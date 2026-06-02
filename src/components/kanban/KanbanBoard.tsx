@@ -6,14 +6,15 @@ import { useKanbanDrag } from '@/hooks/useKanbanDrag'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
 import { KanbanCard } from '@/components/kanban/KanbanCard'
 import { NewCardForm } from '@/components/kanban/NewCardForm'
+import { CardDetailModal } from '@/components/kanban/CardDetailModal'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, ArrowLeft } from 'lucide-react'
-import { createBoard } from '@/actions/boards'
 import { createColumn } from '@/actions/columns'
 import { createCard } from '@/actions/cards'
+import { toggleStar } from '@/actions/starred'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Card } from '@/types/database.types'
@@ -33,7 +34,7 @@ export function KanbanBoard({
   const [newColumnName, setNewColumnName] = useState('')
   const [addingColumn, setAddingColumn] = useState(false)
   const [creatingCardColumnId, setCreatingCardColumnId] = useState<string | null>(null)
-  const [showCreateBoard, setShowCreateBoard] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -53,16 +54,18 @@ export function KanbanBoard({
     onCardsChange: setCards,
   })
 
+  const refreshBoard = useCallback(() => {
+    router.refresh()
+  }, [router])
+
   const handleAddColumn = useCallback(async () => {
     if (!newColumnName.trim()) return
     const result = await createColumn({ boardId: board.id, name: newColumnName.trim() })
-    if (result.error) {
-      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-    }
+    if (result.error) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
     setNewColumnName('')
     setAddingColumn(false)
-    router.refresh()
-  }, [board.id, newColumnName, toast, router])
+    refreshBoard()
+  }, [board.id, newColumnName, toast, refreshBoard])
 
   const handleCreateCard = useCallback(async (columnId: string, title: string) => {
     const result = await createCard({ columnId, title })
@@ -71,18 +74,22 @@ export function KanbanBoard({
       return
     }
     setCreatingCardColumnId(null)
-    router.refresh()
-  }, [toast, router])
+    refreshBoard()
+  }, [toast, refreshBoard])
 
-  const handleCreateBoard = useCallback(async (name: string) => {
-    const result = await createBoard({ name })
-    if (result.error) {
-      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-      return
-    }
-    setShowCreateBoard(false)
-    router.refresh()
-  }, [toast, router])
+  const handleToggleStar = useCallback(async (cardId: string) => {
+    const card = cards.find((c) => c.id === cardId)
+    if (!card) return
+    const newVal = !card.is_starred
+    setCards((prev) => prev.map((c) => c.id === cardId ? { ...c, is_starred: newVal } : c))
+    await toggleStar({ cardId, isStarred: newVal })
+    refreshBoard()
+  }, [cards, refreshBoard])
+
+  const handleCardClick = useCallback((cardId: string) => {
+    const card = cards.find((c) => c.id === cardId)
+    if (card) setSelectedCard(card)
+  }, [cards])
 
   return (
     <div>
@@ -93,12 +100,6 @@ export function KanbanBoard({
           </Link>
           <h1 className="text-2xl font-bold">{board.name}</h1>
         </div>
-        <CreateBoardDialog
-          open={showCreateBoard}
-          onOpenChange={setShowCreateBoard}
-          allBoards={allBoards}
-          onCreateBoard={handleCreateBoard}
-        />
       </div>
 
       <DndContext
@@ -118,6 +119,8 @@ export function KanbanBoard({
               onStartCreate={() => setCreatingCardColumnId(col.id)}
               onCancelCreate={() => setCreatingCardColumnId(null)}
               onCreateCard={(title) => handleCreateCard(col.id, title)}
+              onCardClick={handleCardClick}
+              onToggleStar={handleToggleStar}
             />
           ))}
 
@@ -165,10 +168,21 @@ export function KanbanBoard({
         </DragOverlay>
       </DndContext>
 
-      {otherBoards.length > 0 && (
-        <div className="mt-4 text-xs text-muted-foreground text-center">
-          Sleep een kaart naar een ander bord via de bordwisselaar (binnenkort beschikbaar)
-        </div>
+      {selectedCard && (
+        <CardDetailModal
+          open={!!selectedCard}
+          onOpenChange={(open) => { if (!open) setSelectedCard(null) }}
+          card={{
+            id: selectedCard.id,
+            title: selectedCard.title,
+            description: selectedCard.description,
+            url: selectedCard.url,
+            is_starred: selectedCard.is_starred,
+            is_archived: selectedCard.is_archived,
+            deadline: selectedCard.deadline,
+          }}
+          onUpdated={refreshBoard}
+        />
       )}
     </div>
   )

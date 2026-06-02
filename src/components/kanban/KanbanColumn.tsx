@@ -17,11 +17,15 @@ interface KanbanColumnProps {
     is_starred: boolean
     description?: string | null
     url?: string | null
+    is_archived?: boolean
+    deadline?: string | null
   }[]
   isCreating: boolean
   onStartCreate: () => void
   onCancelCreate: () => void
   onCreateCard: (title: string) => void
+  onCardClick?: (cardId: string) => void
+  onToggleStar?: (cardId: string) => void
 }
 
 export function KanbanColumn({
@@ -31,6 +35,8 @@ export function KanbanColumn({
   onStartCreate,
   onCancelCreate,
   onCreateCard,
+  onCardClick,
+  onToggleStar,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
@@ -52,7 +58,12 @@ export function KanbanColumn({
         <SortableContext items={sortedCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2 min-h-[40px]">
             {sortedCards.map((card) => (
-              <KanbanCard key={card.id} card={card} />
+              <KanbanCard
+                key={card.id}
+                card={card}
+                onClick={() => onCardClick?.(card.id)}
+                onToggleStar={() => onToggleStar?.(card.id)}
+              />
             ))}
             {sortedCards.length === 0 && !isCreating && (
               <p className="text-xs text-muted-foreground text-center py-4">
