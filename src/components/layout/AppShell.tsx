@@ -8,18 +8,20 @@ import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  Bot,
-  BookOpen,
-  Users,
-  Settings,
-  LogOut,
-  Menu,
-  X,
+import { 
+  LayoutDashboard, 
+  Settings, 
+  Star, 
+  Brain, 
+  BookOpen, 
+  Users, 
+  ClipboardList,
   Columns3,
-  Star,
+  Bot,
   Focus,
+  X,
+  LogOut,
+  Menu
 } from 'lucide-react'
 
 const navItems = [

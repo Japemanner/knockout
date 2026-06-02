@@ -39,8 +39,7 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
 
   const handleSave = async () => {
     setIsSaving(true)
-    const result = await updateCard({
-      cardId: card.id,
+    const result = await updateCard(card.id, {
       title,
       description: description || undefined,
       url: url || undefined,
@@ -62,14 +61,14 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
   }
 
   const handleArchive = async () => {
-    await toggleArchiveCard({ cardId: card.id, isArchived: !card.is_archived })
+    await toggleArchiveCard(card.id)
     toast({ title: card.is_archived ? 'Kaart hersteld' : 'Kaart gearchiveerd' })
     onUpdated()
     onOpenChange(false)
   }
 
   const handleDelete = async () => {
-    await deleteCard({ cardId: card.id })
+    await deleteCard(card.id)
     toast({ title: 'Kaart verwijderd' })
     onUpdated()
     onOpenChange(false)

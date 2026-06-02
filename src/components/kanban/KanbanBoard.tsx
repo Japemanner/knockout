@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, ArrowLeft } from 'lucide-react'
 import { createColumn } from '@/actions/columns'
-import { createCard } from '@/actions/cards'
+import { createCardInColumn } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -68,7 +68,7 @@ export function KanbanBoard({
   }, [board.id, newColumnName, toast, refreshBoard])
 
   const handleCreateCard = useCallback(async (columnId: string, title: string) => {
-    const result = await createCard({ columnId, title })
+    const result = await createCardInColumn({ columnId, title })
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return

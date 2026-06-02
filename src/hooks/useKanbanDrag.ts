@@ -70,7 +70,7 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
       if (targetBoard) {
         const newCards = cards.filter((c) => c.id !== activeCardData.id)
         onCardsChange(newCards)
-        await moveCardToBoard({ cardId: activeCardData.id, targetBoardId: targetBoard.id })
+        await moveCardToBoard(activeCardData.id, targetBoard.id)
         return
       }
 
@@ -97,7 +97,7 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
           ...reordered,
         ]
         onCardsChange(newCards)
-        await reorderCards({ columnId: targetColumnId, orderedCardIds: reordered.map((c) => c.id) })
+        await reorderCards(targetColumnId, reordered.map((c) => c.id))
       } else {
         // Move to different column
         const targetColumnCards = cards
@@ -111,11 +111,7 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
         const updatedCard = { ...activeCardData, column_id: targetColumnId, position: overIndex >= 0 ? overIndex : targetColumnCards.length }
         const newCards = cards.map((c) => (c.id === activeCardData.id ? updatedCard : c))
         onCardsChange(newCards)
-        await moveCard({
-          cardId: activeCardData.id,
-          targetColumnId,
-          position: updatedCard.position,
-        })
+        await moveCard(activeCardData.id, targetColumnId, updatedCard.position)
       }
     },
     [cards, otherBoards, onCardsChange],
