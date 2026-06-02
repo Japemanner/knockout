@@ -3,16 +3,55 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
-      organizations: { Row: Organization; Insert: Organization; Update: Partial<Organization> }
-      profiles: { Row: Profile; Insert: Profile; Update: Partial<Profile> }
-      boards: { Row: Board; Insert: Board; Update: Partial<Board> }
-      columns: { Row: KColumn; Insert: KColumn; Update: Partial<KColumn> }
-      cards: { Row: Card; Insert: Card; Update: Partial<Card> }
-      time_sessions: { Row: TimeSession; Insert: TimeSession; Update: Partial<TimeSession> }
-      db_connections: { Row: DBConnection; Insert: DBConnection; Update: Partial<DBConnection> }
-      rss_feeds: { Row: RSSFeed; Insert: RSSFeed; Update: Partial<RSSFeed> }
-      focus_notes: { Row: FocusNote; Insert: FocusNote; Update: Partial<FocusNote> }
+      organizations: {
+        Row: Organization
+        Insert: Omit<Organization, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Organization, 'id'>>
+      }
+      profiles: {
+        Row: Profile
+        Insert: Omit<Profile, 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Profile, 'id'>>
+      }
+      boards: {
+        Row: Board
+        Insert: Omit<Board, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Board, 'id'>>
+      }
+      columns: {
+        Row: KColumn
+        Insert: Omit<KColumn, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<KColumn, 'id'>>
+      }
+      cards: {
+        Row: Card
+        Insert: Omit<Card, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Card, 'id'>>
+      }
+      time_sessions: {
+        Row: TimeSession
+        Insert: Omit<TimeSession, 'id' | 'created_at'>
+        Update: Partial<Omit<TimeSession, 'id'>>
+      }
+      db_connections: {
+        Row: DBConnection
+        Insert: Omit<DBConnection, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<DBConnection, 'id'>>
+      }
+      rss_feeds: {
+        Row: RSSFeed
+        Insert: Omit<RSSFeed, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<RSSFeed, 'id'>>
+      }
+      focus_notes: {
+        Row: FocusNote
+        Insert: Omit<FocusNote, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<FocusNote, 'id'>>
+      }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
   }
 }
 

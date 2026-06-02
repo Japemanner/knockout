@@ -1,18 +1,29 @@
 import { createClient } from '@/lib/supabase/server'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
-import type { KColumn, Card } from '@/types/database.types'
+import type { KColumn, Card, Board } from '@/types/database.types'
+import { notFound } from 'next/navigation'
 
 export default async function BoardPage({ params }: { params: Promise<{ boardId: string }> }) {
   const { boardId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  if (!user) notFound()
+
   const { data: board } = await supabase
     .from('boards')
     .select('*')
     .eq('id', boardId)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .single()
+
+  if (!board) notFound()
+
+  const { data: allBoards } = await supabase
+    .from('boards')
+    .select('id, name')
+    .eq('user_id', user.id)
+    .order('name')
 
   const { data: columnData } = await supabase
     .from('columns')
@@ -33,13 +44,10 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
 
   const cards: Card[] = cardData ?? []
 
-  if (!board) {
-    return <p className="text-muted-foreground">Bord niet gevonden.</p>
-  }
-
   return (
     <KanbanBoard
       board={board}
+      allBoards={(allBoards as Pick<Board, 'id' | 'name'>[]) ?? []}
       columns={columns}
       cards={cards}
     />
