@@ -1,0 +1,8 @@
+# Gitleaks configuration for Knockout project
+title = "Knockout Gitleaks config"
+
+[allowlist]
+  description = "Allow Next.js auto-generated local dev keys"
+  paths = [
+    '''\.next/.*''',
+  ]
