@@ -180,11 +180,21 @@ ALTER TABLE kk_flow_configs ENABLE ROW LEVEL SECURITY;
 ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  org_id uuid;
 BEGIN
+  -- Check if organization exists, if not create default
+  SELECT id INTO org_id FROM kk_organizations LIMIT 1;
+  
+  IF org_id IS NULL THEN
+    INSERT INTO kk_organizations (name) VALUES ('Default Organization')
+    RETURNING id INTO org_id;
+  END IF;
+
   INSERT INTO public.kk_profiles (id, organization_id, full_name, role)
   VALUES (
     NEW.id,
-    (SELECT id FROM kk_organizations LIMIT 1),
+    org_id,
     COALESCE(NEW.raw_user_meta_data ->> 'full_name', NEW.email),
     'member'
   );
