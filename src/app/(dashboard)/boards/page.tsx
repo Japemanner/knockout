@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Plus, FolderKanban } from 'lucide-react'
+import { CreateBoardButton } from '@/components/kanban/CreateBoardButton'
+import { FolderKanban } from 'lucide-react'
 import type { Board } from '@/types/database.types'
 
 export default async function BoardsPage() {
@@ -24,9 +24,7 @@ export default async function BoardsPage() {
           <h1 className="text-2xl font-bold">Borden</h1>
           <p className="text-muted-foreground">Je Kanban-borden</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" /> Nieuw bord
-        </Button>
+        <CreateBoardButton boards={boards.map((b) => ({ id: b.id, name: b.name }))} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

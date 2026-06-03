@@ -10,7 +10,7 @@ interface CreateBoardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   allBoards: { id: string; name: string }[]
-  onCreateBoard: (name: string) => void
+  onCreateBoard: (name: string) => Promise<{ id: string; error?: string }>
 }
 
 export function CreateBoardDialog({ open, onOpenChange, allBoards, onCreateBoard }: CreateBoardDialogProps) {
@@ -21,8 +21,12 @@ export function CreateBoardDialog({ open, onOpenChange, allBoards, onCreateBoard
   const handleCreate = async () => {
     if (!name.trim()) return
     setIsLoading(true)
-    onCreateBoard(name.trim())
+    const result = await onCreateBoard(name.trim())
     setIsLoading(false)
+    if (result.error) {
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
     setName('')
     onOpenChange(false)
   }
