@@ -11,7 +11,7 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
   if (!user) notFound()
 
   const { data: board } = await supabase
-    .from('boards')
+    .from('kk_boards')
     .select('*')
     .eq('id', boardId)
     .eq('user_id', user.id)
@@ -20,13 +20,13 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
   if (!board) notFound()
 
   const { data: allBoards } = await supabase
-    .from('boards')
+    .from('kk_boards')
     .select('id, name')
     .eq('user_id', user.id)
     .order('name')
 
   const { data: columnData } = await supabase
-    .from('columns')
+    .from('kk_columns')
     .select('*')
     .eq('board_id', boardId)
     .order('position', { ascending: true })
@@ -35,7 +35,7 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
 
   const { data: cardData } = columns.length > 0
     ? await supabase
-        .from('cards')
+        .from('kk_cards')
         .select('*')
         .in('column_id', columns.map((c) => c.id))
         .eq('is_archived', false)

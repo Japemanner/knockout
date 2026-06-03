@@ -3,47 +3,47 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
-      organizations: {
+      kk_organizations: {
         Row: Organization
         Insert: Omit<Organization, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Organization, 'id'>>
       }
-      profiles: {
+      kk_profiles: {
         Row: Profile
         Insert: Omit<Profile, 'created_at' | 'updated_at'>
         Update: Partial<Omit<Profile, 'id'>>
       }
-      boards: {
+      kk_boards: {
         Row: Board
         Insert: Omit<Board, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Board, 'id'>>
       }
-      columns: {
+      kk_columns: {
         Row: KColumn
         Insert: Omit<KColumn, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<KColumn, 'id'>>
       }
-      cards: {
+      kk_cards: {
         Row: Card
         Insert: Omit<Card, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Card, 'id'>>
       }
-      time_entries: {
+      kk_time_entries: {
         Row: TimeEntry
         Insert: Omit<TimeEntry, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<TimeEntry, 'id'>>
       }
-      db_connections: {
+      kk_db_connections: {
         Row: DBConnection
         Insert: Omit<DBConnection, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<DBConnection, 'id'>>
       }
-      rss_feeds: {
+      kk_rss_feeds: {
         Row: RSSFeed
         Insert: Omit<RSSFeed, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<RSSFeed, 'id'>>
       }
-      focus_notes: {
+      kk_focus_notes: {
         Row: FocusNote
         Insert: Omit<FocusNote, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<FocusNote, 'id'>>

@@ -17,7 +17,7 @@ export default async function StarredPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data } = await supabase
-    .from('cards')
+    .from('kk_cards')
     .select(`
       id, title, column_id, is_starred,
       columns!inner(id, name, board_id, boards!inner(id, name, user_id))

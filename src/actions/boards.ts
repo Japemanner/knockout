@@ -19,11 +19,11 @@ export async function createBoard(data: { name: string }) {
     if (!user) return { id: '', error: 'Niet ingelogd' }
 
     const { data: board, error } = await supabase
-      .from('boards').insert({ name: data.name, user_id: user.id }).select().single()
+      .from('kk_boards').insert({ name: data.name, user_id: user.id }).select().single()
 
     if (error || !board) return { id: '', error: error?.message ?? 'Kon bord niet aanmaken' }
 
-    await supabase.from('columns').insert([
+    await supabase.from('kk_columns').insert([
       { board_id: board.id, name: 'Backlog', position: 0 },
       { board_id: board.id, name: 'Doing', position: 1 },
       { board_id: board.id, name: 'Review', position: 2 },
@@ -40,7 +40,7 @@ export async function createBoard(data: { name: string }) {
 export async function updateBoard(data: { boardId: string; name: string }) {
   try {
     const { supabase } = await getSupabase()
-    const { error } = await supabase.from('boards').update({ name: data.name }).eq('id', data.boardId)
+    const { error } = await supabase.from('kk_boards').update({ name: data.name }).eq('id', data.boardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/boards')
     revalidatePath(`/boards/${data.boardId}`)
@@ -53,7 +53,7 @@ export async function updateBoard(data: { boardId: string; name: string }) {
 export async function deleteBoard(data: { boardId: string }) {
   try {
     const { supabase } = await getSupabase()
-    const { error } = await supabase.from('boards').delete().eq('id', data.boardId)
+    const { error } = await supabase.from('kk_boards').delete().eq('id', data.boardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/boards')
     return { success: true }
@@ -66,7 +66,7 @@ export async function reorderBoards(data: { orderedIds: string[] }) {
   try {
     const { supabase } = await getSupabase()
     await Promise.all(data.orderedIds.map((id, i) =>
-      supabase.from('boards').update({ position: i }).eq('id', id)
+      supabase.from('kk_boards').update({ position: i }).eq('id', id)
     ))
     revalidatePath('/boards')
     return { success: true }

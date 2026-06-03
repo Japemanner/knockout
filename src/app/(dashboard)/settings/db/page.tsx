@@ -22,7 +22,7 @@ async function DBConnectionsPageContent() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: connections } = await supabase
-    .from('db_connections')
+    .from('kk_db_connections')
     .select('id, name, created_at')
     .eq('user_id', user!.id)
     .order('name')

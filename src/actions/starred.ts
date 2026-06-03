@@ -14,7 +14,7 @@ async function getSupabase(): Promise<UntypedClient> {
 export async function toggleStar(data: { cardId: string; isStarred: boolean }) {
   try {
     const supabase = await getSupabase()
-    const { error } = await supabase.from('cards').update({ is_starred: data.isStarred }).eq('id', data.cardId)
+    const { error } = await supabase      .from('kk_cards').update({ is_starred: data.isStarred }).eq('id', data.cardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/starred')
     return { success: true }
@@ -27,7 +27,7 @@ export async function batchToggleStars(data: { cardIds: string[]; isStarred: boo
   try {
     const supabase = await getSupabase()
     await Promise.all(data.cardIds.map((id) =>
-      supabase.from('cards').update({ is_starred: data.isStarred }).eq('id', id)
+      supabase      .from('kk_cards').update({ is_starred: data.isStarred }).eq('id', id)
     ))
     revalidatePath('/starred')
     return { success: true }

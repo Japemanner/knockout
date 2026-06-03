@@ -13,7 +13,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
   const { data: { user } } = await supabase.auth.getUser()
 
   const result = await supabase
-    .from('db_connections')
+    .from('kk_db_connections')
     .select('name')
     .eq('id', connectionId)
     .eq('user_id', user!.id)

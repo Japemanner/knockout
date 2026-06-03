@@ -15,7 +15,7 @@ export default async function TableViewPage({ params }: { params: Promise<{ conn
   const supabase = await createClient()
 
   const result = await supabase
-    .from('db_connections')
+    .from('kk_db_connections')
     .select('name')
     .eq('id', connectionId)
     .single()

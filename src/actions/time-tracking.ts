@@ -33,7 +33,7 @@ export async function startTimeTracking(data: {
     if (!user) throw new Error('Not authenticated')
 
     const { data: entry } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .insert({
         user_id: user.id,
         task_id: data.taskId || null,
@@ -65,7 +65,7 @@ export async function stopTimeTracking(entryId: string) {
     
     // First get the entry to calculate duration
     const { data: entry } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .select('start_time')
       .eq('id', entryId)
       .eq('user_id', user.id)
@@ -78,7 +78,7 @@ export async function stopTimeTracking(entryId: string) {
     const durationSeconds = Math.floor((end.getTime() - start.getTime()) / 1000)
 
     const { data: updatedEntry } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .update({
         end_time: endTime,
         duration_seconds: durationSeconds,
@@ -107,7 +107,7 @@ export async function getActiveTimeEntry() {
     if (!user) return null
 
     const { data: entry } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .select('*')
       .eq('user_id', user.id)
       .is('end_time', null)
@@ -142,7 +142,7 @@ export async function getTimeEntries(options?: {
     if (!user) return { entries: [], total: 0 }
 
     let query = untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .select('*', { count: 'exact' })
       .eq('user_id', user.id)
       .order('start_time', { ascending: false })
@@ -189,7 +189,7 @@ export async function updateTimeEntry(entryId: string, description: string) {
     if (!user) throw new Error('Not authenticated')
 
     const { data: entry } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .update({ description, updated_at: new Date().toISOString() })
       .eq('id', entryId)
       .eq('user_id', user.id)
@@ -214,7 +214,7 @@ export async function deleteTimeEntry(entryId: string) {
     if (!user) throw new Error('Not authenticated')
 
     const { error } = await untypedClient
-      .from('time_entries')
+      .from('kk_time_entries')
       .delete()
       .eq('id', entryId)
       .eq('user_id', user.id)

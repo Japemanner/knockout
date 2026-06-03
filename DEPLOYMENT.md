@@ -51,7 +51,7 @@ In Netlify Site Settings → Environment Variables, add these **four** variables
 
 | Variable | Value | Type |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://ddfjigrjwlfpaljhhogv.supabase.co` | Public |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://ythjnatklbnjtvvgpwlr.supabase.co` | Public |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *Your Supabase anon key* | Public |
 | `SUPABASE_SERVICE_ROLE_KEY` | *Your Supabase service role key* | Secret |
 | `ENCRYPTION_KEY` | *Output from node command above* | Secret |

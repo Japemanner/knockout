@@ -10,7 +10,7 @@ export default async function BoardsPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data } = await supabase
-    .from('boards')
+    .from('kk_boards')
     .select('*')
     .eq('user_id', user!.id)
     .order('position', { ascending: true })

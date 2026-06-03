@@ -27,7 +27,7 @@ export async function createConnection(data: { name: string; connectionString: s
     const encrypted = await encrypt(data.connectionString)
 
     const { data: conn, error } = await supabase
-      .from('db_connections')
+      .from('kk_db_connections')
       .insert({ name: data.name, encrypted_conn_str: encrypted, user_id: user.id })
       .select()
       .single()
@@ -46,7 +46,7 @@ export async function updateConnection(data: { connectionId: string; name?: stri
     const update: Record<string, unknown> = {}
     if (data.name !== undefined) update.name = data.name
     if (data.connectionString !== undefined) update.encrypted_conn_str = await encrypt(data.connectionString)
-    const { error } = await supabase.from('db_connections').update(update).eq('id', data.connectionId)
+    const { error } = await supabase.from('kk_db_connections').update(update).eq('id', data.connectionId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/settings/db')
     return { success: true }
@@ -58,7 +58,7 @@ export async function updateConnection(data: { connectionId: string; name?: stri
 export async function deleteConnection(data: { connectionId: string }) {
   try {
     const supabase = await getSupabase()
-    const { error } = await supabase.from('db_connections').delete().eq('id', data.connectionId)
+    const { error } = await supabase.from('kk_db_connections').delete().eq('id', data.connectionId)
     if (error) return { success: false, error: error.message }
     destroyPool(data.connectionId)
     revalidatePath('/settings/db')
@@ -71,7 +71,7 @@ export async function deleteConnection(data: { connectionId: string }) {
 export async function testConnectionAction(data: { connectionId: string }) {
   try {
     const supabase = await getServiceDb()
-    const { data: conn } = await supabase.from('db_connections').select('encrypted_conn_str').eq('id', data.connectionId).single()
+    const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', data.connectionId).single()
     if (!conn) return { success: false, error: 'Connectie niet gevonden' }
 
     const { decrypt } = await import('@/lib/db/encrypt')
@@ -85,7 +85,7 @@ export async function testConnectionAction(data: { connectionId: string }) {
 
 export async function getConnectionString(connectionId: string): Promise<string> {
   const supabase = await getServiceDb()
-  const { data: conn } = await supabase.from('db_connections').select('encrypted_conn_str').eq('id', connectionId).single()
+  const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', connectionId).single()
   if (!conn) throw new Error('Connectie niet gevonden')
 
   const { decrypt } = await import('@/lib/db/encrypt')

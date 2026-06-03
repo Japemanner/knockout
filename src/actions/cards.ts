@@ -22,13 +22,13 @@ export async function createCardInColumn(data: {
 
     // Get the next position for the card in this column
     const { count: cardCount } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .select('*', { count: 'exact', head: true })
       .eq('column_id', data.columnId)
 
     // Create the card
     const { data: card } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .insert({
         column_id: data.columnId,
         title: data.title,
@@ -67,7 +67,7 @@ export async function createCard(data: {
 
     // Find the user's inbox board
     const { data: inboxBoard } = await untypedClient
-      .from('boards')
+      .from('kk_boards')
       .select('id')
       .eq('user_id', user.id)
       .eq('is_inbox', true)
@@ -77,7 +77,7 @@ export async function createCard(data: {
 
     // Find the first column in the inbox board (typically "To Do")
     const { data: firstColumn } = await untypedClient
-      .from('columns')
+      .from('kk_columns')
       .select('id')
       .eq('board_id', inboxBoard.id)
       .order('position', { ascending: true })
@@ -88,13 +88,13 @@ export async function createCard(data: {
 
     // Get the next position for the card
     const { count: cardCount } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .select('*', { count: 'exact', head: true })
       .eq('column_id', firstColumn.id)
 
     // Create the card
     const { data: card } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .insert({
         column_id: firstColumn.id,
         title: data.title,
@@ -130,7 +130,7 @@ export async function getInboxBoard() {
     if (!user) return null
 
     const { data: board } = await untypedClient
-      .from('boards')
+      .from('kk_boards')
       .select('id, name')
       .eq('user_id', user.id)
       .eq('is_inbox', true)
@@ -153,7 +153,7 @@ export async function updateCard(cardId: string, data: Record<string, unknown>) 
     const supabase = await createClient()
     const untypedClient = supabase as unknown as UntypedClient
     const { data: updatedCard } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', cardId)
       .select()
@@ -175,7 +175,7 @@ export async function deleteCard(cardId: string) {
     const supabase = await createClient()
     const untypedClient = supabase as unknown as UntypedClient
     const { error } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .delete()
       .eq('id', cardId)
 
@@ -197,7 +197,7 @@ export async function toggleArchiveCard(cardId: string) {
     
     // First get the current card to check archive status
     const { data: currentCard } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .select('is_archived')
       .eq('id', cardId)
       .single()
@@ -206,7 +206,7 @@ export async function toggleArchiveCard(cardId: string) {
 
     // Toggle the archive status
     const { data: updatedCard } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .update({ is_archived: !currentCard.is_archived, updated_at: new Date().toISOString() })
       .eq('id', cardId)
       .select()
@@ -230,7 +230,7 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
     
     // Update the card's column and position
     const { data: updatedCard } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .update({ 
         column_id: newColumnId, 
         position: newPosition,
@@ -259,7 +259,7 @@ export async function reorderCards(columnId: string, cardIds: string[]) {
     // Update positions for all cards in the column
     const updates = cardIds.map((cardId, index) => 
       untypedClient
-        .from('cards')
+      .from('kk_cards')
         .update({ position: index, updated_at: new Date().toISOString() })
         .eq('id', cardId)
     )
@@ -288,7 +288,7 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
     
     // Get the first column of the target board
     const { data: targetColumn } = await untypedClient
-      .from('columns')
+      .from('kk_columns')
       .select('id')
       .eq('board_id', newBoardId)
       .order('position', { ascending: true })
@@ -299,7 +299,7 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
 
     // Move the card to the first column of the new board
     const { data: updatedCard } = await untypedClient
-      .from('cards')
+      .from('kk_cards')
       .update({ 
         column_id: targetColumn.id,
         updated_at: new Date().toISOString() 
