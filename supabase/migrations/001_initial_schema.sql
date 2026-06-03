@@ -184,10 +184,10 @@ DECLARE
   org_id uuid;
 BEGIN
   -- Check if organization exists, if not create default
-  SELECT id INTO org_id FROM kk_organizations LIMIT 1;
+  SELECT id INTO org_id FROM public.kk_organizations LIMIT 1;
   
   IF org_id IS NULL THEN
-    INSERT INTO kk_organizations (name) VALUES ('Default Organization')
+    INSERT INTO public.kk_organizations (name) VALUES ('Default Organization')
     RETURNING id INTO org_id;
   END IF;
 
@@ -200,7 +200,8 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = 'public';
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
