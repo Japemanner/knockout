@@ -3,7 +3,7 @@
 import { useAuthStore } from '@/store/authStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Users, ClipboardList, Plus, Clock, Bot, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Users, ClipboardList, Plus, Clock } from 'lucide-react'
 import { QuickCaptureWidget } from '@/components/tasks/QuickCaptureWidget'
 import { TimeTrackingWidget } from '@/components/time-tracking/TimeTrackingWidget'
 import { useState } from 'react'
@@ -40,20 +40,6 @@ export default function CommandCenterPage() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Taken</CardTitle>
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
-            </Card>
-            <Card className="border-dashed">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Assistenten</CardTitle>
-                <Bot className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
-            </Card>
-            <Card className="border-dashed">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Kennisbronnen</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
             </Card>
