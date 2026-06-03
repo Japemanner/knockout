@@ -28,10 +28,10 @@ export interface Database {
         Insert: Omit<Card, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Card, 'id'>>
       }
-      time_sessions: {
-        Row: TimeSession
-        Insert: Omit<TimeSession, 'id' | 'created_at'>
-        Update: Partial<Omit<TimeSession, 'id'>>
+      time_entries: {
+        Row: TimeEntry
+        Insert: Omit<TimeEntry, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<TimeEntry, 'id'>>
       }
       db_connections: {
         Row: DBConnection
@@ -105,12 +105,17 @@ export interface Card {
   updated_at: string
 }
 
-export interface TimeSession {
+export interface TimeEntry {
   id: string
-  card_id: string
-  started_at: string
-  ended_at: string | null
+  user_id: string
+  task_id: string | null
+  board_id: string | null
+  start_time: string // ISO string
+  end_time: string | null // ISO string
+  duration_seconds: number | null
+  description: string | null
   created_at: string
+  updated_at: string
 }
 
 export interface DBConnection {
