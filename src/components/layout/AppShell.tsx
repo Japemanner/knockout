@@ -23,7 +23,8 @@ import {
   X,
   LogOut,
   Menu,
-  Palette
+  Palette,
+  Gauge
 } from 'lucide-react'
 
 const navItems = [
@@ -56,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <div className="flex items-center justify-between mb-8">
         <Link href="/boards" className="text-xl font-bold hover:text-primary">
-          Knockout
+          <Gauge className="h-8 w-8 text-primary" />
         </Link>
         <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
           <X className="h-5 w-5" />
