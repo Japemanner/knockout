@@ -2,7 +2,7 @@
 
 ## 1. Supabase Setup
 
-Your Supabase project already exists at: `https://ddfjigrjwlfpaljhhogv.supabase.co`
+Your Supabase project already exists at: `your-supabase-url` (set this in Netlify environment variables)
 
 ### Run Migrations
 Execute both migrations in order:
@@ -47,14 +47,17 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ## 4. Environment Variables
 
+> ⚠️ **Important**: Never commit real Supabase keys or encryption keys to your repository!
+> Set these values ONLY in Netlify Environment Variables (Project Settings → Environment Variables).
+
 In Netlify Site Settings → Environment Variables, add these **four** variables:
 
 | Variable | Value | Type |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://ythjnatklbnjtvvgpwlr.supabase.co` | Public |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *Your Supabase anon key* | Public |
-| `SUPABASE_SERVICE_ROLE_KEY` | *Your Supabase service role key* | Secret |
-| `ENCRYPTION_KEY` | *Output from node command above* | Secret |
+| `NEXT_PUBLIC_SUPABASE_URL` | `your-supabase-url` | Public |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `your-supabase-anon-key` | Public |
+| `SUPABASE_SERVICE_ROLE_KEY` | `your-supabase-service-role-key` | Secret |
+| `ENCRYPTION_KEY` | `your-encryption-key` | Secret |
 
 ## 5. Deploy!
 
