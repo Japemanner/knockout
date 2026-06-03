@@ -56,19 +56,32 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
   const handleToggleStar = async () => {
     const newVal = !isStarred
     setIsStarred(newVal)
-    await toggleStar({ cardId: card.id, isStarred: newVal })
+    const result = await toggleStar({ cardId: card.id, isStarred: newVal })
+    if (result.error) {
+      setIsStarred(!newVal)
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
     onUpdated()
   }
 
   const handleArchive = async () => {
-    await toggleArchiveCard(card.id)
+    const result = await toggleArchiveCard(card.id)
+    if (result.error) {
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
     toast({ title: card.is_archived ? 'Kaart hersteld' : 'Kaart gearchiveerd' })
     onUpdated()
     onOpenChange(false)
   }
 
   const handleDelete = async () => {
-    await deleteCard(card.id)
+    const result = await deleteCard(card.id)
+    if (result.error) {
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
     toast({ title: 'Kaart verwijderd' })
     onUpdated()
     onOpenChange(false)
