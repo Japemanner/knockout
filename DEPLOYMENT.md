@@ -65,6 +65,25 @@ After setting environment variables:
 1. Trigger a new deploy in Netlify
 2. Your site will be live at your Netlify URL
 
+## 6. Fixing Netlify Secrets Scanner Issues
+
+If Netlify's secrets scanner blocks your build with messages like:
+```
+Secret env var "NEXT_PUBLIC_SUPABASE_URL"'s value detected
+```
+
+This happens because Netlify considers Supabase URLs and keys as "secrets" even though `NEXT_PUBLIC_*` variables are meant to be public.
+
+**Solution**: Add these environment variables in Netlify to disable the scanner:
+
+In **Netlify Site Settings → Environment Variables**, add:
+- `SECRETS_SCAN_ENABLED` = `false`
+
+Alternatively, you can configure specific paths to omit from scanning:
+- `SECRETS_SCAN_OMIT_PATHS` = `.netlify/edge-functions`
+
+However, this is a temporary workaround. The proper solution is to ensure no real values are ever embedded in your build.
+
 ## First Login
 
 1. Visit your deployed site
