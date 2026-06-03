@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { cn } from '@/lib/utils'
 import { 
   LayoutDashboard, 
@@ -21,7 +22,8 @@ import {
   Focus,
   X,
   LogOut,
-  Menu
+  Menu,
+  Palette
 } from 'lucide-react'
 
 const navItems = [
@@ -29,8 +31,7 @@ const navItems = [
   { href: '/starred', label: 'Gesterd', icon: Star },
   { href: '/focus', label: 'Focus', icon: Focus },
   { href: '/command-center', label: 'Command Center', icon: LayoutDashboard },
-  { href: '/assistants', label: 'Assistenten', icon: Bot },
-  { href: '/knowledge', label: 'Kennisbronnen', icon: BookOpen },
+  { href: '/theme-demo', label: 'Thema Demo', icon: Palette },
   { href: '/team', label: 'Team', icon: Users },
   { href: '/settings', label: 'Instellingen', icon: Settings },
 ]
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-sm font-medium truncate">{profile?.full_name ?? 'Gebruiker'}</p>
           <p className="text-xs text-muted-foreground truncate">{profile?.role ?? 'member'}</p>
         </div>
+        <ThemeToggle />
         <Button variant="ghost" size="icon" onClick={handleSignOut}>
           <LogOut className="h-4 w-4" />
         </Button>

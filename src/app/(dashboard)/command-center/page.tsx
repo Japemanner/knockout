@@ -3,7 +3,7 @@
 import { useAuthStore } from '@/store/authStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Bot, BookOpen, Users, ClipboardList, Plus, Clock } from 'lucide-react'
+import { LayoutDashboard, Users, ClipboardList, Plus, Clock, Bot, BookOpen } from 'lucide-react'
 import { QuickCaptureWidget } from '@/components/tasks/QuickCaptureWidget'
 import { TimeTrackingWidget } from '@/components/time-tracking/TimeTrackingWidget'
 import { useState } from 'react'
@@ -12,7 +12,7 @@ export default function CommandCenterPage() {
   const { profile } = useAuthStore()
   const [key, setKey] = useState(0) // For re-rendering the widget
 
-  const stats = { assistants: '-', knowledgeBases: '-', teamMembers: '-' }
+  const stats = { teamMembers: '-' }
 
   const handleCardCreated = () => {
     // Force re-render of the widget to reset form
@@ -31,20 +31,6 @@ export default function CommandCenterPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Assistenten</CardTitle>
-                <Bot className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent><p className="text-2xl font-bold">{stats.assistants}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Kennisbronnen</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent><p className="text-2xl font-bold">{stats.knowledgeBases}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Teamleden</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -54,6 +40,20 @@ export default function CommandCenterPage() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Taken</CardTitle>
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Assistenten</CardTitle>
+                <Bot className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Kennisbronnen</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent><p className="text-sm text-muted-foreground">Binnenkort beschikbaar</p></CardContent>
             </Card>
@@ -97,10 +97,6 @@ export default function CommandCenterPage() {
               <Button variant="outline" className="w-full justify-start">
                 <ClipboardList className="h-4 w-4 mr-2" />
                 Naar taken
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Naar kennis
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <Clock className="h-4 w-4 mr-2" />

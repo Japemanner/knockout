@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { Database } from 'lucide-react'
+import { Database, Palette } from 'lucide-react'
+import { ThemeToggleSelect } from '@/components/theme/ThemeToggleSelect'
 
 export default function SettingsPage() {
   return (
@@ -11,6 +12,21 @@ export default function SettingsPage() {
       <p className="text-muted-foreground mb-8">Beheer je workspace configuratie</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Palette className="h-5 w-5 text-muted-foreground" />
+              Weergave
+            </CardTitle>
+            <CardDescription>
+              Pas het uiterlijk van de applicatie aan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeToggleSelect />
+          </CardContent>
+        </Card>
+
         <Link href="/settings/db">
           <Card className="hover:border-primary transition-colors cursor-pointer h-full">
             <CardHeader>
