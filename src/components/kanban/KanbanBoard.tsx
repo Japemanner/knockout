@@ -67,14 +67,36 @@ export function KanbanBoard({
   }, [board.id, newColumnName, toast, refreshBoard])
 
   const handleCreateCard = useCallback(async (columnId: string, title: string) => {
+    setCreatingCardColumnId(null)
+
+    const tempId = `temp-${Date.now()}`
+    const now = new Date().toISOString()
+    const columnCards = cards.filter((c) => c.column_id === columnId && !c.is_archived)
+
+    const optimisticCard: Card = {
+      id: tempId,
+      column_id: columnId,
+      title,
+      description: null,
+      url: null,
+      is_starred: false,
+      is_archived: false,
+      position: columnCards.length,
+      deadline: null,
+      created_at: now,
+      updated_at: now,
+    }
+
+    setCards((prev) => [...prev, optimisticCard])
+
     const result = await createCardInColumn({ columnId, title })
     if (result.error) {
+      setCards((prev) => prev.filter((c) => c.id !== tempId))
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return
     }
-    setCreatingCardColumnId(null)
     refreshBoard()
-  }, [toast, refreshBoard])
+  }, [cards, toast, refreshBoard])
 
   const handleToggleStar = useCallback(async (cardId: string) => {
     const card = cards.find((c) => c.id === cardId)
