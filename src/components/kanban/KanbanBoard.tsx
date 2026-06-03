@@ -99,17 +99,22 @@ export function KanbanBoard({
   }, [cards, toast, refreshBoard])
 
   const handleToggleStar = useCallback(async (cardId: string) => {
+    if (cardId.startsWith('temp-')) return
     const card = cards.find((c) => c.id === cardId)
     if (!card) return
     const newVal = !card.is_starred
     setCards((prev) => prev.map((c) => c.id === cardId ? { ...c, is_starred: newVal } : c))
-    await toggleStar({ cardId, isStarred: newVal })
+    const result = await toggleStar({ cardId, isStarred: newVal })
+    if (result.error) {
+      setCards((prev) => prev.map((c) => c.id === cardId ? { ...c, is_starred: !newVal } : c))
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+    }
     refreshBoard()
-  }, [cards, refreshBoard])
+  }, [cards, toast, refreshBoard])
 
   const handleCardClick = useCallback((cardId: string) => {
     const card = cards.find((c) => c.id === cardId)
-    if (card) setSelectedCard(card)
+    if (card && !card.id.startsWith('temp-')) setSelectedCard(card)
   }, [cards])
 
   return (
