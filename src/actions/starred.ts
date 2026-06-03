@@ -17,6 +17,7 @@ export async function toggleStar(data: { cardId: string; isStarred: boolean }) {
     const { error } = await supabase      .from('kk_cards').update({ is_starred: data.isStarred }).eq('id', data.cardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/starred')
+    revalidatePath('/boards')
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
