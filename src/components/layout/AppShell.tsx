@@ -19,16 +19,21 @@ import {
   X,
   LogOut,
   Menu,
-  Gauge
+  Gauge,
+  BarChart3,
+  Bot,
+  ExternalLink
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard },
-  { href: '/boards', label: 'Borden', icon: Columns3 },
-  { href: '/starred', label: 'Gesterd', icon: Star },
-  { href: '/focus', label: 'Focus', icon: Focus },
-  { href: '/team', label: 'Team', icon: Users },
-  { href: '/settings', label: 'Instellingen', icon: Settings },
+  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard, external: false },
+  { href: '/boards', label: 'Borden', icon: Columns3, external: false },
+  { href: '/starred', label: 'Gesterd', icon: Star, external: false },
+  { href: '/focus', label: 'Focus', icon: Focus, external: false },
+  { href: '/team', label: 'Team', icon: Users, external: false },
+  { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3, external: true },
+  { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot, external: true },
+  { href: '/settings', label: 'Instellingen', icon: Settings, external: false },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -64,20 +69,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return true
           })
           .map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
-                pathname === item.href || pathname.startsWith(item.href + '/')
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
+            item.external ? (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-accent text-muted-foreground hover:text-foreground"
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+                <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+              </a>
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                  pathname === item.href || pathname.startsWith(item.href + '/')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            )
           ))}
       </nav>
       <div className="border-t pt-4 flex items-center gap-3 mt-auto">
