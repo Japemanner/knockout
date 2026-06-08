@@ -52,11 +52,11 @@ export function KanbanCard({ card, onClick, onToggleStar }: KanbanCardProps) {
             e.stopPropagation()
             onToggleStar?.()
           }}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className={`flex-shrink-0 transition-opacity ${card.is_starred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
           <Star
             className={`h-3.5 w-3.5 ${
-              card.is_starred ? 'fill-yellow-500 text-yellow-500 opacity-100' : 'text-muted-foreground'
+              card.is_starred ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'
             }`}
           />
         </button>

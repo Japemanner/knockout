@@ -13,26 +13,20 @@ import {
   LayoutDashboard, 
   Settings, 
   Star, 
-  Brain, 
-  BookOpen, 
   Users, 
-  ClipboardList,
   Columns3,
-  Bot,
   Focus,
   X,
   LogOut,
   Menu,
-  Palette,
   Gauge
 } from 'lucide-react'
 
 const navItems = [
+  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard },
   { href: '/boards', label: 'Borden', icon: Columns3 },
   { href: '/starred', label: 'Gesterd', icon: Star },
   { href: '/focus', label: 'Focus', icon: Focus },
-  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard },
-  { href: '/theme-demo', label: 'Thema Demo', icon: Palette },
   { href: '/team', label: 'Team', icon: Users },
   { href: '/settings', label: 'Instellingen', icon: Settings },
 ]

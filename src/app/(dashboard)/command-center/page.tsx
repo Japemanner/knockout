@@ -3,7 +3,7 @@
 import { useAuthStore } from '@/store/authStore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, Users, ClipboardList, Plus, Clock } from 'lucide-react'
+import { LayoutDashboard, Users, ClipboardList, Plus, Clock, BarChart3, Bot, ExternalLink } from 'lucide-react'
 import { QuickCaptureWidget } from '@/components/tasks/QuickCaptureWidget'
 import { TimeTrackingWidget } from '@/components/time-tracking/TimeTrackingWidget'
 import { useState } from 'react'
@@ -76,18 +76,26 @@ export default function CommandCenterPage() {
               <CardTitle>Snelkoppelingen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <LayoutDashboard className="h-4 w-4 mr-2" />
-                Naar boards
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Naar taken
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Clock className="h-4 w-4 mr-2" />
-                Naar focus
-              </Button>
+              <a
+                href="https://dashboards.jaaphoeve.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center w-full rounded-md border px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Metabase
+                <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+              </a>
+              <a
+                href="https://jape-darwin.netlify.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center w-full rounded-md border px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                Darwin
+                <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+              </a>
             </CardContent>
           </Card>
         </div>
