@@ -29,6 +29,7 @@ import {
 const navItems = [
   { href: '/command-center', label: 'Command Center', icon: LayoutDashboard, external: false },
   { href: '/boards', label: 'Borden', icon: Columns3, external: false },
+  { href: '/crud', label: 'CRUD', icon: Database, external: false },
   { href: '/starred', label: 'Gesterd', icon: Star, external: false },
   { href: '/focus', label: 'Focus', icon: Focus, external: false },
   { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },

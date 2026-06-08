@@ -48,6 +48,11 @@ export interface Database {
         Insert: Omit<FocusNote, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<FocusNote, 'id'>>
       }
+      kk_crud_overviews: {
+        Row: CRUDOverview
+        Insert: Omit<CRUDOverview, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CRUDOverview, 'id'>>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -141,6 +146,16 @@ export interface FocusNote {
   user_id: string
   date: string
   content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CRUDOverview {
+  id: string
+  user_id: string
+  name: string
+  connection_id: string | null
+  position: number
   created_at: string
   updated_at: string
 }
