@@ -187,6 +187,12 @@ add_result "F-16" "$SKIP" "Delegate to Snyk MCP: run snyk_code_scan on src/"
 add_result "F-17" "$SKIP" "Delegate to Snyk MCP: run snyk_sca_scan on package.json"
 
 # ─────────────────────────────────────────────
+# F-18: Conventional commit message verplicht
+# Wordt afgedwongen via .git/hooks/commit-msg (niet via fitness check,
+# omdat het commit bericht pas beschikbaar is na de pre-commit fase).
+add_result "F-18" "$SKIP" "Delegated to .git/hooks/commit-msg — enforced at commit time"
+
+# ─────────────────────────────────────────────
 # TOTALEN
 FAIL_COUNT=0
 WARN_COUNT=0
