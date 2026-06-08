@@ -22,7 +22,8 @@ import {
   Gauge,
   BarChart3,
   Bot,
-  ExternalLink
+  ExternalLink,
+  Database
 } from 'lucide-react'
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/boards', label: 'Borden', icon: Columns3, external: false },
   { href: '/starred', label: 'Gesterd', icon: Star, external: false },
   { href: '/focus', label: 'Focus', icon: Focus, external: false },
+  { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },
   { href: '/team', label: 'Team', icon: Users, external: false },
   { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3, external: true },
   { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot, external: true },
@@ -65,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
         {navItems
           .filter((item) => {
-            if (item.href === '/team' || item.href === '/settings') return isAdmin
+            if (item.adminOnly || item.href === '/team' || item.href === '/settings') return isAdmin
             return true
           })
           .map((item) => (
