@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,14 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
   const [isSaving, setIsSaving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    setTitle(card.title)
+    setDescription(card.description ?? '')
+    setUrl(card.url ?? '')
+    setDeadline(card.deadline?.split('T')[0] ?? '')
+    setIsStarred(card.is_starred)
+  }, [card])
 
   const handleSave = async () => {
     setIsSaving(true)

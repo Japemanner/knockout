@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core'
 import { useKanbanDrag } from '@/hooks/useKanbanDrag'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
@@ -30,6 +30,7 @@ export function KanbanBoard({
   cards: Card[]
 }) {
   const [cards, setCards] = useState(initialCards)
+  useEffect(() => { setCards(initialCards) }, [initialCards])
   const [newColumnName, setNewColumnName] = useState('')
   const [addingColumn, setAddingColumn] = useState(false)
   const [creatingCardColumnId, setCreatingCardColumnId] = useState<string | null>(null)
