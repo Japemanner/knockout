@@ -7,7 +7,7 @@ const LOCAL_CONNECTION_ID = '__local__'
 
 function getLocalConnectionString(): string {
   const url = process.env.DIRECT_DATABASE_URL
-  if (!url) throw new Error('DIRECT_DATABASE_URL is niet geconfigureerd')
+  if (!url) throw new Error('DIRECT_DATABASE_URL is niet geconfigureerd in je omgevingsvariabelen. Voeg het toe aan .env.local met de juiste Supabase pooler URL (bijv. postgresql://postgres.xxx:wachtwoord@aws-1-eu-north-1.pooler.supabase.com:5432/postgres)')
   return url
 }
 

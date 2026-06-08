@@ -37,7 +37,7 @@ export function CreateCrudButton({ overviews }: CreateCrudButtonProps) {
       return { id: '', error: result.error }
     }
     setOpen(false)
-    router.refresh()
+    router.push(`/crud/${result.id}`)
     return { id: result.id }
   }, [toast, router])
 
