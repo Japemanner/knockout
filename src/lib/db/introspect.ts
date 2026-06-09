@@ -1,4 +1,5 @@
 import { getPool } from '@/lib/db/pool'
+import { Pool } from 'pg'
 
 export interface ColumnInfo {
   name: string
@@ -20,6 +21,20 @@ export interface TableInfo {
   schema: string
   columns: ColumnInfo[]
   foreignKeys: ForeignKeyInfo[]
+}
+
+export interface TableMeta {
+  columns: ColumnInfo[]
+  foreignKeys: ForeignKeyInfo[]
+}
+
+export async function getTableMeta(connectionId: string, connectionString: string, schema: string, tableName: string): Promise<TableMeta> {
+  const pool = getPool(connectionId, connectionString)
+  const [columns, foreignKeys] = await Promise.all([
+    getColumns(pool, schema, tableName),
+    getForeignKeys(pool, schema, tableName),
+  ])
+  return { columns, foreignKeys }
 }
 
 export async function getTables(connectionId: string, connectionString: string): Promise<TableInfo[]> {
@@ -49,7 +64,7 @@ export async function getTables(connectionId: string, connectionString: string):
   return results
 }
 
-async function getColumns(pool: ReturnType<typeof getPool>, schema: string, table: string): Promise<ColumnInfo[]> {
+async function getColumns(pool: Pool, schema: string, table: string): Promise<ColumnInfo[]> {
   const { rows } = await pool.query<{
     column_name: string; data_type: string; is_nullable: string
     column_default: string | null; character_maximum_length: number | null
@@ -84,7 +99,7 @@ async function getColumns(pool: ReturnType<typeof getPool>, schema: string, tabl
   }))
 }
 
-async function getForeignKeys(pool: ReturnType<typeof getPool>, schema: string, table: string): Promise<ForeignKeyInfo[]> {
+async function getForeignKeys(pool: Pool, schema: string, table: string): Promise<ForeignKeyInfo[]> {
   const { rows } = await pool.query<{
     column_name: string; referenced_table_name: string; referenced_column_name: string
   }>(`

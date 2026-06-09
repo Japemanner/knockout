@@ -1,17 +1,30 @@
 'use server'
 
-import { getTables as introspectTables, getPool } from '@/lib/db'
-import type { ColumnInfo, ForeignKeyInfo, TableInfo } from '@/lib/db/introspect'
+import { getTables as introspectTables, getTableMeta as introspectTableMeta, getPool } from '@/lib/db'
+import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
 
 const LOCAL_CONNECTION_ID = '__local__'
 
 function getLocalConnectionString(): string {
   const url = process.env.DIRECT_DATABASE_URL
-  if (!url) throw new Error('DIRECT_DATABASE_URL is niet geconfigureerd in je omgevingsvariabelen. Voeg het toe aan .env.local met de juiste Supabase pooler URL (bijv. postgresql://postgres.xxx:wachtwoord@aws-1-eu-north-1.pooler.supabase.com:5432/postgres)')
+  if (!url) throw new Error('DIRECT_DATABASE_URL is niet geconfigureerd in je omgevingsvariabelen. Voeg het toe aan .env.local met de juiste Supabase pooler URL (bijv. postgresql://postgres.xxx:wachtwoord@aws-1-eu-north-1.pooler.supabase.com:6543/postgres)')
   return url
 }
 
-export { ColumnInfo, ForeignKeyInfo, TableInfo }
+export { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta }
+
+export async function getLocalTableMeta(tableName: string) {
+  try {
+    const connStr = getLocalConnectionString()
+    const meta = await introspectTableMeta(LOCAL_CONNECTION_ID, connStr, 'public', tableName)
+    if (meta.columns.length === 0) {
+      return { meta: null, error: `Tabel "${tableName}" niet gevonden. Controleer of de tabel bestaat in je database.` }
+    }
+    return { meta, error: null }
+  } catch (err) {
+    return { meta: null, error: err instanceof Error ? err.message : 'Onbekende fout' }
+  }
+}
 
 export async function getLocalTableList() {
   try {

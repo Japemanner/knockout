@@ -34,7 +34,6 @@ export default async function CrudPage() {
               key={overview.id}
               id={overview.id}
               name={overview.name}
-              connection_id={overview.connection_id}
               table_name={overview.table_name}
               interaction_type={overview.interaction_type}
             />

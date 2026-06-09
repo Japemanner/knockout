@@ -2,8 +2,6 @@
 
 import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
-import { getTables as introspectTables } from '@/lib/db'
-import { getConnectionString } from '@/actions/db-connections'
 
 export async function getCrudOverviews() {
   try {
@@ -11,7 +9,7 @@ export async function getCrudOverviews() {
 
     const { data, error } = await supabase
       .from('kk_crud_overviews')
-      .select('id, name, connection_id, position, created_at, updated_at')
+      .select('id, name, table_name, connection_id, interaction_type, position, created_at, updated_at')
       .eq('user_id', userId)
       .order('position', { ascending: true })
 
@@ -24,9 +22,9 @@ export async function getCrudOverviews() {
 
 export async function createCrudOverview(data: {
   name: string
-  connection_id: string | null
-  table_name?: string | null
-  interaction_type?: 'crud' | 'formulier'
+  connection_id: null
+  table_name: string
+  interaction_type: 'crud' | 'formulier'
 }) {
   try {
     const { supabase, userId } = await getAuthenticatedClient()
@@ -40,8 +38,8 @@ export async function createCrudOverview(data: {
       .from('kk_crud_overviews')
       .insert({
         name: data.name,
-        connection_id: data.connection_id,
-        table_name: data.table_name ?? null,
+        connection_id: null,
+        table_name: data.table_name,
         interaction_type: data.interaction_type ?? 'crud',
         user_id: userId,
         position: count ?? 0,
@@ -52,7 +50,7 @@ export async function createCrudOverview(data: {
     if (error || !overview) return { id: '', error: error?.message ?? 'Kon CRUD overzicht niet aanmaken' }
 
     revalidatePath('/crud')
-    return { id: overview.id, table_name: data.table_name ?? null, connection_id: data.connection_id }
+    return { id: overview.id, table_name: data.table_name }
   } catch (err) {
     return { id: '', error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
@@ -100,53 +98,5 @@ export async function reorderCrudOverviews(data: { orderedIds: string[] }) {
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
-  }
-}
-
-export async function getConnectionsForUser() {
-  try {
-    const { supabase, userId } = await getAuthenticatedClient()
-
-    const { data, error } = await supabase
-      .from('kk_db_connections')
-      .select('id, name')
-      .eq('user_id', userId)
-      .order('name')
-
-    if (error) return { connections: [], error: error.message }
-    return { connections: data, error: null }
-  } catch (err) {
-    return { connections: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
-  }
-}
-
-export async function getTablesForConnection(data: { connection_id: string | null }) {
-  try {
-    if (!data.connection_id) {
-      const { supabase } = await getAuthenticatedClient()
-      const { data: rpcTables, error: rpcError } = await supabase
-        .rpc('list_tables')
-
-      if (rpcError) {
-        const url = process.env.DIRECT_DATABASE_URL
-        if (!url) return { tables: [], error: rpcError.message }
-        const tables = await introspectTables('__local__', url)
-        return { tables, error: null }
-      }
-
-      const tables = (rpcTables as { table_name: string; table_schema: string }[]).map((t) => ({
-        name: t.table_name,
-        schema: t.table_schema,
-        columns: [],
-        foreignKeys: [],
-      }))
-      return { tables, error: null }
-    }
-
-    const connStr = await getConnectionString(data.connection_id)
-    const tables = await introspectTables(data.connection_id, connStr)
-    return { tables, error: null }
-  } catch (err) {
-    return { tables: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
 }

@@ -3,9 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { encrypt } from '@/lib/db/encrypt'
+import { encrypt, decrypt } from '@/lib/db/encrypt'
 import { destroyPool, testConnection } from '@/lib/db/pool'
 import { revalidatePath } from 'next/cache'
+import { cache } from 'react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = any
@@ -74,7 +75,6 @@ export async function testConnectionAction(data: { connectionId: string }) {
     const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', data.connectionId).single()
     if (!conn) return { success: false, error: 'Connectie niet gevonden' }
 
-    const { decrypt } = await import('@/lib/db/encrypt')
     const connStr = await decrypt(conn.encrypted_conn_str)
     const ok = await testConnection(connStr)
     return { success: ok, error: ok ? undefined : 'Kan geen verbinding maken' }
@@ -83,11 +83,10 @@ export async function testConnectionAction(data: { connectionId: string }) {
   }
 }
 
-export async function getConnectionString(connectionId: string): Promise<string> {
+export const getConnectionString = cache(async function getConnectionStringInner(connectionId: string): Promise<string> {
   const supabase = await getServiceDb()
   const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', connectionId).single()
   if (!conn) throw new Error('Connectie niet gevonden')
 
-  const { decrypt } = await import('@/lib/db/encrypt')
   return decrypt(conn.encrypted_conn_str)
-}
+})

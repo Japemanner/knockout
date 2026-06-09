@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { LocalTableList } from '@/components/db-explorer/LocalTableList'
-import { TableList } from '@/components/db-explorer/TableList'
+import { LocalDynamicTable } from '@/components/db-explorer/LocalDynamicTable'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
+import { getLocalTableMeta, getLocalTableRecords } from '@/actions/local-db'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -9,13 +9,12 @@ import { notFound } from 'next/navigation'
 interface CrudOverviewData {
   id: string
   name: string
+  table_name: string | null
   connection_id: string | null
+  interaction_type: string
 }
 
-interface ConnectionData {
-  id: string
-  name: string
-}
+export const revalidate = 60
 
 export default async function CrudDetailPage({ params }: { params: Promise<{ crudId: string }> }) {
   const { crudId } = await params
@@ -31,52 +30,107 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
     .eq('user_id', user.id)
     .single()
 
-  const crudOverview = overview as CrudOverviewData | null
-  if (!crudOverview) notFound()
+  const crud = overview as CrudOverviewData | null
+  if (!crud) notFound()
 
-  let content
-  if (crudOverview.connection_id) {
-    const { data: conn } = await supabase
-      .from('kk_db_connections')
-      .select('id, name')
-      .eq('id', crudOverview.connection_id)
-      .single()
-
-    const connection = conn as ConnectionData | null
-
-    if (!connection) {
-      content = (
-        <div className="text-center py-12">
-          <p className="text-destructive mb-2">Connectie niet beschikbaar</p>
-          <p className="text-sm text-muted-foreground">
-            De gekoppelde externe databaseconnectie bestaat niet meer. Verwijder dit overzicht of koppel een andere connectie.
-          </p>
-        </div>
-      )
-    } else {
-      content = <TableList connectionId={connection.id} />
-    }
-  } else {
-    content = <LocalTableList />
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between gap-3 mb-8">
-        <div className="flex items-center gap-3">
+  if (crud.connection_id) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-8">
           <Link href="/crud" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{crudOverview.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {crudOverview.connection_id ? 'Externe database' : 'Eigen project'}
-            </p>
+            <h1 className="text-2xl font-bold">{crud.name}</h1>
+            <p className="text-sm text-muted-foreground">Externe database</p>
           </div>
         </div>
-        <CrudDetailActions crudId={crudOverview.id} name={crudOverview.name} />
+        <div className="text-center py-12">
+          <p className="text-destructive font-medium mb-2">Niet meer beschikbaar</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Externe databaseverbindingen worden niet meer ondersteund. Verwijder deze CRUD view en maak een nieuwe aan met &quot;Eigen project&quot;.
+          </p>
+        </div>
       </div>
-      {content}
+    )
+  }
+
+  if (!crud.table_name) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-8">
+          <Link href="/crud" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">{crud.name}</h1>
+            <p className="text-sm text-muted-foreground">Geen tabel gekoppeld</p>
+          </div>
+          <div className="ml-auto">
+            <CrudDetailActions crudId={crudId} name={crud.name} />
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-destructive font-medium mb-2">Geen tabel gekoppeld</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Deze CRUD view heeft geen tabel. Verwijder hem en maak een nieuwe aan.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const [metaResult, recordsResult] = await Promise.all([
+    getLocalTableMeta(crud.table_name),
+    getLocalTableRecords({ tableName: crud.table_name, page: 1, pageSize: 25 }),
+  ])
+
+  if (metaResult.error || !metaResult.meta) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-8">
+          <Link href="/crud" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">{crud.name}</h1>
+            <p className="text-sm text-muted-foreground">Eigen project · {crud.table_name}</p>
+          </div>
+          <div className="ml-auto">
+            <CrudDetailActions crudId={crudId} name={crud.name} />
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-destructive font-medium mb-2">Fout bij laden van tabel</p>
+          <p className="text-sm text-muted-foreground">{metaResult.error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-8">
+        <Link href="/crud" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">{crud.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            Eigen project · {crud.table_name} · {metaResult.meta.columns.length} kolommen
+          </p>
+        </div>
+        <div className="ml-auto">
+          <CrudDetailActions crudId={crudId} name={crud.name} />
+        </div>
+      </div>
+      <LocalDynamicTable
+        tableName={crud.table_name}
+        columns={metaResult.meta.columns}
+        foreignKeys={metaResult.meta.foreignKeys}
+        initialRows={recordsResult.rows as Record<string, unknown>[]}
+        initialTotal={recordsResult.totalCount}
+      />
     </div>
   )
 }

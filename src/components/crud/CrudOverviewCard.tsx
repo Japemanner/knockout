@@ -13,22 +13,15 @@ import { useRouter } from 'next/navigation'
 interface CrudOverviewCardProps {
   id: string
   name: string
-  connection_id: string | null
   table_name: string | null
   interaction_type: 'crud' | 'formulier'
 }
 
-export function CrudOverviewCard({ id, name, connection_id, table_name, interaction_type }: CrudOverviewCardProps) {
+export function CrudOverviewCard({ id, name, table_name, interaction_type }: CrudOverviewCardProps) {
   const [showDelete, setShowDelete] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-
-  const href = table_name
-    ? (connection_id
-      ? `/settings/db/${connection_id}/${table_name}`
-      : `/db/${table_name}`)
-    : `/crud/${id}`
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -48,7 +41,7 @@ export function CrudOverviewCard({ id, name, connection_id, table_name, interact
   return (
     <>
       <div className="relative group">
-        <Link href={href}>
+        <Link href={`/crud/${id}`}>
           <Card className="hover:border-primary transition-colors cursor-pointer h-full">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 pr-8">
@@ -62,7 +55,7 @@ export function CrudOverviewCard({ id, name, connection_id, table_name, interact
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {connection_id ? 'Externe database' : 'Eigen project'}
+                Eigen project
                 {table_name && ` · ${table_name}`}
               </p>
             </CardContent>

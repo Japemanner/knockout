@@ -5,51 +5,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
-import { getTablesForConnection } from '@/actions/crud-overviews'
-
-interface Connection {
-  id: string
-  name: string
-}
-
-interface TableItem {
-  name: string
-  schema: string
-}
-
-type InteractionType = 'crud' | 'formulier'
+import { getLocalTableList } from '@/actions/local-db'
 
 interface CreateCrudDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  connections: Connection[]
-  onCreate: (data: {
-    name: string
-    connection_id: string | null
-    table_name: string | null
-    interaction_type: InteractionType
-  }) => Promise<{ id: string; error?: string }>
+  onCreate: (data: { name: string; table_name: string; interaction_type: 'crud' | 'formulier' }) => Promise<{ id: string; error?: string }>
 }
 
-export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: CreateCrudDialogProps) {
+export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDialogProps) {
   const [name, setName] = useState('')
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false)
-  const [connectionId, setConnectionId] = useState<string | null>(null)
-  const [tables, setTables] = useState<TableItem[]>([])
-  const [tableName, setTableName] = useState<string | null>(null)
+  const [tables, setTables] = useState<{ name: string; schema: string }[]>([])
+  const [tableName, setTableName] = useState<string>('')
   const [tablesLoading, setTablesLoading] = useState(false)
   const [tablesError, setTablesError] = useState('')
-  const [interactionType, setInteractionType] = useState<InteractionType>('crud')
+  const [interactionType, setInteractionType] = useState<'crud' | 'formulier'>('crud')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  const loadTables = useCallback(async (connId: string | null) => {
+  const loadTables = useCallback(async () => {
     setTablesLoading(true)
     setTablesError('')
     setTables([])
-    setTableName(null)
+    setTableName('')
 
-    const result = await getTablesForConnection({ connection_id: connId })
+    const result = await getLocalTableList()
     if (result.error) {
       setTablesError(result.error)
     } else {
@@ -60,31 +41,20 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
 
   useEffect(() => {
     if (open) {
-      loadTables(null)
+      loadTables()
     } else {
       setName('')
       setNameManuallyEdited(false)
-      setConnectionId(null)
       setTables([])
-      setTableName(null)
+      setTableName('')
       setTablesLoading(false)
       setTablesError('')
       setInteractionType('crud')
     }
   }, [open, loadTables])
 
-  const handleConnectionChange = (value: string) => {
-    const newConnId = value === '__local__' ? null : value
-    setConnectionId(newConnId)
-    if (!nameManuallyEdited) {
-      setName('')
-    }
-    setTableName(null)
-    loadTables(newConnId)
-  }
-
   const handleTableChange = (value: string) => {
-    setTableName(value || null)
+    setTableName(value)
     if (!nameManuallyEdited && value) {
       const displayName = value.replace(/^kk_/, '').replace(/_/g, ' ')
       const capitalized = displayName.charAt(0).toUpperCase() + displayName.slice(1)
@@ -97,16 +67,11 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
     setNameManuallyEdited(true)
   }
 
-  const handleRetryTables = () => {
-    loadTables(connectionId)
-  }
-
   const handleCreate = async () => {
-    if (!name.trim()) return
+    if (!name.trim() || !tableName) return
     setIsLoading(true)
     const result = await onCreate({
       name: name.trim(),
-      connection_id: connectionId,
       table_name: tableName,
       interaction_type: interactionType,
     })
@@ -118,7 +83,7 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
     onOpenChange(false)
   }
 
-  const canCreate = name.trim() && !isLoading
+  const canCreate = name.trim() && tableName && !isLoading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -156,23 +121,6 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">Supabase project</label>
-            <select
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={connectionId ?? '__local__'}
-              onChange={(e) => handleConnectionChange(e.target.value)}
-            >
-              <option value="__local__">Eigen project</option>
-              {connections.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">
-              Kies &quot;Eigen project&quot; voor je eigen Supabase-database, of een externe connectie.
-            </p>
-          </div>
-
-          <div>
             <label className="text-sm font-medium mb-1 block">Tabel</label>
             {tablesLoading && (
               <div className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -182,7 +130,7 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
             {tablesError && (
               <div className="space-y-1">
                 <p className="text-sm text-destructive">{tablesError}</p>
-                <Button variant="outline" size="sm" onClick={handleRetryTables}>
+                <Button variant="outline" size="sm" onClick={loadTables}>
                   Opnieuw proberen
                 </Button>
               </div>
@@ -190,24 +138,16 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
             {!tablesLoading && !tablesError && (
               <select
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={tableName ?? ''}
+                value={tableName}
                 onChange={(e) => handleTableChange(e.target.value)}
               >
                 <option value="">-- Kies een tabel --</option>
-                {tables.length === 0 && (
-                  <option disabled>Geen tabellen gevonden</option>
-                )}
                 {tables.map((t) => (
                   <option key={`${t.schema}.${t.name}`} value={t.name}>
                     {t.name}{t.schema !== 'public' ? ` (${t.schema})` : ''}
                   </option>
                 ))}
               </select>
-            )}
-            {tables.length > 10 && !tablesLoading && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Tip: Gebruik het keuzemenu om te zoeken in {tables.length} tabellen.
-              </p>
             )}
           </div>
 
