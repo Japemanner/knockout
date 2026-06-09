@@ -128,9 +128,23 @@ export async function getConnectionsForUser() {
 export async function getTablesForConnection(data: { connection_id: string | null }) {
   try {
     if (!data.connection_id) {
-      const url = process.env.DIRECT_DATABASE_URL
-      if (!url) return { tables: [], error: 'DIRECT_DATABASE_URL niet geconfigureerd' }
-      const tables = await introspectTables('__local__', url)
+      const { supabase } = await getSupabase()
+      const { data: rpcTables, error: rpcError } = await supabase
+        .rpc('list_tables')
+
+      if (rpcError) {
+        const url = process.env.DIRECT_DATABASE_URL
+        if (!url) return { tables: [], error: rpcError.message }
+        const tables = await introspectTables('__local__', url)
+        return { tables, error: null }
+      }
+
+      const tables = (rpcTables as { table_name: string; table_schema: string }[]).map((t) => ({
+        name: t.table_name,
+        schema: t.table_schema,
+        columns: [],
+        foreignKeys: [],
+      }))
       return { tables, error: null }
     }
 

@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { LocalTableList } from '@/components/db-explorer/LocalTableList'
 import { TableList } from '@/components/db-explorer/TableList'
+import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import type { CRUDOverview } from '@/types/database.types'
 
 interface CrudOverviewData {
   id: string
@@ -62,16 +62,19 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/crud" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">{crudOverview.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {crudOverview.connection_id ? 'Externe database' : 'Eigen project'}
-          </p>
+      <div className="flex items-center justify-between gap-3 mb-8">
+        <div className="flex items-center gap-3">
+          <Link href="/crud" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">{crudOverview.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {crudOverview.connection_id ? 'Externe database' : 'Eigen project'}
+            </p>
+          </div>
         </div>
+        <CrudDetailActions crudId={crudOverview.id} name={crudOverview.name} />
       </div>
       {content}
     </div>
