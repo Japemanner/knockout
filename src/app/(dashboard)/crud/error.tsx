@@ -1,6 +1,13 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+
+const RSC_CONNECTION_ERRORS = ['Connection closed.', 'Connection reset.', 'The connection to the page was unexpectedly closed']
+
+function isRSCConnectionError(error: Error): boolean {
+  return RSC_CONNECTION_ERRORS.some(msg => error.message?.includes(msg))
+}
 
 export default function CrudError({
   error,
@@ -9,6 +16,16 @@ export default function CrudError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    if (isRSCConnectionError(error)) {
+      reset()
+    }
+  }, [error, reset])
+
+  if (isRSCConnectionError(error)) {
+    return null
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-4">
       <p className="text-destructive font-medium">CRUD overzicht kon niet laden</p>
