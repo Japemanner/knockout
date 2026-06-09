@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { getTables as introspectTables } from '@/lib/db'
+import { getConnectionString } from '@/actions/db-connections'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = any
@@ -27,7 +29,12 @@ export async function getCrudOverviews() {
   return { overviews: data, error: null }
 }
 
-export async function createCrudOverview(data: { name: string; connection_id: string | null }) {
+export async function createCrudOverview(data: {
+  name: string
+  connection_id: string | null
+  table_name?: string | null
+  interaction_type?: 'crud' | 'formulier'
+}) {
   try {
     const { supabase, user } = await getSupabase()
     if (!user) return { id: '', error: 'Niet ingelogd' }
@@ -39,14 +46,21 @@ export async function createCrudOverview(data: { name: string; connection_id: st
 
     const { data: overview, error } = await supabase
       .from('kk_crud_overviews')
-      .insert({ name: data.name, connection_id: data.connection_id, user_id: user.id, position: count ?? 0 })
+      .insert({
+        name: data.name,
+        connection_id: data.connection_id,
+        table_name: data.table_name ?? null,
+        interaction_type: data.interaction_type ?? 'crud',
+        user_id: user.id,
+        position: count ?? 0,
+      })
       .select()
       .single()
 
     if (error || !overview) return { id: '', error: error?.message ?? 'Kon CRUD overzicht niet aanmaken' }
 
     revalidatePath('/crud')
-    return { id: overview.id }
+    return { id: overview.id, table_name: data.table_name ?? null, connection_id: data.connection_id }
   } catch (err) {
     return { id: '', error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
@@ -109,4 +123,21 @@ export async function getConnectionsForUser() {
 
   if (error) return { connections: [], error: error.message }
   return { connections: data, error: null }
+}
+
+export async function getTablesForConnection(data: { connection_id: string | null }) {
+  try {
+    if (!data.connection_id) {
+      const url = process.env.DIRECT_DATABASE_URL
+      if (!url) return { tables: [], error: 'DIRECT_DATABASE_URL niet geconfigureerd' }
+      const tables = await introspectTables('__local__', url)
+      return { tables, error: null }
+    }
+
+    const connStr = await getConnectionString(data.connection_id)
+    const tables = await introspectTables(data.connection_id, connStr)
+    return { tables, error: null }
+  } catch (err) {
+    return { tables: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
+  }
 }

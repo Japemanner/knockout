@@ -155,6 +155,8 @@ export interface CRUDOverview {
   user_id: string
   name: string
   connection_id: string | null
+  table_name: string | null
+  interaction_type: 'crud' | 'formulier'
   position: number
   created_at: string
   updated_at: string

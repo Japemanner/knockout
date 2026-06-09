@@ -30,14 +30,29 @@ export function CreateCrudButton({ overviews }: CreateCrudButtonProps) {
     }
   }, [open, toast])
 
-  const handleCreate = useCallback(async (data: { name: string; connection_id: string | null }): Promise<{ id: string; error?: string }> => {
+  const handleCreate = useCallback(async (data: {
+    name: string
+    connection_id: string | null
+    table_name: string | null
+    interaction_type: 'crud' | 'formulier'
+  }): Promise<{ id: string; error?: string }> => {
     const result = await createCrudOverview(data)
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return { id: '', error: result.error }
     }
     setOpen(false)
-    router.push(`/crud/${result.id}`)
+
+    if (data.table_name) {
+      if (data.connection_id) {
+        router.push(`/settings/db/${data.connection_id}/${data.table_name}`)
+      } else {
+        router.push(`/db/${data.table_name}`)
+      }
+    } else {
+      router.push(`/crud/${result.id}`)
+    }
+
     return { id: result.id }
   }, [toast, router])
 
@@ -49,7 +64,6 @@ export function CreateCrudButton({ overviews }: CreateCrudButtonProps) {
       <CreateCrudDialog
         open={open}
         onOpenChange={setOpen}
-        allOverviews={overviews}
         connections={connections}
         onCreate={handleCreate}
       />
