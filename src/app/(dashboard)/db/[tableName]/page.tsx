@@ -5,7 +5,6 @@ import Link from 'next/link'
 
 export default async function LocalTablePage({ params }: { params: Promise<{ tableName: string }> }) {
   const { tableName } = await params
-  console.debug('[local-table] Loading table:', tableName)
 
   const { tables } = await getLocalTableList()
   const table = tables.find((t) => t.name === tableName)

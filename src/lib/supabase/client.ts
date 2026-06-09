@@ -24,21 +24,8 @@ class NoopWebSocket {
   dispatchEvent(_event: Event) { return true }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason?.message === 'Connection closed.') {
-      event.preventDefault()
-    }
-  })
-  window.addEventListener('error', (event) => {
-    if (event.message?.includes('Connection closed')) {
-      event.preventDefault()
-    }
-  })
-}
-
 export function createClient() {
-  const client = createBrowserClient<Database>(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -47,11 +34,4 @@ export function createClient() {
       },
     },
   )
-
-  if (typeof window !== 'undefined') {
-    console.debug('[supabase] Disconnecting realtime — not used in this app')
-    client.realtime.disconnect()
-  }
-
-  return client
 }
