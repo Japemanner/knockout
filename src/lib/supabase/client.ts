@@ -2,7 +2,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/types/database.types'
 
 export function createClient() {
-  return createBrowserClient<Database>(
+  const client = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -13,4 +13,6 @@ export function createClient() {
       },
     },
   )
+  client.realtime.disconnect()
+  return client
 }
