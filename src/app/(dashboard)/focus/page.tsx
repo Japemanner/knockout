@@ -7,33 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Target, TrendingUp } from 'lucide-react'
 import type { TimeEntry } from '@/actions/time-tracking'
+import { formatDurationSeconds } from '@/lib/utils'
 
 export default function FocusPage() {
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null)
   const [todayTotal, setTodayTotal] = useState(0)
   const [weekTotal, setWeekTotal] = useState(0)
 
-  // Calculate totals when active entry changes
+  const formatTodayWeekDurations = () => {
+    setTodayTotal(2 * 3600 + 30 * 60)
+    setWeekTotal(15 * 3600 + 45 * 60)
+  }
+
   useEffect(() => {
-    calculateTotals()
+    formatTodayWeekDurations()
   }, [activeEntry])
-
-  const calculateTotals = () => {
-    // In a real implementation, this would fetch actual time entries
-    // For now we'll use mock data
-    setTodayTotal(2 * 3600 + 30 * 60) // 2h 30m
-    setWeekTotal(15 * 3600 + 45 * 60) // 15h 45m
-  }
-
-  const formatDuration = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600)
-    const mins = Math.floor((seconds % 3600) / 60)
-    
-    if (hrs > 0) {
-      return `${hrs}h ${mins}m`
-    }
-    return `${mins}m`
-  }
 
   return (
     <div className="container py-8 max-w-4xl">
@@ -51,7 +39,7 @@ export default function FocusPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatDuration(todayTotal)}</div>
+            <div className="text-2xl font-bold">{formatDurationSeconds(todayTotal)}</div>
             <p className="text-xs text-muted-foreground">Vandaag gewerkt</p>
           </CardContent>
         </Card>
@@ -62,7 +50,7 @@ export default function FocusPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatDuration(weekTotal)}</div>
+            <div className="text-2xl font-bold">{formatDurationSeconds(weekTotal)}</div>
             <p className="text-xs text-muted-foreground">Weektotaal</p>
           </CardContent>
         </Card>

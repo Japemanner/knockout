@@ -20,12 +20,16 @@ class NoopWebSocket {
   close() { return this }
   send(_data: string | ArrayBufferLike | Blob | ArrayBufferView) { return this }
   addEventListener(_type: string, _listener: EventListenerOrEventListenerObject, _options?: boolean | AddEventListenerOptions) { return this }
-  removeEventListener(_type: string, _listener: EventListenerOrEventListenerObject, _options?: boolean | EventListenerOptions) { return this }
+  removeEventListener(_type: string, _listener: EventListenerOrEventListenerObject, _options?: boolean | AddEventListenerOptions) { return this }
   dispatchEvent(_event: Event) { return true }
 }
 
+let client: ReturnType<typeof createBrowserClient<Database>> | undefined
+
 export function createClient() {
-  return createBrowserClient<Database>(
+  if (client) return client
+
+  client = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -34,4 +38,6 @@ export function createClient() {
       },
     },
   )
+
+  return client
 }

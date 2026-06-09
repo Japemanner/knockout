@@ -19,17 +19,18 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
 
   if (!board) notFound()
 
-  const { data: allBoards } = await supabase
-    .from('kk_boards')
-    .select('id, name')
-    .eq('user_id', user.id)
-    .order('name')
-
-  const { data: columnData } = await supabase
-    .from('kk_columns')
-    .select('*')
-    .eq('board_id', boardId)
-    .order('position', { ascending: true })
+  const [{ data: allBoards }, { data: columnData }] = await Promise.all([
+    supabase
+      .from('kk_boards')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .order('name'),
+    supabase
+      .from('kk_columns')
+      .select('*')
+      .eq('board_id', boardId)
+      .order('position', { ascending: true }),
+  ])
 
   const columns: KColumn[] = columnData ?? []
 

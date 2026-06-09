@@ -1,32 +1,25 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
 import { getTables as introspectTables } from '@/lib/db'
 import { getConnectionString } from '@/actions/db-connections'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = any
-
-async function getSupabase(): Promise<{ supabase: SupabaseClient<DB, 'public', DB>; user: { id: string } | null }> {
-  const supabase = (await createClient()) as unknown as SupabaseClient<DB, 'public', DB>
-  const { data: { user } } = await supabase.auth.getUser()
-  return { supabase, user: user as { id: string } | null }
-}
-
 export async function getCrudOverviews() {
-  const { supabase, user } = await getSupabase()
-  if (!user) return { overviews: [], error: 'Niet ingelogd' }
+  try {
+    const { supabase, userId } = await getAuthenticatedClient()
 
-  const { data, error } = await supabase
-    .from('kk_crud_overviews')
-    .select('id, name, connection_id, position, created_at, updated_at')
-    .eq('user_id', user.id)
-    .order('position', { ascending: true })
+    const { data, error } = await supabase
+      .from('kk_crud_overviews')
+      .select('id, name, connection_id, position, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('position', { ascending: true })
 
-  if (error) return { overviews: [], error: error.message }
-  return { overviews: data, error: null }
+    if (error) return { overviews: [], error: error.message }
+    return { overviews: data, error: null }
+  } catch (err) {
+    return { overviews: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
+  }
 }
 
 export async function createCrudOverview(data: {
@@ -36,13 +29,12 @@ export async function createCrudOverview(data: {
   interaction_type?: 'crud' | 'formulier'
 }) {
   try {
-    const { supabase, user } = await getSupabase()
-    if (!user) return { id: '', error: 'Niet ingelogd' }
+    const { supabase, userId } = await getAuthenticatedClient()
 
     const { count } = await supabase
       .from('kk_crud_overviews')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     const { data: overview, error } = await supabase
       .from('kk_crud_overviews')
@@ -51,7 +43,7 @@ export async function createCrudOverview(data: {
         connection_id: data.connection_id,
         table_name: data.table_name ?? null,
         interaction_type: data.interaction_type ?? 'crud',
-        user_id: user.id,
+        user_id: userId,
         position: count ?? 0,
       })
       .select()
@@ -68,7 +60,7 @@ export async function createCrudOverview(data: {
 
 export async function updateCrudOverview(data: { crudId: string; name: string }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     const { error } = await supabase
       .from('kk_crud_overviews')
       .update({ name: data.name })
@@ -84,7 +76,7 @@ export async function updateCrudOverview(data: { crudId: string; name: string })
 
 export async function deleteCrudOverview(data: { crudId: string }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     const { error } = await supabase
       .from('kk_crud_overviews')
       .delete()
@@ -100,7 +92,7 @@ export async function deleteCrudOverview(data: { crudId: string }) {
 
 export async function reorderCrudOverviews(data: { orderedIds: string[] }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     await Promise.all(data.orderedIds.map((id, i) =>
       supabase.from('kk_crud_overviews').update({ position: i }).eq('id', id)
     ))
@@ -112,23 +104,26 @@ export async function reorderCrudOverviews(data: { orderedIds: string[] }) {
 }
 
 export async function getConnectionsForUser() {
-  const { supabase, user } = await getSupabase()
-  if (!user) return { connections: [], error: 'Niet ingelogd' }
+  try {
+    const { supabase, userId } = await getAuthenticatedClient()
 
-  const { data, error } = await supabase
-    .from('kk_db_connections')
-    .select('id, name')
-    .eq('user_id', user.id)
-    .order('name')
+    const { data, error } = await supabase
+      .from('kk_db_connections')
+      .select('id, name')
+      .eq('user_id', userId)
+      .order('name')
 
-  if (error) return { connections: [], error: error.message }
-  return { connections: data, error: null }
+    if (error) return { connections: [], error: error.message }
+    return { connections: data, error: null }
+  } catch (err) {
+    return { connections: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
+  }
 }
 
 export async function getTablesForConnection(data: { connection_id: string | null }) {
   try {
     if (!data.connection_id) {
-      const { supabase } = await getSupabase()
+      const { supabase } = await getAuthenticatedClient()
       const { data: rpcTables, error: rpcError } = await supabase
         .rpc('list_tables')
 

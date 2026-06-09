@@ -1,41 +1,33 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UntypedClient = any
-
-// Time entry data structure
 export interface TimeEntry {
   id: string
   user_id: string
   task_id: string | null
   board_id: string | null
-  start_time: string // ISO string
-  end_time: string | null // ISO string
+  start_time: string
+  end_time: string | null
   duration_seconds: number | null
   description: string | null
   created_at: string
   updated_at: string
 }
 
-// Create a new time entry
 export async function startTimeTracking(data: {
   taskId?: string
   boardId?: string
   description?: string
 }) {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    const { data: entry } = await untypedClient
+    const { data: entry } = await supabase
       .from('kk_time_entries')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         task_id: data.taskId || null,
         board_id: data.boardId || null,
         start_time: new Date().toISOString(),
@@ -53,31 +45,24 @@ export async function startTimeTracking(data: {
   }
 }
 
-// Stop current time tracking
 export async function stopTimeTracking(entryId: string) {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    const endTime = new Date().toISOString()
-    
-    // First get the entry to calculate duration
-    const { data: entry } = await untypedClient
+    const { data: entry } = await supabase
       .from('kk_time_entries')
       .select('start_time')
       .eq('id', entryId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (!entry) throw new Error('Time entry not found')
 
+    const endTime = new Date().toISOString()
     const start = new Date(entry.start_time)
-    const end = new Date(endTime)
-    const durationSeconds = Math.floor((end.getTime() - start.getTime()) / 1000)
+    const durationSeconds = Math.floor((new Date(endTime).getTime() - start.getTime()) / 1000)
 
-    const { data: updatedEntry } = await untypedClient
+    const { data: updatedEntry } = await supabase
       .from('kk_time_entries')
       .update({
         end_time: endTime,
@@ -85,7 +70,7 @@ export async function stopTimeTracking(entryId: string) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', entryId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -98,18 +83,14 @@ export async function stopTimeTracking(entryId: string) {
   }
 }
 
-// Get active time entry for user
 export async function getActiveTimeEntry() {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    const { data: entry } = await untypedClient
+    const { data: entry } = await supabase
       .from('kk_time_entries')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .is('end_time', null)
       .order('start_time', { ascending: false })
       .limit(1)
@@ -117,7 +98,6 @@ export async function getActiveTimeEntry() {
 
     return entry || null
   } catch (error) {
-    // PGRST116 is "no rows" error which is expected when no active entry
     if (error instanceof Error && error.message.includes('PGRST116')) {
       return null
     }
@@ -126,7 +106,6 @@ export async function getActiveTimeEntry() {
   }
 }
 
-// Get time entries for user with optional filters
 export async function getTimeEntries(options?: {
   limit?: number
   offset?: number
@@ -136,15 +115,12 @@ export async function getTimeEntries(options?: {
   boardId?: string
 }) {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { entries: [], total: 0 }
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    let query = untypedClient
+    let query = supabase
       .from('kk_time_entries')
       .select('*', { count: 'exact' })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('start_time', { ascending: false })
 
     if (options?.limit) {
@@ -180,19 +156,15 @@ export async function getTimeEntries(options?: {
   }
 }
 
-// Update time entry description
 export async function updateTimeEntry(entryId: string, description: string) {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    const { data: entry } = await untypedClient
+    const { data: entry } = await supabase
       .from('kk_time_entries')
       .update({ description, updated_at: new Date().toISOString() })
       .eq('id', entryId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -205,19 +177,15 @@ export async function updateTimeEntry(entryId: string, description: string) {
   }
 }
 
-// Delete time entry
 export async function deleteTimeEntry(entryId: string) {
   try {
-    const supabase = await createClient()
-    const untypedClient = supabase as unknown as UntypedClient
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+    const { supabase, userId } = await getAuthenticatedClient()
 
-    const { error } = await untypedClient
+    const { error } = await supabase
       .from('kk_time_entries')
       .delete()
       .eq('id', entryId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) throw error
     revalidatePath('/focus')

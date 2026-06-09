@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanCard } from '@/components/kanban/KanbanCard'
@@ -40,7 +41,7 @@ export function KanbanColumn({
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
-  const sortedCards = [...cards].sort((a, b) => a.position - b.position)
+  const sortedCards = useMemo(() => [...cards].sort((a, b) => a.position - b.position), [cards])
 
   return (
     <div

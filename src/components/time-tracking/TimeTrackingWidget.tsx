@@ -5,16 +5,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Play, Square, Clock, Calendar, FileText } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
-import { 
-  startTimeTracking, 
-  stopTimeTracking, 
-  getActiveTimeEntry,
-  updateTimeEntry
-} from '@/actions/time-tracking'
+import {
+  useActiveTimeEntry,
+  useStartTimeTracking,
+  useStopTimeTracking,
+  useUpdateTimeEntry,
+} from '@/hooks/useTimeTracking'
 import type { TimeEntry } from '@/actions/time-tracking'
 import { useToast } from '@/components/ui/toast'
+import { formatDurationSeconds } from '@/lib/utils'
 
 interface TimeTrackingWidgetProps {
   taskId?: string
@@ -23,135 +24,86 @@ interface TimeTrackingWidgetProps {
 }
 
 export function TimeTrackingWidget({ taskId, boardId, onTimeEntryChange }: TimeTrackingWidgetProps) {
-  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null)
-  const [description, setDescription] = useState('')
-  const [isStarting, setIsStarting] = useState(false)
-  const [isStopping, setIsStopping] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const { data: activeEntry } = useActiveTimeEntry()
+  const startMutation = useStartTimeTracking()
+  const stopMutation = useStopTimeTracking()
+  const updateMutation = useUpdateTimeEntry()
   const { toast } = useToast()
 
-  // Load active time entry on mount
+  const [description, setDescription] = useState('')
+  const [elapsed, setElapsed] = useState('')
+
   useEffect(() => {
-    loadActiveEntry()
-  }, [])
-
-  const loadActiveEntry = async () => {
-    try {
-      const entry = await getActiveTimeEntry()
-      setActiveEntry(entry)
-      if (entry?.description) {
-        setDescription(entry.description)
-      }
-      if (onTimeEntryChange) {
-        onTimeEntryChange(entry)
-      }
-    } catch (error) {
-      console.error('Error loading active entry:', error)
+    if (activeEntry?.description) {
+      setDescription(activeEntry.description)
     }
+  }, [activeEntry?.description])
+
+  useEffect(() => {
+    if (onTimeEntryChange) {
+      onTimeEntryChange(activeEntry ?? null)
+    }
+  }, [activeEntry, onTimeEntryChange])
+
+  useEffect(() => {
+    if (!activeEntry?.start_time) {
+      setElapsed('')
+      return
+    }
+    const update = () => {
+      const diff = Math.floor((Date.now() - new Date(activeEntry.start_time).getTime()) / 1000)
+      setElapsed(formatDurationSeconds(diff))
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [activeEntry?.start_time])
+
+  const handleStart = () => {
+    startMutation.mutate(
+      { taskId, boardId, description: description || undefined },
+      {
+        onSuccess: (result) => {
+          if (result.success) {
+            toast({ title: 'Timer gestart', description: 'Je tijdregistratie is begonnen' })
+          } else {
+            toast({ title: 'Fout bij starten', description: result.error ?? 'Kon timer niet starten', variant: 'destructive' })
+          }
+        },
+        onError: (error) => {
+          toast({ title: 'Fout bij starten', description: error.message, variant: 'destructive' })
+        },
+      }
+    )
   }
 
-  const handleStart = async () => {
-    if (isStarting) return
-    setIsStarting(true)
-    
-    try {
-      const result = await startTimeTracking({
-        taskId,
-        boardId,
-        description: description || undefined
-      })
-      
-      if (result.success && result.entry) {
-        setActiveEntry(result.entry)
-        if (onTimeEntryChange) {
-          onTimeEntryChange(result.entry)
+  const handleStop = () => {
+    if (!activeEntry) return
+    stopMutation.mutate(activeEntry.id, {
+      onSuccess: (result) => {
+        if (result.success) {
+          toast({
+            title: 'Timer gestopt',
+            description: `Tijd geregistreerd: ${formatDurationSeconds(result.entry?.duration_seconds ?? 0)}`,
+          })
+        } else {
+          toast({ title: 'Fout bij stoppen', description: result.error ?? 'Kon timer niet stoppen', variant: 'destructive' })
         }
-        toast({
-          title: 'Timer gestart',
-          description: 'Je tijdregistratie is begonnen'
-        })
-      } else {
-        throw new Error(result.error || 'Kon timer niet starten')
-      }
-    } catch (error) {
-      console.error('Error starting timer:', error)
-      toast({
-        title: 'Fout bij starten',
-        description: error instanceof Error ? error.message : 'Kon timer niet starten',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsStarting(false)
-    }
+      },
+    })
   }
 
-  const handleStop = async () => {
-    if (!activeEntry || isStopping) return
-    setIsStopping(true)
-    
-    try {
-      const result = await stopTimeTracking(activeEntry.id)
-      
-      if (result.success && result.entry) {
-        setActiveEntry(null)
-        if (onTimeEntryChange) {
-          onTimeEntryChange(null)
-        }
-        toast({
-          title: 'Timer gestopt',
-          description: `Tijd geregistreerd: ${formatDuration(result.entry.duration_seconds || 0)}`
-        })
-      } else {
-        throw new Error(result.error || 'Kon timer niet stoppen')
-      }
-    } catch (error) {
-      console.error('Error stopping timer:', error)
-      toast({
-        title: 'Fout bij stoppen',
-        description: error instanceof Error ? error.message : 'Kon timer niet stoppen',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsStopping(false)
-    }
-  }
-
-  const handleDescriptionChange = async (newDescription: string) => {
+  const handleDescriptionChange = (newDescription: string) => {
     setDescription(newDescription)
-    
-    // Update description in real-time if there's an active entry
     if (activeEntry && newDescription !== (activeEntry.description || '')) {
-      setIsUpdating(true)
-      try {
-        const result = await updateTimeEntry(activeEntry.id, newDescription)
-        if (result.success && result.entry) {
-          setActiveEntry(result.entry)
-        }
-      } catch (error) {
-        console.error('Error updating description:', error)
-      } finally {
-        setIsUpdating(false)
-      }
+      updateMutation.mutate(
+        { entryId: activeEntry.id, description: newDescription },
+      )
     }
   }
 
-  const formatDuration = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600)
-    const mins = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    
-    if (hrs > 0) {
-      return `${hrs}h ${mins}m`
-    }
-    return `${mins}m ${secs}s`
-  }
-
-  const formatElapsedTime = (startTime: string): string => {
-    const start = new Date(startTime)
-    const now = new Date()
-    const diffSeconds = Math.floor((now.getTime() - start.getTime()) / 1000)
-    return formatDuration(diffSeconds)
-  }
+  const isStarting = startMutation.isPending
+  const isStopping = stopMutation.isPending
 
   return (
     <Card>
@@ -173,7 +125,7 @@ export function TimeTrackingWidget({ taskId, boardId, onTimeEntryChange }: TimeT
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               placeholder="Wat werk je aan?"
-              disabled={isUpdating}
+              disabled={updateMutation.isPending}
             />
           </div>
         </div>
@@ -186,7 +138,7 @@ export function TimeTrackingWidget({ taskId, boardId, onTimeEntryChange }: TimeT
                 <span className="font-medium">Actief</span>
               </div>
               <span className="font-mono text-lg">
-                {formatElapsedTime(activeEntry.start_time)}
+                {elapsed}
               </span>
             </div>
             

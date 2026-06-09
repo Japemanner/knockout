@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -47,13 +47,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAdmin = profile?.role === 'admin'
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
+  const getSupabase = useCallback(() => {
+    if (!supabaseRef.current) supabaseRef.current = createClient()
+    return supabaseRef.current
+  }, [])
+
+  const handleSignOut = useCallback(async () => {
+    const supabase = getSupabase()
     await supabase.auth.signOut()
     useAuthStore.getState().signOut()
     router.push('/login')
     router.refresh()
-  }
+  }, [getSupabase, router])
 
   const sidebarContent = (
     <>

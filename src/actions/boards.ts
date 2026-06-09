@@ -1,25 +1,17 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UntypedClient = SupabaseClient<any, 'public', any>
-
-async function getSupabase(): Promise<{ supabase: UntypedClient; user: { id: string } | null }> {
-  const supabase = (await createClient()) as unknown as UntypedClient
-  const { data: { user } } = await supabase.auth.getUser()
-  return { supabase, user: user as { id: string } | null }
-}
 
 export async function createBoard(data: { name: string }) {
   try {
-    const { supabase, user } = await getSupabase()
-    if (!user) return { id: '', error: 'Niet ingelogd' }
+    const { supabase, userId } = await getAuthenticatedClient()
 
     const { data: board, error } = await supabase
-      .from('kk_boards').insert({ name: data.name, user_id: user.id }).select().single()
+      .from('kk_boards')
+      .insert({ name: data.name, user_id: userId })
+      .select()
+      .single()
 
     if (error || !board) return { id: '', error: error?.message ?? 'Kon bord niet aanmaken' }
 
@@ -39,7 +31,7 @@ export async function createBoard(data: { name: string }) {
 
 export async function updateBoard(data: { boardId: string; name: string }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     const { error } = await supabase.from('kk_boards').update({ name: data.name }).eq('id', data.boardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/boards')
@@ -52,7 +44,7 @@ export async function updateBoard(data: { boardId: string; name: string }) {
 
 export async function deleteBoard(data: { boardId: string }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     const { error } = await supabase.from('kk_boards').delete().eq('id', data.boardId)
     if (error) return { success: false, error: error.message }
     revalidatePath('/boards')
@@ -64,7 +56,7 @@ export async function deleteBoard(data: { boardId: string }) {
 
 export async function reorderBoards(data: { orderedIds: string[] }) {
   try {
-    const { supabase } = await getSupabase()
+    const { supabase } = await getAuthenticatedClient()
     await Promise.all(data.orderedIds.map((id, i) =>
       supabase.from('kk_boards').update({ position: i }).eq('id', id)
     ))
