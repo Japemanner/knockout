@@ -14,5 +14,6 @@ export function createClient() {
     },
   )
   client.realtime.disconnect()
+  client.realtime.connect = () => client.realtime
   return client
 }
