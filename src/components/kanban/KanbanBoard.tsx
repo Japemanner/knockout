@@ -10,10 +10,12 @@ import { CardDetailModal } from '@/components/kanban/CardDetailModal'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, ArrowLeft } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, ArrowLeft, Trash2 } from 'lucide-react'
 import { createColumn } from '@/actions/columns'
 import { createCardInColumn } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
+import { deleteBoard } from '@/actions/boards'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Card } from '@/types/database.types'
@@ -35,6 +37,8 @@ export function KanbanBoard({
   const [addingColumn, setAddingColumn] = useState(false)
   const [creatingCardColumnId, setCreatingCardColumnId] = useState<string | null>(null)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
+  const [showDeleteBoard, setShowDeleteBoard] = useState(false)
+  const [isDeletingBoard, setIsDeletingBoard] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -118,6 +122,18 @@ export function KanbanBoard({
     if (card && !card.id.startsWith('temp-')) setSelectedCard(card)
   }, [cards])
 
+  const handleDeleteBoard = useCallback(async () => {
+    setIsDeletingBoard(true)
+    const result = await deleteBoard({ boardId: board.id })
+    setIsDeletingBoard(false)
+    setShowDeleteBoard(false)
+    if (result.error) {
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
+    router.push('/boards')
+  }, [board.id, toast, router])
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -127,7 +143,32 @@ export function KanbanBoard({
           </Link>
           <h1 className="text-2xl font-bold">{board.name}</h1>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDeleteBoard(true)}
+          className="text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-1" /> Verwijderen
+        </Button>
       </div>
+
+      <Dialog open={showDeleteBoard} onOpenChange={setShowDeleteBoard}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bord verwijderen?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mt-2">
+            Weet je zeker dat je &quot;{board.name}&quot; wilt verwijderen? Alle kolommen en kaarten worden ook verwijderd. Dit kan niet ongedaan worden gemaakt.
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowDeleteBoard(false)}>Annuleren</Button>
+            <Button variant="destructive" onClick={handleDeleteBoard} disabled={isDeletingBoard}>
+              {isDeletingBoard ? 'Verwijderen...' : 'Verwijderen'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <DndContext
         sensors={sensors}

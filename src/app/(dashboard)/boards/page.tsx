@@ -1,8 +1,6 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CreateBoardButton } from '@/components/kanban/CreateBoardButton'
-import { FolderKanban } from 'lucide-react'
+import { BoardCard } from '@/components/kanban/BoardCard'
 import type { Board } from '@/types/database.types'
 
 export default async function BoardsPage() {
@@ -30,21 +28,12 @@ export default async function BoardsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {boards.length > 0 ? (
           boards.map((board: Board) => (
-            <Link key={board.id} href={`/boards/${board.id}`}>
-              <Card className="hover:border-primary transition-colors cursor-pointer h-full">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FolderKanban className="h-5 w-5 text-muted-foreground" />
-                    {board.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {board.is_inbox ? 'Inbox — quick capture bestemming' : 'Kanban-bord'}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <BoardCard
+              key={board.id}
+              id={board.id}
+              name={board.name}
+              is_inbox={board.is_inbox}
+            />
           ))
         ) : (
           <p className="text-muted-foreground col-span-full text-center py-12">
