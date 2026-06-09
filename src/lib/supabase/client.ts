@@ -30,10 +30,15 @@ if (typeof window !== 'undefined') {
       event.preventDefault()
     }
   })
+  window.addEventListener('error', (event) => {
+    if (event.message?.includes('Connection closed')) {
+      event.preventDefault()
+    }
+  })
 }
 
 export function createClient() {
-  return createBrowserClient<Database>(
+  const client = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -42,4 +47,11 @@ export function createClient() {
       },
     },
   )
+
+  if (typeof window !== 'undefined') {
+    console.debug('[supabase] Disconnecting realtime — not used in this app')
+    client.realtime.disconnect()
+  }
+
+  return client
 }

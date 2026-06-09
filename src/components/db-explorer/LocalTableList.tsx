@@ -12,7 +12,9 @@ export function LocalTableList() {
   const router = useRouter()
 
   useEffect(() => {
+    console.debug('[LocalTableList] Fetching table list...')
     getLocalTableList().then((result) => {
+      console.debug('[LocalTableList] Result:', result.error ? `ERROR: ${result.error}` : `${result.tables.length} tables`)
       if (result.error) setError(result.error)
       else setTables(result.tables)
       setLoading(false)

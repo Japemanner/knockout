@@ -34,6 +34,8 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
   const crudOverview = overview as CrudOverviewData | null
   if (!crudOverview) notFound()
 
+  console.debug('[crud-detail] Rendering for crudId:', crudId, 'connection_id:', crudOverview.connection_id)
+
   let content
   if (crudOverview.connection_id) {
     const { data: conn } = await supabase
