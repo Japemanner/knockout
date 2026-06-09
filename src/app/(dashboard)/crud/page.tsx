@@ -5,6 +5,8 @@ import { CreateCrudButton } from '@/components/crud/CreateCrudButton'
 import { Table2, FormInput } from 'lucide-react'
 import type { CRUDOverview } from '@/types/database.types'
 
+export const revalidate = 60
+
 export default async function CrudPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

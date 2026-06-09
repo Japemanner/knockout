@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { AuthInitializer } from '@/components/auth/AuthInitializer'
 
+export const revalidate = 300
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
