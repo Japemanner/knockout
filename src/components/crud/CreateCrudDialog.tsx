@@ -35,7 +35,6 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
   const [name, setName] = useState('')
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false)
   const [connectionId, setConnectionId] = useState<string | null>(null)
-  const [connectionSelected, setConnectionSelected] = useState(false)
   const [tables, setTables] = useState<TableItem[]>([])
   const [tableName, setTableName] = useState<string | null>(null)
   const [tablesLoading, setTablesLoading] = useState(false)
@@ -43,20 +42,6 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
   const [interactionType, setInteractionType] = useState<InteractionType>('crud')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
-
-  useEffect(() => {
-    if (!open) {
-      setName('')
-      setNameManuallyEdited(false)
-      setConnectionId(null)
-      setConnectionSelected(false)
-      setTables([])
-      setTableName(null)
-      setTablesLoading(false)
-      setTablesError('')
-      setInteractionType('crud')
-    }
-  }, [open])
 
   const loadTables = useCallback(async (connId: string | null) => {
     setTablesLoading(true)
@@ -74,18 +59,28 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
   }, [])
 
   useEffect(() => {
-    if (open && connectionSelected) {
-      loadTables(connectionId)
+    if (open) {
+      loadTables(null)
+    } else {
+      setName('')
+      setNameManuallyEdited(false)
+      setConnectionId(null)
+      setTables([])
+      setTableName(null)
+      setTablesLoading(false)
+      setTablesError('')
+      setInteractionType('crud')
     }
-  }, [open, connectionId, connectionSelected, loadTables])
+  }, [open, loadTables])
 
   const handleConnectionChange = (value: string) => {
     const newConnId = value === '__local__' ? null : value
     setConnectionId(newConnId)
-    setConnectionSelected(true)
     if (!nameManuallyEdited) {
       setName('')
     }
+    setTableName(null)
+    loadTables(newConnId)
   }
 
   const handleTableChange = (value: string) => {
@@ -123,7 +118,7 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
     onOpenChange(false)
   }
 
-  const canCreate = name.trim() && !tablesLoading && !isLoading
+  const canCreate = name.trim() && !isLoading
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,46 +172,44 @@ export function CreateCrudDialog({ open, onOpenChange, connections, onCreate }: 
             </p>
           </div>
 
-          {connectionSelected && (
-            <div>
-              <label className="text-sm font-medium mb-1 block">Tabel</label>
-              {tablesLoading && (
-                <div className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-                  Tabellen laden...
-                </div>
-              )}
-              {tablesError && (
-                <div className="space-y-1">
-                  <p className="text-sm text-destructive">{tablesError}</p>
-                  <Button variant="outline" size="sm" onClick={handleRetryTables}>
-                    Opnieuw proberen
-                  </Button>
-                </div>
-              )}
-              {!tablesLoading && !tablesError && (
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={tableName ?? ''}
-                  onChange={(e) => handleTableChange(e.target.value)}
-                >
-                  <option value="">-- Kies een tabel --</option>
-                  {tables.length === 0 && (
-                    <option disabled>Geen tabellen gevonden</option>
-                  )}
-                  {tables.map((t) => (
-                    <option key={`${t.schema}.${t.name}`} value={t.name}>
-                      {t.name}{t.schema !== 'public' ? ` (${t.schema})` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {tables.length > 10 && !tablesLoading && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tip: Gebruik het keuzemenu om te zoeken in {tables.length} tabellen.
-                </p>
-              )}
-            </div>
-          )}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Tabel</label>
+            {tablesLoading && (
+              <div className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
+                Tabellen laden...
+              </div>
+            )}
+            {tablesError && (
+              <div className="space-y-1">
+                <p className="text-sm text-destructive">{tablesError}</p>
+                <Button variant="outline" size="sm" onClick={handleRetryTables}>
+                  Opnieuw proberen
+                </Button>
+              </div>
+            )}
+            {!tablesLoading && !tablesError && (
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={tableName ?? ''}
+                onChange={(e) => handleTableChange(e.target.value)}
+              >
+                <option value="">-- Kies een tabel --</option>
+                {tables.length === 0 && (
+                  <option disabled>Geen tabellen gevonden</option>
+                )}
+                {tables.map((t) => (
+                  <option key={`${t.schema}.${t.name}`} value={t.name}>
+                    {t.name}{t.schema !== 'public' ? ` (${t.schema})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {tables.length > 10 && !tablesLoading && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Tip: Gebruik het keuzemenu om te zoeken in {tables.length} tabellen.
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="text-sm font-medium mb-1 block">Naam</label>
