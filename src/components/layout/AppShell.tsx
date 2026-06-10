@@ -23,7 +23,11 @@ import {
   BarChart3,
   Bot,
   ExternalLink,
-  Database
+  Database,
+  GitBranch,
+  LineChart,
+  Shield,
+  Workflow
 } from 'lucide-react'
 
 const navItems = [
@@ -34,9 +38,17 @@ const navItems = [
   { href: '/focus', label: 'Focus', icon: Focus, external: false },
   { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },
   { href: '/team', label: 'Team', icon: Users, external: false },
-  { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3, external: true },
-  { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot, external: true },
   { href: '/settings', label: 'Instellingen', icon: Settings, external: false },
+]
+
+const externalLinks = [
+  { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
+  { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
+  { href: 'http://5.189.133.117:3000/login', label: 'Grafana', icon: LineChart },
+  { href: 'https://mijn.amfico.nl/', label: 'Amfico', icon: Shield },
+  { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
+  { href: 'https://eu.smith.langchain.com/', label: 'Langsmith', icon: GitBranch },
+  { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -78,7 +90,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return true
           })
           .map((item) => (
-            item.external ? (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                pathname === item.href || pathname.startsWith(item.href + '/')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          ))}
+        {externalLinks.length > 0 && (
+          <>
+            <div className="mt-4 mb-1 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Extern
+            </div>
+            {externalLinks.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -90,23 +122,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {item.label}
                 <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
               </a>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
-                  pathname === item.href || pathname.startsWith(item.href + '/')
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-accent text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            )
-          ))}
+            ))}
+          </>
+        )}
       </nav>
       <div className="border-t pt-4 flex items-center gap-3 mt-auto">
         <Avatar fallback={profile?.full_name ?? undefined} size="sm" />
