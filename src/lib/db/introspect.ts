@@ -6,6 +6,8 @@ export interface ColumnInfo {
   dataType: string
   isNullable: boolean
   isPrimaryKey: boolean
+  isIdentity: boolean
+  isGenerated: 'ALWAYS' | 'BY DEFAULT' | 'NEVER'
   defaultValue: string | null
   maxLength: number | null
 }
@@ -68,7 +70,7 @@ async function getColumns(pool: Pool, schema: string, table: string): Promise<Co
   const { rows } = await pool.query<{
     column_name: string; data_type: string; is_nullable: string
     column_default: string | null; character_maximum_length: number | null
-    is_primary_key: boolean
+    is_primary_key: boolean; is_identity: string; is_generated: string
   }>(`
     SELECT
       c.column_name,
@@ -76,7 +78,9 @@ async function getColumns(pool: Pool, schema: string, table: string): Promise<Co
       c.is_nullable,
       c.column_default,
       c.character_maximum_length,
-      COALESCE(tc.constraint_type = 'PRIMARY KEY', false) AS is_primary_key
+      COALESCE(tc.constraint_type = 'PRIMARY KEY', false) AS is_primary_key,
+      c.is_identity,
+      c.is_generated
     FROM information_schema.columns c
     LEFT JOIN information_schema.key_column_usage kcu
       ON c.table_schema = kcu.table_schema
@@ -94,6 +98,8 @@ async function getColumns(pool: Pool, schema: string, table: string): Promise<Co
     dataType: r.data_type,
     isNullable: r.is_nullable === 'YES',
     isPrimaryKey: r.is_primary_key,
+    isIdentity: r.is_identity === 'YES',
+    isGenerated: (r.is_generated === 'ALWAYS' || r.is_generated === 'BY DEFAULT') ? r.is_generated : 'NEVER',
     defaultValue: r.column_default,
     maxLength: r.character_maximum_length,
   }))

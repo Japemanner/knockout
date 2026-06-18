@@ -13,6 +13,7 @@ interface LocalDynamicTableProps {
   tableName: string
   columns: ColumnInfo[]
   foreignKeys: ForeignKeyInfo[]
+  hiddenColumns?: string[]
   initialRows: Record<string, unknown>[]
   initialTotal: number
   pageSize?: number
@@ -22,6 +23,7 @@ export function LocalDynamicTable({
   tableName,
   columns,
   foreignKeys,
+  hiddenColumns = [],
   initialRows,
   initialTotal,
   pageSize = 25,
@@ -58,6 +60,7 @@ export function LocalDynamicTable({
       tableName={tableName}
       columns={columns}
       foreignKeys={foreignKeys}
+      hiddenColumns={hiddenColumns}
       initialRows={initialRows}
       initialTotal={initialTotal}
       dataSource={dataSource}

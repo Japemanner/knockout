@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { updateCard, deleteCard, toggleArchiveCard } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
-import { Star, Trash2, Archive, ExternalLink } from 'lucide-react'
+import { Star, Trash2, Archive, ExternalLink, ArrowUp } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import type { Card } from '@/types/database.types'
 
 interface CardDetailModalProps {
   open: boolean
@@ -23,11 +24,13 @@ interface CardDetailModalProps {
     is_starred: boolean
     is_archived: boolean
     deadline: string | null
+    parent_id: string | null
   }
+  allCards: Card[]
   onUpdated: () => void
 }
 
-export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDetailModalProps) {
+export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description ?? '')
   const [url, setUrl] = useState(card.url ?? '')
@@ -44,6 +47,16 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
     setDeadline(card.deadline?.split('T')[0] ?? '')
     setIsStarred(card.is_starred)
   }, [card])
+
+  const parentCard = useMemo(
+    () => card.parent_id ? allCards.find((c) => c.id === card.parent_id) : null,
+    [card.parent_id, allCards],
+  )
+
+  const subtasks = useMemo(
+    () => allCards.filter((c) => c.parent_id === card.id && !c.is_archived),
+    [card.id, allCards],
+  )
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -109,6 +122,35 @@ export function CardDetailModal({ open, onOpenChange, card, onUpdated }: CardDet
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
+          {parentCard && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ArrowUp className="h-3 w-3" />
+              Subtaak van:
+              <span className="font-medium text-foreground">{parentCard.title}</span>
+            </div>
+          )}
+
+          {subtasks.length > 0 && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Subtaken ({subtasks.length})
+              </label>
+              <div className="space-y-1">
+                {subtasks.map((sub) => (
+                  <div key={sub.id} className="text-sm bg-muted/50 rounded px-2 py-1 flex items-center gap-2">
+                    {sub.is_starred && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />}
+                    <span className="truncate">{sub.title}</span>
+                    {sub.deadline && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {new Date(sub.deadline).toLocaleDateString('nl-NL')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {url && (
             <a href={url} target="_blank" rel="noopener noreferrer"
               className="text-sm text-primary flex items-center gap-1 hover:underline">

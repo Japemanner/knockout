@@ -28,6 +28,7 @@ export async function createCardInColumn(data: {
       .from('kk_cards')
       .insert({
         column_id: data.columnId,
+        parent_id: null,
         title: data.title,
         description: data.description || null,
         url: data.url || null,
@@ -89,6 +90,7 @@ export async function createCard(data: {
       .from('kk_cards')
       .insert({
         column_id: firstColumn.id,
+        parent_id: null,
         title: data.title,
         description: data.description || null,
         url: data.url || null,
@@ -182,9 +184,18 @@ export async function deleteCard(cardId: string) {
 
     const { data: card } = await supabase
       .from('kk_cards')
-      .select('column_id')
+      .select('column_id, parent_id')
       .eq('id', cardId)
       .single()
+
+    if (!card) throw new Error('Card not found')
+
+    const { error: promoteError } = await supabase
+      .from('kk_cards')
+      .update({ parent_id: null, updated_at: new Date().toISOString() })
+      .eq('parent_id', cardId)
+
+    if (promoteError) throw promoteError
 
     const { error } = await supabase
       .from('kk_cards')
@@ -196,7 +207,7 @@ export async function deleteCard(cardId: string) {
     revalidatePath('/starred')
     revalidatePath('/boards')
 
-    if (card?.column_id) {
+    if (card.column_id) {
       const { data: column } = await supabase
         .from('kk_columns')
         .select('board_id')
@@ -226,14 +237,25 @@ export async function toggleArchiveCard(cardId: string) {
 
     if (!currentCard) throw new Error('Card not found')
 
+    const newArchived = !currentCard.is_archived
+
     const { data: updatedCard } = await supabase
       .from('kk_cards')
-      .update({ is_archived: !currentCard.is_archived, updated_at: new Date().toISOString() })
+      .update({ is_archived: newArchived, updated_at: new Date().toISOString() })
       .eq('id', cardId)
       .select()
       .single()
 
     if (!updatedCard) throw new Error('Failed to update card')
+
+    if (newArchived) {
+      const { error: subError } = await supabase
+        .from('kk_cards')
+        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .eq('parent_id', cardId)
+
+      if (subError) throw subError
+    }
 
     revalidatePath('/boards')
     if (currentCard.column_id) {
@@ -342,6 +364,7 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
       .from('kk_cards')
       .update({
         column_id: targetColumn.id,
+        parent_id: null,
         updated_at: new Date().toISOString()
       })
       .eq('id', cardId)
@@ -350,12 +373,129 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
 
     if (!updatedCard) throw new Error('Failed to move card')
 
+    const { error: subError } = await supabase
+      .from('kk_cards')
+      .update({
+        column_id: targetColumn.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('parent_id', cardId)
+
+    if (subError) throw subError
+
     revalidatePath('/boards')
     revalidatePath(`/boards/${newBoardId}`)
 
     return { success: true, card: updatedCard }
   } catch (error) {
     console.error('Error moving card to board:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+export async function moveCardUnderParent(cardId: string, parentId: string) {
+  try {
+    const { supabase } = await getAuthenticatedClient()
+
+    const { data: parent } = await supabase
+      .from('kk_cards')
+      .select('id, column_id, parent_id')
+      .eq('id', parentId)
+      .single()
+
+    if (!parent) throw new Error('Parent card not found')
+
+    if (parent.parent_id !== null) throw new Error('Cannot nest under a subtask')
+
+    const { data: child } = await supabase
+      .from('kk_cards')
+      .select('id, parent_id')
+      .eq('id', cardId)
+      .single()
+
+    if (!child) throw new Error('Card not found')
+
+    if (child.parent_id === parentId) return { success: true }
+
+    let current = parent
+    while (current.parent_id) {
+      if (current.parent_id === cardId) throw new Error('Cyclic reference detected')
+      const { data: ancestor } = await supabase
+        .from('kk_cards')
+        .select('parent_id')
+        .eq('id', current.parent_id)
+        .single()
+      if (!ancestor) break
+      current = ancestor as { parent_id: string | null }
+    }
+
+    const { count: subCount } = await supabase
+      .from('kk_cards')
+      .select('*', { count: 'exact', head: true })
+      .eq('parent_id', parentId)
+
+    const { data: updatedCard } = await supabase
+      .from('kk_cards')
+      .update({
+        parent_id: parentId,
+        column_id: parent.column_id,
+        position: subCount || 0,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', cardId)
+      .select()
+      .single()
+
+    if (!updatedCard) throw new Error('Failed to move card under parent')
+
+    revalidatePath('/boards')
+    const { data: column } = await supabase
+      .from('kk_columns')
+      .select('board_id')
+      .eq('id', parent.column_id)
+      .single()
+    if (column?.board_id) {
+      revalidatePath(`/boards/${column.board_id}`)
+    }
+
+    return { success: true, card: updatedCard }
+  } catch (error) {
+    console.error('Error moving card under parent:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+export async function moveCardOutOfParent(cardId: string, newColumnId: string, newPosition: number) {
+  try {
+    const { supabase } = await getAuthenticatedClient()
+
+    const { data: updatedCard } = await supabase
+      .from('kk_cards')
+      .update({
+        parent_id: null,
+        column_id: newColumnId,
+        position: newPosition,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', cardId)
+      .select()
+      .single()
+
+    if (!updatedCard) throw new Error('Failed to move card out of parent')
+
+    revalidatePath('/boards')
+    const { data: column } = await supabase
+      .from('kk_columns')
+      .select('board_id')
+      .eq('id', newColumnId)
+      .single()
+    if (column?.board_id) {
+      revalidatePath(`/boards/${column.board_id}`)
+    }
+
+    return { success: true, card: updatedCard }
+  } catch (error) {
+    console.error('Error moving card out of parent:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }

@@ -7,20 +7,11 @@ import { KanbanCard } from '@/components/kanban/KanbanCard'
 import { NewCardForm } from '@/components/kanban/NewCardForm'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import type { Card } from '@/types/database.types'
 
 interface KanbanColumnProps {
   column: { id: string; name: string; position: number }
-  cards: {
-    id: string
-    column_id: string
-    title: string
-    position: number
-    is_starred: boolean
-    description?: string | null
-    url?: string | null
-    is_archived?: boolean
-    deadline?: string | null
-  }[]
+  cards: Card[]
   isCreating: boolean
   onStartCreate: () => void
   onCancelCreate: () => void
@@ -41,7 +32,31 @@ export function KanbanColumn({
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
-  const sortedCards = useMemo(() => [...cards].sort((a, b) => a.position - b.position), [cards])
+  const columnCards = useMemo(
+    () => cards.filter((c) => c.column_id === column.id && !c.is_archived),
+    [cards, column.id],
+  )
+
+  const topLevelCards = useMemo(
+    () => columnCards.filter((c) => c.parent_id === null).sort((a, b) => a.position - b.position),
+    [columnCards],
+  )
+
+  const subtaskMap = useMemo(() => {
+    const map: Record<string, Card[]> = {}
+    for (const card of columnCards) {
+      if (card.parent_id) {
+        if (!map[card.parent_id]) map[card.parent_id] = []
+        map[card.parent_id]!.push(card)
+      }
+    }
+    for (const key of Object.keys(map)) {
+      map[key]!.sort((a, b) => a.position - b.position)
+    }
+    return map
+  }, [columnCards])
+
+  const sortableIds = useMemo(() => topLevelCards.map((c) => c.id), [topLevelCards])
 
   return (
     <div
@@ -53,20 +68,21 @@ export function KanbanColumn({
       <div className="p-3">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-medium text-sm">{column.name}</h3>
-          <span className="text-xs text-muted-foreground">{sortedCards.length}</span>
+          <span className="text-xs text-muted-foreground">{columnCards.length}</span>
         </div>
 
-        <SortableContext items={sortedCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-2 min-h-[40px]">
-            {sortedCards.map((card) => (
+            {topLevelCards.map((card) => (
               <KanbanCard
                 key={card.id}
                 card={card}
+                subtasks={subtaskMap[card.id] || []}
                 onClick={() => onCardClick?.(card.id)}
                 onToggleStar={() => onToggleStar?.(card.id)}
               />
             ))}
-            {sortedCards.length === 0 && !isCreating && (
+            {topLevelCards.length === 0 && !isCreating && (
               <p className="text-xs text-muted-foreground text-center py-4">
                 Geen kaarten
               </p>
