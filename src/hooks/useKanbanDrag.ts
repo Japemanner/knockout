@@ -2,20 +2,19 @@
 
 import { useState, useCallback, useRef } from 'react'
 import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
+  closestCorners,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { moveCard, reorderCards, moveCardToBoard } from '@/actions/cards'
+import { moveCard, reorderCards, moveCardToBoard, moveCardUnderParent, moveCardOutOfParent } from '@/actions/cards'
 import type { Card } from '@/types/database.types'
 
 interface UseKanbanDragProps {
@@ -25,10 +24,35 @@ interface UseKanbanDragProps {
   onCardsChange: (cards: Card[]) => void
 }
 
+function makeCollisionDetection(): CollisionDetection {
+  return (args) => {
+    const { droppableContainers, pointerCoordinates } = args
+
+    if (pointerCoordinates) {
+      for (const container of droppableContainers) {
+        const id = String(container.id)
+        if (!id.startsWith('subtask-')) continue
+        const rect = container.rect.current
+        if (!rect) continue
+        if (
+          pointerCoordinates.x >= rect.left &&
+          pointerCoordinates.x <= rect.right &&
+          pointerCoordinates.y >= rect.top &&
+          pointerCoordinates.y <= rect.bottom
+        ) {
+          return [{ id: container.id }]
+        }
+      }
+    }
+
+    return closestCorners(args)
+  }
+}
+
 export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: UseKanbanDragProps) {
   const [activeCard, setActiveCard] = useState<Card | null>(null)
-  const [isOverBoardSwitcher, setIsOverBoardSwitcher] = useState(false)
-  const boardSwitcherRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const collisionDetectionRef = useRef(makeCollisionDetection())
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -40,32 +64,50 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
     (event: DragStartEvent) => {
       const card = cards.find((c) => c.id === event.active.id)
       if (card) setActiveCard(card)
+      setIsDragging(true)
     },
     [cards],
   )
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const overBoardSwitcher = event.over?.id === 'board-switcher'
-    setIsOverBoardSwitcher(overBoardSwitcher)
+  const handleDragOver = useCallback((_event: DragOverEvent) => {
+    // collision detection handles the rest
   }, [])
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
       setActiveCard(null)
-      setIsOverBoardSwitcher(false)
+      setIsDragging(false)
 
       if (!over || active.id === over.id) return
 
       const activeCardData = cards.find((c) => c.id === active.id)
       if (!activeCardData) return
 
-      // Cross-board drag: over = board-switcher, need target board from some state
-      if (over.id === 'board-switcher') return
-
       const overId = String(over.id)
 
-      // Check if over is a board (cross-board move)
+      // Subtask drop: dropped on subtask-{parentId} zone
+      if (overId.startsWith('subtask-')) {
+        const parentId = overId.replace('subtask-', '')
+        if (parentId === activeCardData.id) return
+
+        const parentCard = cards.find((c) => c.id === parentId)
+        if (!parentCard || parentCard.parent_id !== null) return
+
+        const subCount = cards.filter((c) => c.parent_id === parentId).length
+        const updatedCard = {
+          ...activeCardData,
+          parent_id: parentId,
+          column_id: parentCard.column_id,
+          position: subCount,
+        }
+        const newCards = cards.map((c) => (c.id === activeCardData.id ? updatedCard : c))
+        onCardsChange(newCards)
+        await moveCardUnderParent(activeCardData.id, parentId)
+        return
+      }
+
+      // Board-switcher: dropped on a board
       const targetBoard = otherBoards.find((b) => b.id === overId)
       if (targetBoard) {
         const newCards = cards.filter((c) => c.id !== activeCardData.id)
@@ -78,10 +120,12 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
       const overCard = cards.find((c) => c.id === overId)
       const targetColumnId = overCard ? overCard.column_id : overId
 
-      if (targetColumnId === activeCardData.column_id) {
-        // Reorder within same column
+      const isSubtask = activeCardData.parent_id !== null
+
+      if (targetColumnId === activeCardData.column_id && !isSubtask) {
+        // Reorder within same column (top-level cards only)
         const columnCards = cards
-          .filter((c) => c.column_id === targetColumnId && c.id !== activeCardData.id)
+          .filter((c) => c.column_id === targetColumnId && c.parent_id === null && c.id !== activeCardData.id)
           .sort((a, b) => a.position - b.position)
 
         if (overCard) {
@@ -93,22 +137,45 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
 
         const reordered = columnCards.map((c, i) => ({ ...c, position: i }))
         const newCards = [
-          ...cards.filter((c) => c.column_id !== targetColumnId),
+          ...cards.filter((c) => !(c.column_id === targetColumnId && c.parent_id === null)),
           ...reordered,
         ]
         onCardsChange(newCards)
         await reorderCards(targetColumnId, reordered.map((c) => c.id))
-      } else {
-        // Move to different column
+      } else if (isSubtask) {
+        // Moving a subtask out to a column
         const targetColumnCards = cards
-          .filter((c) => c.column_id === targetColumnId)
+          .filter((c) => c.column_id === targetColumnId && c.parent_id === null)
           .sort((a, b) => a.position - b.position)
 
         const overIndex = overCard
           ? targetColumnCards.findIndex((c) => c.id === overCard.id)
           : targetColumnCards.length
 
-        const updatedCard = { ...activeCardData, column_id: targetColumnId, position: overIndex >= 0 ? overIndex : targetColumnCards.length }
+        const updatedCard = {
+          ...activeCardData,
+          parent_id: null,
+          column_id: targetColumnId,
+          position: overIndex >= 0 ? overIndex : targetColumnCards.length,
+        }
+        const newCards = cards.map((c) => (c.id === activeCardData.id ? updatedCard : c))
+        onCardsChange(newCards)
+        await moveCardOutOfParent(activeCardData.id, targetColumnId, updatedCard.position)
+      } else {
+        // Move top-level card to different column
+        const targetColumnCards = cards
+          .filter((c) => c.column_id === targetColumnId && c.parent_id === null)
+          .sort((a, b) => a.position - b.position)
+
+        const overIndex = overCard
+          ? targetColumnCards.findIndex((c) => c.id === overCard.id)
+          : targetColumnCards.length
+
+        const updatedCard = {
+          ...activeCardData,
+          column_id: targetColumnId,
+          position: overIndex >= 0 ? overIndex : targetColumnCards.length,
+        }
         const newCards = cards.map((c) => (c.id === activeCardData.id ? updatedCard : c))
         onCardsChange(newCards)
         await moveCard(activeCardData.id, targetColumnId, updatedCard.position)
@@ -120,8 +187,8 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
   return {
     sensors,
     activeCard,
-    isOverBoardSwitcher,
-    boardSwitcherRef,
+    isDragging,
+    collisionDetection: collisionDetectionRef.current,
     handleDragStart,
     handleDragOver,
     handleDragEnd,

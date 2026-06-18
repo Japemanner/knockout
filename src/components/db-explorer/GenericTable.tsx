@@ -20,6 +20,7 @@ interface GenericTableProps {
   tableName: string
   columns: ColumnInfo[]
   foreignKeys: ForeignKeyInfo[]
+  hiddenColumns?: string[]
   initialRows: Record<string, unknown>[]
   initialTotal: number
   dataSource: TableDataSource
@@ -31,6 +32,7 @@ export function GenericTable({
   tableName,
   columns,
   foreignKeys,
+  hiddenColumns = [],
   initialRows,
   initialTotal,
   dataSource,
@@ -73,7 +75,9 @@ export function GenericTable({
 
   const handleCreate = useCallback(async (values: Record<string, unknown>) => {
     setSubmitting(true)
-    const result = await dataSource.createRecord(values)
+    const autoColumns = new Set(columns.filter((c) => c.isPrimaryKey || c.isIdentity || c.isGenerated === 'ALWAYS').map((c) => c.name))
+    const safeValues = Object.fromEntries(Object.entries(values).filter(([k]) => !autoColumns.has(k)))
+    const result = await dataSource.createRecord(safeValues)
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
     } else {
@@ -82,7 +86,7 @@ export function GenericTable({
       loadPage(1)
     }
     setSubmitting(false)
-  }, [dataSource, loadPage, toast])
+  }, [dataSource, loadPage, toast, columns])
 
   const handleUpdate = useCallback(async (values: Record<string, unknown>) => {
     if (!pk || !showForm || showForm === 'create') return
@@ -113,7 +117,7 @@ export function GenericTable({
     setSubmitting(false)
   }, [pk, showDelete, dataSource, loadPage, page, toast])
 
-  const displayColumns = columns.filter((c) => !c.isPrimaryKey).slice(0, 8)
+  const displayColumns = columns.filter((c) => !c.isPrimaryKey && !hiddenColumns.includes(c.name)).slice(0, 8)
 
   return (
     <div>
@@ -194,6 +198,7 @@ export function GenericTable({
               columns={columns}
               foreignKeys={foreignKeys}
               fkOptions={fkOptions}
+              hiddenColumns={hiddenColumns}
               initialValues={showForm === 'create' ? {} : showForm.row}
               onSubmit={showForm === 'create' ? handleCreate : handleUpdate}
               onCancel={() => setShowForm(null)}

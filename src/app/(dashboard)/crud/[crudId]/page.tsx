@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { LocalDynamicTable } from '@/components/db-explorer/LocalDynamicTable'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
+import { ColumnVisibilityDialog } from '@/components/crud/ColumnVisibilityDialog'
 import { getLocalTableMeta, getLocalTableRecords } from '@/actions/local-db'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -12,6 +13,7 @@ interface CrudOverviewData {
   table_name: string | null
   connection_id: string | null
   interaction_type: string
+  hidden_columns: string[]
 }
 
 export const revalidate = 60
@@ -120,7 +122,12 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
             Eigen project · {crud.table_name} · {metaResult.meta.columns.length} kolommen
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <ColumnVisibilityDialog
+            crudId={crudId}
+            columns={metaResult.meta.columns}
+            hiddenColumns={crud.hidden_columns ?? []}
+          />
           <CrudDetailActions crudId={crudId} name={crud.name} />
         </div>
       </div>
@@ -128,6 +135,7 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
         tableName={crud.table_name}
         columns={metaResult.meta.columns}
         foreignKeys={metaResult.meta.foreignKeys}
+        hiddenColumns={crud.hidden_columns ?? []}
         initialRows={recordsResult.rows as Record<string, unknown>[]}
         initialTotal={recordsResult.totalCount}
       />

@@ -99,6 +99,7 @@ export interface KColumn {
 export interface Card {
   id: string
   column_id: string
+  parent_id: string | null
   title: string
   description: string | null
   url: string | null
@@ -157,6 +158,7 @@ export interface CRUDOverview {
   connection_id: string | null
   table_name: string | null
   interaction_type: 'crud' | 'formulier'
+  hidden_columns: string[]
   position: number
   created_at: string
   updated_at: string

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { useKanbanDrag } from '@/hooks/useKanbanDrag'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
 import { CardDetailModal } from '@/components/kanban/CardDetailModal'
 import { BoardHeader } from '@/components/kanban/BoardHeader'
 import { DeleteBoardDialog } from '@/components/kanban/DeleteBoardDialog'
 import { AddColumnForm } from '@/components/kanban/AddColumnForm'
+import { BoardSwitcherRow } from '@/components/kanban/BoardSwitcherRow'
 import { DragOverlayCard } from '@/components/kanban/DragOverlayCard'
 import { useToast } from '@/components/ui/toast'
 import { createColumn } from '@/actions/columns'
@@ -43,6 +44,8 @@ export function KanbanBoard({
   const {
     sensors,
     activeCard,
+    isDragging,
+    collisionDetection,
     handleDragStart,
     handleDragOver,
     handleDragEnd,
@@ -69,11 +72,12 @@ export function KanbanBoard({
 
     const tempId = `temp-${Date.now()}`
     const now = new Date().toISOString()
-    const columnCards = cards.filter((c) => c.column_id === columnId && !c.is_archived)
+    const columnCards = cards.filter((c) => c.column_id === columnId && c.parent_id === null && !c.is_archived)
 
     const optimisticCard: Card = {
       id: tempId,
       column_id: columnId,
+      parent_id: null,
       title,
       description: null,
       url: null,
@@ -139,9 +143,11 @@ export function KanbanBoard({
         onConfirm={handleDeleteBoard}
       />
 
+      <BoardSwitcherRow boards={otherBoards} isVisible={isDragging} />
+
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -151,7 +157,7 @@ export function KanbanBoard({
             <KanbanColumn
               key={col.id}
               column={col}
-              cards={cards.filter((c) => c.column_id === col.id && !c.is_archived)}
+              cards={cards}
               isCreating={creatingCardColumnId === col.id}
               onStartCreate={() => setCreatingCardColumnId(col.id)}
               onCancelCreate={() => setCreatingCardColumnId(null)}
@@ -180,7 +186,9 @@ export function KanbanBoard({
             is_starred: selectedCard.is_starred,
             is_archived: selectedCard.is_archived,
             deadline: selectedCard.deadline,
+            parent_id: selectedCard.parent_id,
           }}
+          allCards={cards}
           onUpdated={refreshBoard}
         />
       )}
