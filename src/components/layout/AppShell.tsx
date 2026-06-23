@@ -28,7 +28,8 @@ import {
   Shield,
   Workflow,
   Hexagon,
-  Briefcase
+  Briefcase,
+  TrendingUp
 } from 'lucide-react'
 
 const navItems = [
@@ -50,6 +51,7 @@ const externalLinks = [
   { href: 'https://eu.smith.langchain.com/', label: 'LangSmith', icon: GitBranch },
   { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
   { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
+  { href: 'https://eu.posthog.com/', label: 'PostHog', icon: TrendingUp },
   { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
 ]
 
