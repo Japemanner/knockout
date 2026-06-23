@@ -27,7 +27,8 @@ import {
   LineChart,
   Shield,
   Workflow,
-  Hexagon
+  Hexagon,
+  Briefcase
 } from 'lucide-react'
 
 const navItems = [
@@ -41,14 +42,15 @@ const navItems = [
 ]
 
 const externalLinks = [
-  { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
-  { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
+  { href: 'https://mijn.amfico.nl/', label: 'Amfico', icon: Shield },
+  { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot },
   { href: 'http://5.189.133.117:3000/login', label: 'Grafana', icon: LineChart },
   { href: 'https://ui.honeycomb.io/', label: 'Honeycomb', icon: Hexagon },
-  { href: 'https://mijn.amfico.nl/', label: 'Amfico', icon: Shield },
-  { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
+  { href: 'https://app-eu1.hubspot.com/', label: 'Hubspot', icon: Briefcase },
   { href: 'https://eu.smith.langchain.com/', label: 'LangSmith', icon: GitBranch },
-  { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot },
+  { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
+  { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
+  { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
