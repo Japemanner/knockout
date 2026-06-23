@@ -30,7 +30,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (user) {
-    supabaseResponse.headers.set('x-user-id', user.id)
+    request.headers.set('x-user-id', user.id)
+    supabaseResponse = NextResponse.next({ request })
   }
 
   return { supabaseResponse, user }
