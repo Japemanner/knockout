@@ -27,10 +27,11 @@ interface CardDetailModalProps {
     parent_id: string | null
   }
   allCards: Card[]
-  onUpdated: () => void
+  onUpdated: (updatedCard?: Card) => void
+  onDeleted: (cardId: string) => void
 }
 
-export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated }: CardDetailModalProps) {
+export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated, onDeleted }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description ?? '')
   const [url, setUrl] = useState(card.url ?? '')
@@ -69,7 +70,7 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated 
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
     } else {
-      onUpdated()
+      onUpdated(result.card)
     }
     setIsSaving(false)
   }
@@ -83,7 +84,8 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated 
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return
     }
-    onUpdated()
+    const fullCard = allCards.find((c) => c.id === card.id)
+    if (fullCard) onUpdated({ ...fullCard, is_starred: newVal })
   }
 
   const handleArchive = async () => {
@@ -93,7 +95,7 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated 
       return
     }
     toast({ title: card.is_archived ? 'Kaart hersteld' : 'Kaart gearchiveerd' })
-    onUpdated()
+    if (result.card) onUpdated(result.card)
     onOpenChange(false)
   }
 
@@ -104,7 +106,7 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated 
       return
     }
     toast({ title: 'Kaart verwijderd' })
-    onUpdated()
+    onDeleted(card.id)
     onOpenChange(false)
   }
 

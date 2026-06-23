@@ -1,24 +1,23 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { AuthInitializer } from '@/components/auth/AuthInitializer'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
+  const userId = await getUserId()
+  if (!userId) {
     redirect('/login')
   }
 
+  const supabase = await createClient()
   const { data: profile } = await supabase
     .from('kk_profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   return (
-    <AuthInitializer user={user} profile={profile}>
+    <AuthInitializer userId={userId} profile={profile}>
       <AppShell>{children}</AppShell>
     </AuthInitializer>
   )

@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { encrypt, decrypt } from '@/lib/db/encrypt'
@@ -21,15 +21,15 @@ async function getServiceDb(): Promise<SupabaseClient<DB, 'public', DB>> {
 
 export async function createConnection(data: { name: string; connectionString: string }) {
   try {
-    const supabase = await getSupabase()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { id: '', error: 'Niet ingelogd' }
+    const userId = await getUserId()
+    if (!userId) return { id: '', error: 'Niet ingelogd' }
 
+    const supabase = await getSupabase()
     const encrypted = await encrypt(data.connectionString)
 
     const { data: conn, error } = await supabase
       .from('kk_db_connections')
-      .insert({ name: data.name, encrypted_conn_str: encrypted, user_id: user.id })
+      .insert({ name: data.name, encrypted_conn_str: encrypted, user_id: userId })
       .select()
       .single()
 

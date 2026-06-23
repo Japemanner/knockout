@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CommandCenterClient } from '@/components/command-center/CommandCenterClient'
 
@@ -9,22 +9,24 @@ interface CardRow { id: string; title: string; column_id: string }
 export const revalidate = 60
 
 export default async function CommandCenterPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const userId = await getUserId()
+  if (!userId) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('kk_profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
+  const supabase = await createClient()
+
+  const [{ data: profile }, { data: boards }] = await Promise.all([
+    supabase
+      .from('kk_profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .single(),
+    supabase
+      .from('kk_boards')
+      .select('id, name')
+      .eq('user_id', userId),
+  ])
 
   const firstName = (profile as { full_name: string } | null)?.full_name?.split(' ')[0] ?? 'gebruiker'
-
-  const { data: boards } = await supabase
-    .from('kk_boards')
-    .select('id, name')
-    .eq('user_id', user.id)
 
   const starredItems: { boardId: string; boardName: string; cards: { id: string; title: string }[] }[] = []
 

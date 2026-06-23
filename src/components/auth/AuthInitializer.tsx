@@ -1,30 +1,27 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import type { User } from '@supabase/supabase-js'
+import { useRef } from 'react'
 import type { Profile } from '@/types/database.types'
 import { useAuthStore } from '@/store/authStore'
 
 export function AuthInitializer({
-  user,
+  userId,
   profile,
   children,
 }: {
-  user: User
+  userId: string
   profile: Profile | null
   children: React.ReactNode
 }) {
   const initialized = useRef(false)
-  const setUser = useAuthStore((s) => s.setUser)
+  const setUserId = useAuthStore((s) => s.setUserId)
   const setProfile = useAuthStore((s) => s.setProfile)
 
-  useEffect(() => {
-    if (!initialized.current) {
-      setUser(user)
-      if (profile) setProfile(profile)
-      initialized.current = true
-    }
-  }, [user, profile, setUser, setProfile])
+  if (!initialized.current) {
+    setUserId(userId)
+    if (profile) setProfile(profile)
+    initialized.current = true
+  }
 
   return <>{children}</>
 }

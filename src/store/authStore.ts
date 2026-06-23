@@ -1,31 +1,30 @@
 import { create } from 'zustand'
-import type { User } from '@supabase/supabase-js'
 import type { Profile } from '@/types/database.types'
 
 interface AuthState {
-  user: User | null
+  userId: string | null
   profile: Profile | null
   isLoading: boolean
   isAuthenticated: boolean
-  setUser: (user: User | null) => void
+  setUserId: (userId: string | null) => void
   setProfile: (profile: Profile | null) => void
   signOut: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  userId: null,
   profile: null,
   isLoading: false,
   isAuthenticated: false,
 
-  setUser: (user) =>
+  setUserId: (userId) =>
     set({
-      user,
-      isAuthenticated: !!user,
+      userId,
+      isAuthenticated: !!userId,
     }),
 
   setProfile: (profile) => set({ profile }),
 
   signOut: () =>
-    set({ user: null, profile: null, isAuthenticated: false }),
+    set({ userId: null, profile: null, isAuthenticated: false }),
 }))

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import { useKanbanDrag } from '@/hooks/useKanbanDrag'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
-import { CardDetailModal } from '@/components/kanban/CardDetailModal'
 import { BoardHeader } from '@/components/kanban/BoardHeader'
 import { DeleteBoardDialog } from '@/components/kanban/DeleteBoardDialog'
 import { AddColumnForm } from '@/components/kanban/AddColumnForm'
@@ -18,6 +18,11 @@ import { deleteBoard } from '@/actions/boards'
 import { useRouter } from 'next/navigation'
 import type { Card } from '@/types/database.types'
 
+const CardDetailModal = dynamic(() =>
+  import('@/components/kanban/CardDetailModal').then((m) => m.CardDetailModal),
+  { ssr: false }
+)
+
 export function KanbanBoard({
   board,
   allBoards,
@@ -30,7 +35,6 @@ export function KanbanBoard({
   cards: Card[]
 }) {
   const [cards, setCards] = useState(initialCards)
-  useEffect(() => { setCards(initialCards) }, [initialCards])
   const [creatingCardColumnId, setCreatingCardColumnId] = useState<string | null>(null)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showDeleteBoard, setShowDeleteBoard] = useState(false)
@@ -59,6 +63,18 @@ export function KanbanBoard({
   const refreshBoard = useCallback(() => {
     router.refresh()
   }, [router])
+
+  const handleCardUpdated = useCallback((updatedCard?: Card) => {
+    if (updatedCard) {
+      setCards((prev) => prev.map((c) => c.id === updatedCard.id ? updatedCard : c))
+      setSelectedCard(updatedCard)
+    }
+  }, [])
+
+  const handleCardDeleted = useCallback((cardId: string) => {
+    setCards((prev) => prev.filter((c) => c.id !== cardId && c.parent_id !== cardId))
+    setSelectedCard(null)
+  }, [])
 
   const handleAddColumn = useCallback(async (name: string) => {
     if (!name) return
@@ -92,13 +108,13 @@ export function KanbanBoard({
     setCards((prev) => [...prev, optimisticCard])
 
     const result = await createCardInColumn({ columnId, title })
-    if (result.error) {
+    if (result.error || !result.card) {
       setCards((prev) => prev.filter((c) => c.id !== tempId))
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return
     }
-    refreshBoard()
-  }, [cards, toast, refreshBoard])
+    setCards((prev) => prev.map((c) => c.id === tempId ? result.card! : c))
+  }, [cards, toast])
 
   const handleToggleStar = useCallback(async (cardId: string) => {
     if (cardId.startsWith('temp-')) return
@@ -111,8 +127,7 @@ export function KanbanBoard({
       setCards((prev) => prev.map((c) => c.id === cardId ? { ...c, is_starred: !newVal } : c))
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
     }
-    refreshBoard()
-  }, [cards, toast, refreshBoard])
+  }, [cards, toast])
 
   const handleCardClick = useCallback((cardId: string) => {
     const card = cards.find((c) => c.id === cardId)
@@ -189,7 +204,8 @@ export function KanbanBoard({
             parent_id: selectedCard.parent_id,
           }}
           allCards={cards}
-          onUpdated={refreshBoard}
+          onUpdated={handleCardUpdated}
+          onDeleted={handleCardDeleted}
         />
       )}
     </div>

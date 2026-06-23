@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { TableList } from '@/components/db-explorer/TableList'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -9,14 +9,15 @@ interface ConnectionData {
 
 export default async function ConnectionPage({ params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getUserId()
+  if (!userId) return null
 
+  const supabase = await createClient()
   const result = await supabase
     .from('kk_db_connections')
     .select('name')
     .eq('id', connectionId)
-    .eq('user_id', user!.id)
+    .eq('user_id', userId)
     .single()
 
   const conn = result.data as ConnectionData | null

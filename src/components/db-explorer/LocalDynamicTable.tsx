@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { GenericTable, type TableDataSource } from '@/components/db-explorer/GenericTable'
 import {
   useCreateLocalRecord,
@@ -32,7 +33,7 @@ export function LocalDynamicTable({
   const updateMutation = useUpdateLocalRecord(tableName)
   const deleteMutation = useDeleteLocalRecord(tableName)
 
-  const dataSource: TableDataSource = {
+  const dataSource: TableDataSource = useMemo(() => ({
     getRecords: async (page, size) => {
       const result = await getLocalTableRecords({ tableName, page, pageSize: size })
       return { rows: result.rows ?? [], totalCount: result.totalCount ?? 0, error: result.error }
@@ -53,7 +54,7 @@ export function LocalDynamicTable({
       const result = await getLocalForeignKeyOptions({ referencedTable, referencedColumn })
       return { options: result.options ?? [], error: result.error }
     },
-  }
+  }), [tableName, createMutation, updateMutation, deleteMutation])
 
   return (
     <GenericTable

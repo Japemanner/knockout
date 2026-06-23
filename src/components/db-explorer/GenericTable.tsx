@@ -54,12 +54,14 @@ export function GenericTable({
   const canEdit = !!pk
 
   useEffect(() => {
+    let cancelled = false
     foreignKeys.forEach(async (fk) => {
       const result = await dataSource.getForeignKeyOptions(fk.columnName, fk.referencedTable, fk.referencedColumn)
-      if (!result.error) {
+      if (!cancelled && !result.error) {
         setFkOptions((prev) => ({ ...prev, [fk.columnName]: result.options }))
       }
     })
+    return () => { cancelled = true }
   }, [foreignKeys, dataSource])
 
   const loadPage = useCallback(async (pageNum: number) => {

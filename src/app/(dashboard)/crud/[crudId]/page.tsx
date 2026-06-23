@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { LocalDynamicTable } from '@/components/db-explorer/LocalDynamicTable'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
 import { ColumnVisibilityDialog } from '@/components/crud/ColumnVisibilityDialog'
@@ -20,16 +20,15 @@ export const revalidate = 60
 
 export default async function CrudDetailPage({ params }: { params: Promise<{ crudId: string }> }) {
   const { crudId } = await params
+  const userId = await getUserId()
+  if (!userId) notFound()
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) notFound()
-
   const { data: overview } = await supabase
     .from('kk_crud_overviews')
     .select('*')
     .eq('id', crudId)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   const crud = overview as CrudOverviewData | null

@@ -1,16 +1,17 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import { CreateBoardButton } from '@/components/kanban/CreateBoardButton'
 import { BoardCard } from '@/components/kanban/BoardCard'
 import type { Board } from '@/types/database.types'
 
 export default async function BoardsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userId = await getUserId()
+  if (!userId) return null
 
+  const supabase = await createClient()
   const { data } = await supabase
     .from('kk_boards')
     .select('*')
-    .eq('user_id', user!.id)
+    .eq('user_id', userId)
     .order('position', { ascending: true })
 
   const boards: Board[] = data ?? []

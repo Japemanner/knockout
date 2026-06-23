@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      'react-markdown',
+    ],
   },
   images: {
     remotePatterns: [

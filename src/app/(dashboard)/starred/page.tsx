@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getUserId } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Star } from 'lucide-react'
@@ -22,14 +22,14 @@ interface ColumnRow {
 }
 
 export default async function StarredPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const userId = await getUserId()
+  if (!userId) return null
 
+  const supabase = await createClient()
   const { data: boards } = await supabase
     .from('kk_boards')
     .select('id, name')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
 
   if (!boards || boards.length === 0) {
     return (

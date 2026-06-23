@@ -1,6 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { Database } from '@/types/database.types'
+
+export async function getUserId(): Promise<string | null> {
+  const headerStore = await headers()
+  return headerStore.get('x-user-id')
+}
 
 export async function createClient() {
   const cookieStore = await cookies()
