@@ -194,6 +194,8 @@ export interface HourEntry {
   entry_date: string
   hours: number
   description: string | null
+  start_time: string | null
+  end_time: string | null
   created_at: string
   updated_at: string
 }
