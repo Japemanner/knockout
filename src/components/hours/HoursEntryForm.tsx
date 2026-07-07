@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,12 +8,31 @@ import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { useClients, useCreateEntry } from '@/hooks/useHours'
 import { parseDecimalInput } from '@/lib/decimal'
-import { Plus } from 'lucide-react'
+import { Plus, Clock } from 'lucide-react'
 
 function todayISO(): string {
   const d = new Date()
   const tzOffset = d.getTimezoneOffset() * 60000
   return new Date(d.getTime() - tzOffset).toISOString().split('T')[0] ?? ''
+}
+
+function dateWithTime(dateISO: string, timeHHMM: string): string | null {
+  if (!dateISO || !timeHHMM) return null
+  const parts = timeHHMM.split(':')
+  const h = parts[0] !== undefined ? Number(parts[0]) : NaN
+  const m = parts[1] !== undefined ? Number(parts[1]) : NaN
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  const d = new Date(`${dateISO}T00:00:00`)
+  d.setHours(h, m, 0, 0)
+  return d.toISOString()
+}
+
+function diffHours(startISO: string, endISO: string): number | null {
+  const start = new Date(startISO)
+  const end = new Date(endISO)
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs <= 0) return null
+  return Math.round((diffMs / 3_600_000) * 100) / 100
 }
 
 export function HoursEntryForm() {
@@ -24,43 +43,86 @@ export function HoursEntryForm() {
 
   const [clientId, setClientId] = useState('')
   const [entryDate, setEntryDate] = useState(todayISO())
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [hoursRaw, setHoursRaw] = useState('')
+  const [hoursManual, setHoursManual] = useState(false)
   const [description, setDescription] = useState('')
-  const [hoursError, setHoursError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  // Auto-bereken uren uit start/eind wanneer beide ingevuld en niet handmatig overschreven
+  const computedHours = useMemo(() => {
+    if (hoursManual) return null
+    if (!startTime || !endTime || !entryDate) return null
+    const startISO = dateWithTime(entryDate, startTime)
+    const endISO = dateWithTime(entryDate, endTime)
+    if (!startISO || !endISO) return null
+    const diff = diffHours(startISO, endISO)
+    return diff
+  }, [startTime, endTime, entryDate, hoursManual])
+
+  const displayHours = hoursManual ? hoursRaw : computedHours !== null ? String(computedHours).replace('.', ',') : ''
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
+    setFormError(null)
+
     if (!clientId) {
-      toast({ title: 'Opdrachtgever verplicht', variant: 'destructive' })
+      setFormError('Opdrachtgever is verplicht')
       return
     }
     if (!entryDate) {
-      toast({ title: 'Datum verplicht', variant: 'destructive' })
+      setFormError('Datum is verplicht')
       return
     }
-    const parsed = parseDecimalInput(hoursRaw, false)
-    if (!parsed.ok) {
-      setHoursError(parsed.error)
-      return
+
+    let hoursValue: number | null = null
+    let startTimeISO: string | null = null
+    let endTimeISO: string | null = null
+
+    if (startTime && endTime) {
+      startTimeISO = dateWithTime(entryDate, startTime)
+      endTimeISO = dateWithTime(entryDate, endTime)
+      if (!startTimeISO || !endTimeISO) {
+        setFormError('Ongeldige start- of eindtijd')
+        return
+      }
+      const diff = diffHours(startTimeISO, endTimeISO)
+      if (diff === null) {
+        setFormError('Eindtijd moet na starttijd liggen')
+        return
+      }
+      hoursValue = diff
+    } else {
+      const parsed = parseDecimalInput(hoursRaw, false)
+      if (!parsed.ok) {
+        setFormError(parsed.error)
+        return
+      }
+      if (parsed.value === null || parsed.value <= 0) {
+        setFormError('Uren moeten groter dan 0 zijn')
+        return
+      }
+      hoursValue = parsed.value
     }
-    if (parsed.value === null || parsed.value <= 0) {
-      setHoursError('Uren moeten groter dan 0 zijn')
-      return
-    }
-    setHoursError(null)
 
     createMutation.mutate(
       {
         client_id: clientId,
         entry_date: entryDate,
-        hours: parsed.value,
+        hours: hoursValue,
+        start_time: startTimeISO,
+        end_time: endTimeISO,
         description: description.trim() || null,
       },
       {
         onSuccess: (result) => {
           if (result.success) {
-            toast({ title: 'Opgeslagen', description: `${parsed.value} uur geregistreerd` })
+            toast({ title: 'Opgeslagen', description: `${hoursValue} uur geregistreerd` })
+            setStartTime('')
+            setEndTime('')
             setHoursRaw('')
+            setHoursManual(false)
             setDescription('')
           } else {
             toast({ title: 'Fout bij opslaan', description: result.error, variant: 'destructive' })
@@ -89,7 +151,10 @@ export function HoursEntryForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Uren schrijven</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Uren schrijven
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -117,23 +182,53 @@ export function HoursEntryForm() {
             />
           </div>
           <div className="space-y-1">
+            <label htmlFor="hours-start" className="text-xs font-medium text-muted-foreground">
+              Starttijd
+            </label>
+            <Input
+              id="hours-start"
+              type="time"
+              value={startTime}
+              onChange={(e) => {
+                setStartTime(e.target.value)
+                setHoursManual(false)
+              }}
+              placeholder="09:00"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="hours-end" className="text-xs font-medium text-muted-foreground">
+              Eindtijd
+            </label>
+            <Input
+              id="hours-end"
+              type="time"
+              value={endTime}
+              onChange={(e) => {
+                setEndTime(e.target.value)
+                setHoursManual(false)
+              }}
+              placeholder="17:30"
+            />
+          </div>
+          <div className="space-y-1">
             <label htmlFor="hours-amount" className="text-xs font-medium text-muted-foreground">
-              Uren
+              Uren {computedHours !== null && !hoursManual && '(berekend)'}
             </label>
             <Input
               id="hours-amount"
               inputMode="decimal"
-              value={hoursRaw}
+              value={displayHours}
               onChange={(e) => {
                 setHoursRaw(e.target.value)
-                if (hoursError) setHoursError(null)
+                setHoursManual(true)
+                if (formError) setFormError(null)
               }}
               placeholder="bijv. 1,5 of 2.25"
-              aria-invalid={!!hoursError}
+              aria-invalid={!!formError}
             />
-            {hoursError && <p className="text-xs text-destructive">{hoursError}</p>}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 sm:col-span-1 lg:col-span-3">
             <label htmlFor="hours-desc" className="text-xs font-medium text-muted-foreground">
               Omschrijving (optioneel)
             </label>
@@ -144,6 +239,9 @@ export function HoursEntryForm() {
               placeholder="Waar heb je aan gewerkt?"
             />
           </div>
+          {formError && (
+            <p className="text-xs text-destructive sm:col-span-2 lg:col-span-4">{formError}</p>
+          )}
           <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
             <Button type="submit" disabled={createMutation.isPending}>
               <Plus className="h-4 w-4 mr-2" />

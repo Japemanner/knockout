@@ -150,6 +150,8 @@ export async function listEntries(options?: {
         entry_date: row.entry_date as string,
         hours: Number(row.hours),
         description: (row.description as string | null) ?? null,
+        start_time: (row.start_time as string | null) ?? null,
+        end_time: (row.end_time as string | null) ?? null,
         created_at: row.created_at as string,
         updated_at: row.updated_at as string,
         client_name: client?.name ?? 'Onbekend',
@@ -167,6 +169,8 @@ export async function createEntry(input: {
   client_id: string
   entry_date: string
   hours: number
+  start_time?: string | null
+  end_time?: string | null
   description?: string | null
 }): Promise<ActionResult<EntryWithClient>> {
   try {
@@ -179,6 +183,8 @@ export async function createEntry(input: {
         client_id: input.client_id,
         entry_date: input.entry_date,
         hours: input.hours,
+        start_time: input.start_time ?? null,
+        end_time: input.end_time ?? null,
         description: input.description?.trim() || null,
       })
       .select('*, kk_clients!inner(name)')
@@ -195,6 +201,8 @@ export async function createEntry(input: {
       entry_date: data.entry_date,
       hours: Number(data.hours),
       description: data.description ?? null,
+      start_time: (data.start_time as string | null) ?? null,
+      end_time: (data.end_time as string | null) ?? null,
       created_at: data.created_at,
       updated_at: data.updated_at,
       client_name: client?.name ?? 'Onbekend',
@@ -207,7 +215,7 @@ export async function createEntry(input: {
 
 export async function updateEntry(
   entryId: string,
-  patch: Partial<Pick<HourEntry, 'client_id' | 'entry_date' | 'hours' | 'description'>>
+  patch: Partial<Pick<HourEntry, 'client_id' | 'entry_date' | 'hours' | 'description' | 'start_time' | 'end_time'>>
 ): Promise<ActionResult<HourEntry>> {
   try {
     const { supabase } = await getAuthenticatedClient()
@@ -216,6 +224,8 @@ export async function updateEntry(
     if (patch.entry_date !== undefined) updateData.entry_date = patch.entry_date
     if (patch.hours !== undefined) updateData.hours = patch.hours
     if (patch.description !== undefined) updateData.description = patch.description?.trim() || null
+    if (patch.start_time !== undefined) updateData.start_time = patch.start_time
+    if (patch.end_time !== undefined) updateData.end_time = patch.end_time
     if (Object.keys(updateData).length === 0) return { success: true, data: {} as HourEntry }
 
     const { data, error } = await supabase

@@ -101,6 +101,8 @@ export function useCreateEntry() {
       client_id: string
       entry_date: string
       hours: number
+      start_time?: string | null
+      end_time?: string | null
       description?: string | null
     }) => createEntry(input),
     onMutate: async (input) => {
