@@ -1,10 +1,18 @@
 'use client'
 
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import {
+  isDecimalType,
+  isIntegerType,
+  normalizeForDisplay,
+  parseDecimalInput,
+  parseIntegerInput,
+} from '@/lib/decimal'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/external-db'
 
 interface FormFieldMapperProps {
@@ -16,6 +24,7 @@ interface FormFieldMapperProps {
 }
 
 export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOptions }: FormFieldMapperProps) {
+  const [numericError, setNumericError] = useState<string | null>(null)
   const fk = foreignKeys.find((f) => f.columnName === column.name)
   const isRequired = !column.isNullable && column.defaultValue === null && !column.isPrimaryKey
 
@@ -68,15 +77,36 @@ export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOption
   }
 
   if (isText || isNumeric || fk) {
+    const decimalType = isDecimalType(column.dataType)
+    const integerType = isIntegerType(column.dataType)
+    const isNumericType = decimalType || integerType
+    const displayValue = decimalType ? normalizeForDisplay(value) : (value === null || value === undefined ? '' : String(value))
+
+    const handleNumericChange = (raw: string) => {
+      const result = decimalType
+        ? parseDecimalInput(raw, column.isNullable)
+        : integerType
+          ? parseIntegerInput(raw, column.isNullable)
+          : null
+      if (result) {
+        setNumericError(result.ok ? null : result.error)
+        onChange(result.ok ? result.value : null)
+      } else {
+        onChange(raw)
+      }
+    }
+
     return (
       <div className="flex flex-col gap-1">
         <Label>{column.name}{isRequired ? ' *' : ''}</Label>
         <Input
-          type={isNumeric ? 'number' : 'text'}
-          value={String(value ?? '')}
-          onChange={(e) => onChange(isNumeric ? Number(e.target.value) : e.target.value)}
+          type={isNumericType ? 'text' : 'text'}
+          inputMode={decimalType ? 'decimal' : integerType ? 'numeric' : undefined}
+          value={isNumericType ? displayValue : String(value ?? '')}
+          onChange={(e) => isNumericType ? handleNumericChange(e.target.value) : onChange(e.target.value)}
           required={isRequired}
         />
+        {numericError && <p className="text-xs text-destructive mt-1">{numericError}</p>}
       </div>
     )
   }

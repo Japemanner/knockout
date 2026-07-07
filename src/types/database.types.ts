@@ -53,6 +53,16 @@ export interface Database {
         Insert: Omit<CRUDOverview, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<CRUDOverview, 'id'>>
       }
+      kk_clients: {
+        Row: Client
+        Insert: Omit<Client, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Client, 'id'>>
+      }
+      kk_hour_entries: {
+        Row: HourEntry
+        Insert: Omit<HourEntry, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<HourEntry, 'id'>>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -160,6 +170,30 @@ export interface CRUDOverview {
   interaction_type: 'crud' | 'formulier'
   hidden_columns: string[]
   position: number
+  created_at: string
+  updated_at: string
+}
+
+export type ClientTargetPeriod = 'week' | 'month' | 'total'
+
+export interface Client {
+  id: string
+  user_id: string
+  name: string
+  target_hours: number
+  target_period: ClientTargetPeriod
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface HourEntry {
+  id: string
+  user_id: string
+  client_id: string
+  entry_date: string
+  hours: number
+  description: string | null
   created_at: string
   updated_at: string
 }
