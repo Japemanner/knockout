@@ -14,7 +14,6 @@ import {
   Settings, 
   Users, 
   Columns3,
-  Focus,
   X,
   LogOut,
   Menu,
@@ -30,14 +29,14 @@ import {
   Hexagon,
   Briefcase,
   TrendingUp,
-  Clock
+  Clock,
+  Mail
 } from 'lucide-react'
 
 const navItems = [
   { href: '/command-center', label: 'Command Center', icon: LayoutDashboard, external: false },
   { href: '/boards', label: 'Borden', icon: Columns3, external: false },
   { href: '/crud', label: 'CRUD', icon: Database, external: false },
-  { href: '/focus', label: 'Focus', icon: Focus, external: false },
   { href: '/uren', label: 'Uren', icon: Clock, external: false },
   { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },
   { href: '/team', label: 'Team', icon: Users, external: false },
@@ -51,6 +50,7 @@ const externalLinks = [
   { href: 'https://ui.honeycomb.io/', label: 'Honeycomb', icon: Hexagon },
   { href: 'https://app-eu1.hubspot.com/', label: 'Hubspot', icon: Briefcase },
   { href: 'https://eu.smith.langchain.com/', label: 'LangSmith', icon: GitBranch },
+  { href: 'https://mail.cirrux.co/inbox', label: 'Mail', icon: Mail },
   { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
   { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
   { href: 'https://eu.posthog.com/', label: 'PostHog', icon: TrendingUp },
