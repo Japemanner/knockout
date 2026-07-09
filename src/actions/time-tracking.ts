@@ -37,7 +37,7 @@ export async function startTimeTracking(data: {
       .single()
 
     if (!entry) throw new Error('Failed to create time entry')
-    revalidatePath('/focus')
+    revalidatePath('/uren')
     return { success: true, entry }
   } catch (error) {
     console.error('Error starting time tracking:', error)
@@ -75,7 +75,7 @@ export async function stopTimeTracking(entryId: string) {
       .single()
 
     if (!updatedEntry) throw new Error('Failed to update time entry')
-    revalidatePath('/focus')
+    revalidatePath('/uren')
     return { success: true, entry: updatedEntry }
   } catch (error) {
     console.error('Error stopping time tracking:', error)
@@ -169,7 +169,7 @@ export async function updateTimeEntry(entryId: string, description: string) {
       .single()
 
     if (!entry) throw new Error('Failed to update time entry')
-    revalidatePath('/focus')
+    revalidatePath('/uren')
     return { success: true, entry }
   } catch (error) {
     console.error('Error updating time entry:', error)
@@ -188,7 +188,7 @@ export async function deleteTimeEntry(entryId: string) {
       .eq('user_id', userId)
 
     if (error) throw error
-    revalidatePath('/focus')
+    revalidatePath('/uren')
     return { success: true }
   } catch (error) {
     console.error('Error deleting time entry:', error)
