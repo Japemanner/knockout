@@ -56,6 +56,7 @@ export function KanbanBoard({
   } = useKanbanDrag({
     boardId: board.id,
     otherBoards,
+    columns: sortedColumns,
     cards,
     onCardsChange: setCards,
   })

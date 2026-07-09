@@ -20,6 +20,7 @@ import type { Card } from '@/types/database.types'
 interface UseKanbanDragProps {
   boardId: string
   otherBoards: { id: string; name: string }[]
+  columns: { id: string; name: string }[]
   cards: Card[]
   onCardsChange: (cards: Card[]) => void
 }
@@ -49,7 +50,7 @@ function makeCollisionDetection(): CollisionDetection {
   }
 }
 
-export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: UseKanbanDragProps) {
+export function useKanbanDrag({ boardId, otherBoards, columns, cards, onCardsChange }: UseKanbanDragProps) {
   const [activeCard, setActiveCard] = useState<Card | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const collisionDetectionRef = useRef(makeCollisionDetection())
@@ -171,17 +172,21 @@ export function useKanbanDrag({ boardId, otherBoards, cards, onCardsChange }: Us
           ? targetColumnCards.findIndex((c) => c.id === overCard.id)
           : targetColumnCards.length
 
+        const targetColumnName = columns.find((c) => c.id === targetColumnId)?.name?.toLowerCase()
+        const isDoneColumn = targetColumnName === 'done'
+
         const updatedCard = {
           ...activeCardData,
           column_id: targetColumnId,
           position: overIndex >= 0 ? overIndex : targetColumnCards.length,
+          ...(isDoneColumn ? { is_starred: false } : {}),
         }
         const newCards = cards.map((c) => (c.id === activeCardData.id ? updatedCard : c))
         onCardsChange(newCards)
         await moveCard(activeCardData.id, targetColumnId, updatedCard.position)
       }
     },
-    [cards, otherBoards, onCardsChange],
+    [cards, otherBoards, columns, onCardsChange],
   )
 
   return {

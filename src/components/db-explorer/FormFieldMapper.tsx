@@ -23,8 +23,78 @@ interface FormFieldMapperProps {
   fkOptions?: { value: unknown; label: string }[]
 }
 
-export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOptions }: FormFieldMapperProps) {
+interface NumericFieldProps {
+  column: ColumnInfo
+  decimalType: boolean
+  integerType: boolean
+  isNumericType: boolean
+  isRequired: boolean
+  value: unknown
+  onChange: (value: unknown) => void
+}
+
+function NumericField({
+  column,
+  decimalType,
+  integerType,
+  isNumericType,
+  isRequired,
+  value,
+  onChange,
+}: NumericFieldProps) {
+  const [text, setText] = useState<string>(
+    isNumericType
+      ? (value === null || value === undefined ? '' : normalizeForDisplay(value))
+      : (value === null || value === undefined ? '' : String(value))
+  )
   const [numericError, setNumericError] = useState<string | null>(null)
+
+  const handleChange = (raw: string) => {
+    setText(raw)
+
+    if (!isNumericType) {
+      onChange(raw)
+      return
+    }
+
+    const result = decimalType
+      ? parseDecimalInput(raw, column.isNullable)
+      : integerType
+        ? parseIntegerInput(raw, column.isNullable)
+        : null
+
+    if (result) {
+      if (result.ok) {
+        setNumericError(null)
+        onChange(result.value)
+      } else if (raw.trim() === '' && column.isNullable) {
+        setNumericError(null)
+        onChange(null)
+      } else {
+        setNumericError(result.error)
+        onChange(null)
+      }
+    } else {
+      onChange(raw)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Label>{column.name}{isRequired ? ' *' : ''}</Label>
+      <Input
+        type="text"
+        inputMode={decimalType ? 'decimal' : integerType ? 'numeric' : undefined}
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        required={isRequired}
+      />
+      {numericError && <p className="text-xs text-destructive mt-1">{numericError}</p>}
+    </div>
+  )
+}
+
+export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOptions }: FormFieldMapperProps) {
   const fk = foreignKeys.find((f) => f.columnName === column.name)
   const isRequired = !column.isNullable && column.defaultValue === null && !column.isPrimaryKey
 
@@ -80,34 +150,17 @@ export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOption
     const decimalType = isDecimalType(column.dataType)
     const integerType = isIntegerType(column.dataType)
     const isNumericType = decimalType || integerType
-    const displayValue = decimalType ? normalizeForDisplay(value) : (value === null || value === undefined ? '' : String(value))
-
-    const handleNumericChange = (raw: string) => {
-      const result = decimalType
-        ? parseDecimalInput(raw, column.isNullable)
-        : integerType
-          ? parseIntegerInput(raw, column.isNullable)
-          : null
-      if (result) {
-        setNumericError(result.ok ? null : result.error)
-        onChange(result.ok ? result.value : null)
-      } else {
-        onChange(raw)
-      }
-    }
 
     return (
-      <div className="flex flex-col gap-1">
-        <Label>{column.name}{isRequired ? ' *' : ''}</Label>
-        <Input
-          type={isNumericType ? 'text' : 'text'}
-          inputMode={decimalType ? 'decimal' : integerType ? 'numeric' : undefined}
-          value={isNumericType ? displayValue : String(value ?? '')}
-          onChange={(e) => isNumericType ? handleNumericChange(e.target.value) : onChange(e.target.value)}
-          required={isRequired}
-        />
-        {numericError && <p className="text-xs text-destructive mt-1">{numericError}</p>}
-      </div>
+      <NumericField
+        column={column}
+        decimalType={decimalType}
+        integerType={integerType}
+        isNumericType={isNumericType}
+        isRequired={isRequired}
+        value={value}
+        onChange={onChange}
+      />
     )
   }
 

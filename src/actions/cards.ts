@@ -155,6 +155,9 @@ export async function updateCard(cardId: string, data: Record<string, unknown>) 
 
     if (!updatedCard) throw new Error('Failed to update card')
 
+    if (data.is_archived === true) {
+      revalidatePath('/starred')
+    }
     if (data.is_starred !== undefined) {
       revalidatePath('/starred')
     }
@@ -241,7 +244,11 @@ export async function toggleArchiveCard(cardId: string) {
 
     const { data: updatedCard } = await supabase
       .from('kk_cards')
-      .update({ is_archived: newArchived, updated_at: new Date().toISOString() })
+      .update({
+        is_archived: newArchived,
+        ...(newArchived ? { is_starred: false } : {}),
+        updated_at: new Date().toISOString()
+      })
       .eq('id', cardId)
       .select()
       .single()
@@ -249,9 +256,10 @@ export async function toggleArchiveCard(cardId: string) {
     if (!updatedCard) throw new Error('Failed to update card')
 
     if (newArchived) {
+      revalidatePath('/starred')
       const { error: subError } = await supabase
         .from('kk_cards')
-        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .update({ is_archived: true, is_starred: false, updated_at: new Date().toISOString() })
         .eq('parent_id', cardId)
 
       if (subError) throw subError
@@ -280,11 +288,20 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
   try {
     const { supabase } = await getAuthenticatedClient()
 
+    const { data: column } = await supabase
+      .from('kk_columns')
+      .select('board_id, name')
+      .eq('id', newColumnId)
+      .single()
+
+    const isDoneColumn = column?.name?.toLowerCase() === 'done'
+
     const { data: updatedCard } = await supabase
       .from('kk_cards')
       .update({
         column_id: newColumnId,
         position: newPosition,
+        ...(isDoneColumn ? { is_starred: false } : {}),
         updated_at: new Date().toISOString()
       })
       .eq('id', cardId)
@@ -293,11 +310,7 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
 
     if (!updatedCard) throw new Error('Failed to move card')
 
-    const { data: column } = await supabase
-      .from('kk_columns')
-      .select('board_id')
-      .eq('id', newColumnId)
-      .single()
+    if (isDoneColumn) revalidatePath('/starred')
 
     revalidatePath('/boards')
     if (column?.board_id) {
@@ -352,7 +365,7 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
 
     const { data: targetColumn } = await supabase
       .from('kk_columns')
-      .select('id')
+      .select('id, name')
       .eq('board_id', newBoardId)
       .order('position', { ascending: true })
       .limit(1)
@@ -360,11 +373,14 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
 
     if (!targetColumn) throw new Error('Target board has no columns')
 
+    const isDoneColumn = targetColumn.name?.toLowerCase() === 'done'
+
     const { data: updatedCard } = await supabase
       .from('kk_cards')
       .update({
         column_id: targetColumn.id,
         parent_id: null,
+        ...(isDoneColumn ? { is_starred: false } : {}),
         updated_at: new Date().toISOString()
       })
       .eq('id', cardId)
@@ -372,6 +388,8 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
       .single()
 
     if (!updatedCard) throw new Error('Failed to move card')
+
+    if (isDoneColumn) revalidatePath('/starred')
 
     const { error: subError } = await supabase
       .from('kk_cards')
@@ -407,6 +425,14 @@ export async function moveCardUnderParent(cardId: string, parentId: string) {
 
     if (parent.parent_id !== null) throw new Error('Cannot nest under a subtask')
 
+    const { data: parentColumn } = await supabase
+      .from('kk_columns')
+      .select('name')
+      .eq('id', parent.column_id)
+      .single()
+
+    const isDoneColumn = parentColumn?.name?.toLowerCase() === 'done'
+
     const { data: child } = await supabase
       .from('kk_cards')
       .select('id, parent_id')
@@ -440,6 +466,7 @@ export async function moveCardUnderParent(cardId: string, parentId: string) {
         parent_id: parentId,
         column_id: parent.column_id,
         position: subCount || 0,
+        ...(isDoneColumn ? { is_starred: false } : {}),
         updated_at: new Date().toISOString()
       })
       .eq('id', cardId)
@@ -448,6 +475,7 @@ export async function moveCardUnderParent(cardId: string, parentId: string) {
 
     if (!updatedCard) throw new Error('Failed to move card under parent')
 
+    if (isDoneColumn) revalidatePath('/starred')
     revalidatePath('/boards')
     const { data: column } = await supabase
       .from('kk_columns')
