@@ -35,6 +35,12 @@ function diffHours(startISO: string, endISO: string): number | null {
   return Math.round((diffMs / 3_600_000) * 100) / 100
 }
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const v = String(i).padStart(2, '0')
+  return { value: v, label: v }
+})
+const MINUTE_OPTIONS = ['00', '15', '30', '45'].map((v) => ({ value: v, label: v }))
+
 export function HoursEntryForm() {
   const { data: clients } = useClients()
   const activeClients = (clients ?? []).filter((c) => !c.archived)
@@ -43,25 +49,32 @@ export function HoursEntryForm() {
 
   const [clientId, setClientId] = useState('')
   const [entryDate, setEntryDate] = useState(todayISO())
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+  const [startHour, setStartHour] = useState('')
+  const [startMinute, setStartMinute] = useState('')
+  const [endHour, setEndHour] = useState('')
+  const [endMinute, setEndMinute] = useState('')
   const [hoursRaw, setHoursRaw] = useState('')
   const [hoursManual, setHoursManual] = useState(false)
   const [description, setDescription] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Auto-bereken uren uit start/eind wanneer beide ingevuld en niet handmatig overschreven
+  const startTime = startHour && startMinute ? `${startHour}:${startMinute}` : ''
+  const endTime = endHour && endMinute ? `${endHour}:${endMinute}` : ''
+
   const computedHours = useMemo(() => {
     if (hoursManual) return null
     if (!startTime || !endTime || !entryDate) return null
     const startISO = dateWithTime(entryDate, startTime)
     const endISO = dateWithTime(entryDate, endTime)
     if (!startISO || !endISO) return null
-    const diff = diffHours(startISO, endISO)
-    return diff
+    return diffHours(startISO, endISO)
   }, [startTime, endTime, entryDate, hoursManual])
 
-  const displayHours = hoursManual ? hoursRaw : computedHours !== null ? String(computedHours).replace('.', ',') : ''
+  const displayHours = hoursManual
+    ? hoursRaw
+    : computedHours !== null
+      ? String(computedHours).replace('.', ',')
+      : ''
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -119,8 +132,10 @@ export function HoursEntryForm() {
         onSuccess: (result) => {
           if (result.success) {
             toast({ title: 'Opgeslagen', description: `${hoursValue} uur geregistreerd` })
-            setStartTime('')
-            setEndTime('')
+            setStartHour('')
+            setStartMinute('')
+            setEndHour('')
+            setEndMinute('')
             setHoursRaw('')
             setHoursManual(false)
             setDescription('')
@@ -182,34 +197,50 @@ export function HoursEntryForm() {
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="hours-start" className="text-xs font-medium text-muted-foreground">
-              Starttijd
-            </label>
-            <Input
-              id="hours-start"
-              type="time"
-              value={startTime}
-              onChange={(e) => {
-                setStartTime(e.target.value)
-                setHoursManual(false)
-              }}
-              placeholder="09:00"
-            />
+            <label className="text-xs font-medium text-muted-foreground">Starttijd</label>
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                value={startHour}
+                onValueChange={(v) => {
+                  setStartHour(v)
+                  setHoursManual(false)
+                }}
+                placeholder="Uur"
+                options={HOUR_OPTIONS}
+              />
+              <Select
+                value={startMinute}
+                onValueChange={(v) => {
+                  setStartMinute(v)
+                  setHoursManual(false)
+                }}
+                placeholder="Min"
+                options={MINUTE_OPTIONS}
+              />
+            </div>
           </div>
           <div className="space-y-1">
-            <label htmlFor="hours-end" className="text-xs font-medium text-muted-foreground">
-              Eindtijd
-            </label>
-            <Input
-              id="hours-end"
-              type="time"
-              value={endTime}
-              onChange={(e) => {
-                setEndTime(e.target.value)
-                setHoursManual(false)
-              }}
-              placeholder="17:30"
-            />
+            <label className="text-xs font-medium text-muted-foreground">Eindtijd</label>
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                value={endHour}
+                onValueChange={(v) => {
+                  setEndHour(v)
+                  setHoursManual(false)
+                }}
+                placeholder="Uur"
+                options={HOUR_OPTIONS}
+              />
+              <Select
+                value={endMinute}
+                onValueChange={(v) => {
+                  setEndMinute(v)
+                  setHoursManual(false)
+                }}
+                placeholder="Min"
+                options={MINUTE_OPTIONS}
+              />
+            </div>
           </div>
           <div className="space-y-1">
             <label htmlFor="hours-amount" className="text-xs font-medium text-muted-foreground">
@@ -224,7 +255,7 @@ export function HoursEntryForm() {
                 setHoursManual(true)
                 if (formError) setFormError(null)
               }}
-              placeholder="bijv. 1,5 of 2.25"
+              placeholder="bijv. 1,5 of 2,25"
               aria-invalid={!!formError}
             />
           </div>
