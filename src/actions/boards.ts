@@ -60,7 +60,6 @@ export async function reorderBoards(data: { orderedIds: string[] }) {
     await Promise.all(data.orderedIds.map((id, i) =>
       supabase.from('kk_boards').update({ position: i }).eq('id', id)
     ))
-    revalidatePath('/boards')
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }

@@ -13,12 +13,6 @@ export async function createCardInColumn(data: {
   try {
     const { supabase } = await getAuthenticatedClient()
 
-    const { data: column } = await supabase
-      .from('kk_columns')
-      .select('board_id')
-      .eq('id', data.columnId)
-      .single()
-
     const { count: cardCount } = await supabase
       .from('kk_cards')
       .select('*', { count: 'exact', head: true })
@@ -42,10 +36,6 @@ export async function createCardInColumn(data: {
 
     if (!card) throw new Error('Failed to create card')
 
-    if (column?.board_id) {
-      revalidatePath(`/boards/${column.board_id}`)
-    }
-    revalidatePath('/boards')
     return { success: true, card }
   } catch (error) {
     console.error('Error creating card:', error)
@@ -106,7 +96,6 @@ export async function createCard(data: {
 
     revalidatePath('/boards')
     revalidatePath('/command-center')
-    revalidatePath(`/boards/${inboxBoard.id}`)
 
     return { success: true, card }
   } catch (error) {
@@ -140,12 +129,6 @@ export async function updateCard(cardId: string, data: Record<string, unknown>) 
   try {
     const { supabase } = await getAuthenticatedClient()
 
-    const { data: currentCard } = await supabase
-      .from('kk_cards')
-      .select('id, column_id')
-      .eq('id', cardId)
-      .single()
-
     const { data: updatedCard } = await supabase
       .from('kk_cards')
       .update({ ...data, updated_at: new Date().toISOString() })
@@ -154,25 +137,6 @@ export async function updateCard(cardId: string, data: Record<string, unknown>) 
       .single()
 
     if (!updatedCard) throw new Error('Failed to update card')
-
-    if (data.is_archived === true) {
-      revalidatePath('/starred')
-    }
-    if (data.is_starred !== undefined) {
-      revalidatePath('/starred')
-    }
-    revalidatePath('/boards')
-
-    if (currentCard?.column_id) {
-      const { data: column } = await supabase
-        .from('kk_columns')
-        .select('board_id')
-        .eq('id', currentCard.column_id)
-        .single()
-      if (column?.board_id) {
-        revalidatePath(`/boards/${column.board_id}`)
-      }
-    }
 
     return { success: true, card: updatedCard }
   } catch (error) {
@@ -290,7 +254,7 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
 
     const { data: column } = await supabase
       .from('kk_columns')
-      .select('board_id, name')
+      .select('name')
       .eq('id', newColumnId)
       .single()
 
@@ -309,13 +273,6 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
       .single()
 
     if (!updatedCard) throw new Error('Failed to move card')
-
-    if (isDoneColumn) revalidatePath('/starred')
-
-    revalidatePath('/boards')
-    if (column?.board_id) {
-      revalidatePath(`/boards/${column.board_id}`)
-    }
 
     return { success: true, card: updatedCard }
   } catch (error) {
@@ -339,17 +296,6 @@ export async function reorderCards(columnId: string, cardIds: string[]) {
 
     for (const result of results) {
       if (result.error) throw result.error
-    }
-
-    const { data: column } = await supabase
-      .from('kk_columns')
-      .select('board_id')
-      .eq('id', columnId)
-      .single()
-
-    revalidatePath('/boards')
-    if (column?.board_id) {
-      revalidatePath(`/boards/${column.board_id}`)
     }
 
     return { success: true }
@@ -400,9 +346,6 @@ export async function moveCardToBoard(cardId: string, newBoardId: string) {
       .eq('parent_id', cardId)
 
     if (subError) throw subError
-
-    revalidatePath('/boards')
-    revalidatePath(`/boards/${newBoardId}`)
 
     return { success: true, card: updatedCard }
   } catch (error) {
@@ -475,17 +418,6 @@ export async function moveCardUnderParent(cardId: string, parentId: string) {
 
     if (!updatedCard) throw new Error('Failed to move card under parent')
 
-    if (isDoneColumn) revalidatePath('/starred')
-    revalidatePath('/boards')
-    const { data: column } = await supabase
-      .from('kk_columns')
-      .select('board_id')
-      .eq('id', parent.column_id)
-      .single()
-    if (column?.board_id) {
-      revalidatePath(`/boards/${column.board_id}`)
-    }
-
     return { success: true, card: updatedCard }
   } catch (error) {
     console.error('Error moving card under parent:', error)
@@ -510,16 +442,6 @@ export async function moveCardOutOfParent(cardId: string, newColumnId: string, n
       .single()
 
     if (!updatedCard) throw new Error('Failed to move card out of parent')
-
-    revalidatePath('/boards')
-    const { data: column } = await supabase
-      .from('kk_columns')
-      .select('board_id')
-      .eq('id', newColumnId)
-      .single()
-    if (column?.board_id) {
-      revalidatePath(`/boards/${column.board_id}`)
-    }
 
     return { success: true, card: updatedCard }
   } catch (error) {

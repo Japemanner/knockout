@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handleiding — Duplicate Key Error oplossen in Supabase</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #38bdf8;
+      margin-top: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      margin-bottom: 1rem;
+      color: #cbd5e1;
+    }
+    ul, ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+      color: #cbd5e1;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    code {
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      background: #1e293b;
+      color: #f472b6;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+    .callout {
+      background: #1e293b;
+      border-left: 4px solid #38bdf8;
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.5rem 0;
+    }
+    .callout-warning {
+      border-left-color: #fbbf24;
+    }
+    .callout-success {
+      border-left-color: #34d399;
+    }
+    .callout p {
+      margin-bottom: 0;
+    }
+    .sql-block {
+      background: #0d1117;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .sql-block code {
+      background: none;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      display: block;
+      white-space: pre;
+    }
+    .sql-keyword { color: #f472b6; }
+    .sql-func { color: #38bdf8; }
+    .sql-comment { color: #64748b; font-style: italic; }
+    .sql-string { color: #34d399; }
+    .error-box {
+      background: #1c0f0f;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+    }
+    .error-box code {
+      background: none;
+      color: #fca5a5;
+      padding: 0;
+      font-size: 0.875rem;
+    }
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding-left: 0;
+    }
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding-left: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1.75rem;
+      height: 1.75rem;
+      background: #38bdf8;
+      color: #0f172a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1e293b;
+      color: #64748b;
+      font-size: 0.8125rem;
+    }
+    a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Duplicate Key Error oplossen in Supabase</h1>
+
+    <div class="callout">
+      <p><strong>Project:</strong> Knockout &nbsp;|&nbsp; <strong>Tabel:</strong> <code>prive_fin_week</code> &nbsp;|&nbsp; <strong>Datum:</strong> 25 juni 2026</p>
+    </div>
+
+    <h2>Het probleem</h2>
+    <p>
+      Bij het aanmaken van een nieuw record via het CRUD-tabblad in Knockout verschijnt de volgende foutmelding:
+    </p>
+    <div class="error-box">
+      <code>duplicate key value violates unique constraint "prive_fin_week_pkey"</code>
+    </div>
+
+    <h2>Oorzaak</h2>
+    <p>
+      De primary key-kolom <code>id</code> in de tabel <code>prive_fin_week</code> is een
+      <strong>identity column</strong> &mdash; de database hoort de waarde automatisch in te vullen
+      via een onderliggende <strong>sequence</strong> (teller).
+    </p>
+    <p>
+      Het probleem ontstaat wanneer er records met handmatige ID's zijn ingevoerd (bijvoorbeeld via
+      een import of directe SQL-insert). De sequence loopt dan achter op de daadwerkelijk maximale
+      waarde in de tabel. Bij de volgende <code>INSERT</code> genereert de sequence een waarde die
+      al bestaat, wat leidt tot de <em>duplicate key</em>-fout.
+    </p>
+
+    <div class="callout callout-warning">
+      <p><strong>Voorbeeld:</strong> De hoogste <code>id</code> in de tabel is <code>47</code>,
+      maar de sequence staat nog op <code>3</code>. De volgende insert probeert <code>id = 4</code>
+      te gebruiken, maar die bestaat al &rarr; <em>duplicate key violation</em>.</p>
+    </div>
+
+    <h2>Oplossing</h2>
+    <p>
+      Reset de sequence naar <code>MAX(id) + 1</code>, zodat de automatische teller verdergaat
+      waar de bestaande data ophoudt.
+    </p>
+
+    <h3>Stap voor stap</h3>
+    <ol class="steps">
+      <li>
+        Ga naar de <strong>Supabase Dashboard</strong> van je project
+        (<a href="https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub" target="_blank" rel="noopener">open dashboard</a>)
+      </li>
+      <li>
+        Open de <strong>SQL Editor</strong> in het linkermenu
+      </li>
+      <li>
+        Plak de onderstaande SQL-query in de editor
+      </li>
+      <li>
+        Klik op <strong>Run</strong> om de query uit te voeren
+      </li>
+      <li>
+        Ga terug naar Knockout en probeer opnieuw een record aan te maken &mdash; het werkt direct
+      </li>
+    </ol>
+
+    <h3>De SQL-query</h3>
+    <div class="sql-block">
+      <code><span class="sql-keyword">SELECT</span> <span class="sql-func">setval</span>(
+  <span class="sql-func">pg_get_serial_sequence</span>(<span class="sql-string">'prive_fin_week'</span>, <span class="sql-string">'id'</span>),
+  <span class="sql-func">COALESCE</span>((<span class="sql-keyword">SELECT</span> <span class="sql-func">MAX</span>(id) <span class="sql-keyword">FROM</span> prive_fin_week), <span class="sql-string">0</span>) + <span class="sql-string">1</span>,
+  <span class="sql-keyword">false</span>
+);</code>
+    </div>
+
+    <h3>Wat doet deze query?</h3>
+    <ul>
+      <li>
+        <code>pg_get_serial_sequence('prive_fin_week', 'id')</code> &mdash; vindt de naam van de
+        sequence die hoort bij de <code>id</code>-kolom
+      </li>
+      <li>
+        <code>SELECT MAX(id) FROM prive_fin_week</code> &mdash; zoekt de hoogste bestaande
+        <code>id</code>-waarde in de tabel
+      </li>
+      <li>
+        <code>COALESCE(..., 0) + 1</code> &mdash; als de tabel leeg is, start bij 1; anders
+        <code>max + 1</code>
+      </li>
+      <li>
+        <code>setval(..., false)</code> &mdash; de <code>false</code> betekent dat de volgende
+        <code>nextval</code> deze waarde retourneert (niet <code>waarde + 1</code>), dus de eerste
+        nieuwe insert krijgt <code>max + 1</code>
+      </li>
+    </ul>
+
+    <div class="callout callout-success">
+      <p><strong>Geverifieerd:</strong> Deze oplossing is succesvol toegepast op 25 juni 2026
+      en loste het probleem direct op.</p>
+    </div>
+
+    <h2>Werkt dit voor andere tabellen?</h2>
+    <p>
+      Ja. Vervang <code>prive_fin_week</code> door de naam van de betreffende tabel en
+      <code>id</code> door de naam van de primary key-kolom:
+    </p>
+    <div class="sql-block">
+      <code><span class="sql-keyword">SELECT</span> <span class="sql-func">setval</span>(
+  <span class="sql-func">pg_get_serial_sequence</span>(<span class="sql-string">'&lt;tabelnaam&gt;'</span>, <span class="sql-string">'&lt;pk-kolom&gt;'</span>),
+  <span class="sql-func">COALESCE</span>((<span class="sql-keyword">SELECT</span> <span class="sql-func">MAX</span>(&lt;pk-kolom&gt;) <span class="sql-keyword">FROM</span> &lt;tabelnaam&gt;), <span class="sql-string">0</span>) + <span class="sql-string">1</span>,
+  <span class="sql-keyword">false</span>
+);</code>
+    </div>
+
+    <h2>Voorkomen in de toekomst</h2>
+    <ul>
+      <li>
+        Gebruik altijd <code>INSERT</code> zonder expliciete <code>id</code> &mdash; laat de
+        identity column het invullen
+      </li>
+      <li>
+        Bij data-imports: gebruik <code>INSERT ... RETURNING id</code> of laat de <code>id</code>
+        weg zodat de database deze automatisch toekent
+      </li>
+      <li>
+        Als je toch handmatige ID's moet invoeren, voer dan direct daarna de
+        <code>setval</code>-query hierboven uit om de sequence te synchroniseren
+      </li>
+    </ul>
+
+    <div class="footer">
+      <p>Handleiding voor Knockout &mdash; gegenereerd op 25 juni 2026</p>
+    </div>
+  </div>
+</body>
+</html>
