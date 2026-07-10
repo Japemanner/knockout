@@ -57,9 +57,8 @@ export async function deleteBoard(data: { boardId: string }) {
 export async function reorderBoards(data: { orderedIds: string[] }) {
   try {
     const { supabase } = await getAuthenticatedClient()
-    await Promise.all(data.orderedIds.map((id, i) =>
-      supabase.from('kk_boards').update({ position: i }).eq('id', id)
-    ))
+    const { error } = await supabase.rpc('kk_reorder_boards', { p_board_ids: data.orderedIds })
+    if (error) return { success: false, error: error.message }
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
