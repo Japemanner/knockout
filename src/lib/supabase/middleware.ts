@@ -25,9 +25,19 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Local JWT verification via getClaims() — avoids a network round-trip to
+  // Supabase Auth on every request. Requires asymmetric JWT signing keys
+  // (RS256/ES256) enabled in the Supabase Dashboard → Project Settings →
+  // JWT Keys. Falls back to a server call for HS256 (symmetric) keys.
+  let user: { id: string } | null = null
+  try {
+    const { data } = await supabase.auth.getClaims()
+    if (data?.claims?.sub) {
+      user = { id: data.claims.sub }
+    }
+  } catch {
+    user = null
+  }
 
   if (user) {
     request.headers.set('x-user-id', user.id)
