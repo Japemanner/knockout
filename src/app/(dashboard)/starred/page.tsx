@@ -8,17 +8,7 @@ interface StarredCardRow {
   title: string
   column_id: string
   is_starred: boolean
-}
-
-interface BoardRow {
-  id: string
-  name: string
-}
-
-interface ColumnRow {
-  id: string
-  name: string
-  board_id: string
+  kk_columns: Array<{ board_id: string; kk_boards: Array<{ id: string; name: string }> }>
 }
 
 export default async function StarredPage() {
@@ -26,54 +16,13 @@ export default async function StarredPage() {
   if (!userId) return null
 
   const supabase = await createClient()
-  const { data: boards } = await supabase
-    .from('kk_boards')
-    .select('id, name')
-    .eq('user_id', userId)
 
-  if (!boards || boards.length === 0) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-          <Star className="h-6 w-6 text-yellow-500" /> Gesterde items
-        </h1>
-        <p className="text-muted-foreground mb-8">Jouw dagelijkse focus-items uit alle borden</p>
-        <p className="text-muted-foreground text-center py-12">
-          Geen gesterde items. Klik op de ster bij een kaart om &apos;m hier te zien.
-        </p>
-      </div>
-    )
-  }
-
-  const boardIds = boards.map((b: BoardRow) => b.id)
-  const boardMap = new Map(boards.map((b: BoardRow) => [b.id, b.name]))
-
-  const { data: columns } = await supabase
-    .from('kk_columns')
-    .select('id, name, board_id')
-    .in('board_id', boardIds)
-
-  const columnIds = (columns ?? []).map((c: ColumnRow) => c.id)
-  const columnToBoard = new Map((columns ?? []).map((c: ColumnRow) => [c.id, c.board_id]))
-
-  if (columnIds.length === 0) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
-          <Star className="h-6 w-6 text-yellow-500" /> Gesterde items
-        </h1>
-        <p className="text-muted-foreground mb-8">Jouw dagelijkse focus-items uit alle borden</p>
-        <p className="text-muted-foreground text-center py-12">
-          Geen gesterde items. Klik op de ster bij een kaart om &apos;m hier te zien.
-        </p>
-      </div>
-    )
-  }
-
+  // Single nested query with !inner joins: cards → columns → boards
+  // Previously: boards → columns → cards = 3 sequential round-trips.
   const { data: starredCards } = await supabase
     .from('kk_cards')
-    .select('id, title, column_id, is_starred')
-    .in('column_id', columnIds)
+    .select('id, title, column_id, is_starred, kk_columns!inner(board_id, kk_boards!inner(id, name, user_id))')
+    .eq('kk_columns.kk_boards.user_id', userId)
     .eq('is_starred', true)
     .eq('is_archived', false)
     .order('title')
@@ -81,9 +30,12 @@ export default async function StarredPage() {
   const groupedByBoard = new Map<string, { boardName: string; cards: { id: string; title: string }[] }>()
 
   for (const card of (starredCards ?? []) as StarredCardRow[]) {
-    const boardId = columnToBoard.get(card.column_id)
-    if (!boardId) continue
-    const boardName = boardMap.get(boardId) ?? 'Onbekend'
+    const col = card.kk_columns?.[0]
+    if (!col) continue
+    const board = col.kk_boards?.[0]
+    if (!board) continue
+    const boardId = board.id
+    const boardName = board.name
     if (!groupedByBoard.has(boardId)) {
       groupedByBoard.set(boardId, { boardName, cards: [] })
     }
