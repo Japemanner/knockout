@@ -27,10 +27,10 @@ export default async function CommandCenterPage() {
   const starredItems: { boardId: string; boardName: string; cards: { id: string; title: string }[] }[] = []
   const groupedByBoard = new Map<string, { boardName: string; cards: { id: string; title: string }[] }>()
 
-  for (const card of (starredCards ?? []) as Array<{ id: string; title: string; column_id: string; kk_columns: Array<{ board_id: string; kk_boards: Array<{ id: string; name: string }> }> }>) {
-    const col = card.kk_columns?.[0]
+  for (const card of (starredCards ?? []) as Array<{ id: string; title: string; column_id: string; kk_columns: { board_id: string; kk_boards: { id: string; name: string } } | null }>) {
+    const col = card.kk_columns
     if (!col) continue
-    const board = col.kk_boards?.[0]
+    const board = col.kk_boards
     if (!board) continue
     const boardId = board.id
     const boardName = board.name

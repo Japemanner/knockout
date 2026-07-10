@@ -8,7 +8,7 @@ interface StarredCardRow {
   title: string
   column_id: string
   is_starred: boolean
-  kk_columns: Array<{ board_id: string; kk_boards: Array<{ id: string; name: string }> }>
+  kk_columns: { board_id: string; kk_boards: { id: string; name: string } } | null
 }
 
 export default async function StarredPage() {
@@ -30,9 +30,9 @@ export default async function StarredPage() {
   const groupedByBoard = new Map<string, { boardName: string; cards: { id: string; title: string }[] }>()
 
   for (const card of (starredCards ?? []) as StarredCardRow[]) {
-    const col = card.kk_columns?.[0]
+    const col = card.kk_columns
     if (!col) continue
-    const board = col.kk_boards?.[0]
+    const board = col.kk_boards
     if (!board) continue
     const boardId = board.id
     const boardName = board.name
