@@ -278,36 +278,66 @@ export async function getDashboardStats(): Promise<ClientWithProgress[]> {
 
     const { supabase, userId } = await getAuthenticatedClient()
 
-    const results: ClientWithProgress[] = await Promise.all(
-      clients.map(async (client) => {
-        let query = supabase
-          .from('kk_hour_entries')
-          .select('hours')
-          .eq('user_id', userId)
-          .eq('client_id', client.id)
+    // Find the earliest period start across all clients (for batch filtering)
+    const now = new Date()
+    let earliestStart: Date | null = null
+    for (const client of clients) {
+      const start = periodStart(client.target_period, now)
+      if (start && (!earliestStart || start < earliestStart)) {
+        earliestStart = start
+      }
+    }
 
-        const start = periodStart(client.target_period)
-        if (start) {
-          query = query.gte('entry_date', format(start, 'yyyy-MM-dd'))
-        }
+    // Single query: fetch client_id + hours + entry_date for all active clients
+    let query = supabase
+      .from('kk_hour_entries')
+      .select('client_id, hours, entry_date')
+      .eq('user_id', userId)
+      .in('client_id', clients.map((c) => c.id))
 
-        const { data, error } = await query
-        if (error || !data) {
-          return { ...client, current_hours: 0, target_label: periodLabel(client.target_period), percentage: 0 }
-        }
-        const totalHours = data.reduce((sum: number, row: Record<string, unknown>) => sum + Number(row.hours), 0)
-        const target = Number(client.target_hours) || 0
-        const percentage = target > 0 ? Math.min(100, Math.round((totalHours / target) * 100)) : 0
-        return {
-          ...client,
-          current_hours: Math.round(totalHours * 100) / 100,
-          target_label: periodLabel(client.target_period),
-          percentage,
-        }
-      })
-    )
+    if (earliestStart) {
+      query = query.gte('entry_date', format(earliestStart, 'yyyy-MM-dd'))
+    }
 
-    return results
+    const { data, error } = await query
+    if (error || !data) {
+      return clients.map((client) => ({
+        ...client,
+        current_hours: 0,
+        target_label: periodLabel(client.target_period),
+        percentage: 0,
+      }))
+    }
+
+    // Build a map of entries per client for aggregation
+    const entriesByClient = new Map<string, Array<{ hours: number; entry_date: string }>>()
+    for (const row of data as Array<{ client_id: string; hours: number; entry_date: string }>) {
+      if (!entriesByClient.has(row.client_id)) {
+        entriesByClient.set(row.client_id, [])
+      }
+      entriesByClient.get(row.client_id)!.push({ hours: Number(row.hours), entry_date: row.entry_date })
+    }
+
+    // Aggregate per client applying each client's own period start
+    return clients.map((client) => {
+      const entries = entriesByClient.get(client.id) ?? []
+      const start = periodStart(client.target_period, now)
+      const startDateStr = start ? format(start, 'yyyy-MM-dd') : null
+
+      const totalHours = entries
+        .filter((e) => !startDateStr || e.entry_date >= startDateStr)
+        .reduce((sum, e) => sum + e.hours, 0)
+
+      const target = Number(client.target_hours) || 0
+      const percentage = target > 0 ? Math.min(100, Math.round((totalHours / target) * 100)) : 0
+
+      return {
+        ...client,
+        current_hours: Math.round(totalHours * 100) / 100,
+        target_label: periodLabel(client.target_period),
+        percentage,
+      }
+    })
   } catch (err) {
     console.error('getDashboardStats:', err)
     return []
