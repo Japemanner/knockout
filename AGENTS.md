@@ -115,6 +115,36 @@ Heavier checks — runs deliberately after a completed feature, not on every sma
 
 ---
 
+## 🔴 Regression Test Rule — Evaluate On Every Change
+
+**Every code change MUST be evaluated for regression test impact.** This is non-negotiable.
+
+### When to write or update a regression test:
+
+1. **Any server action that touches Supabase is changed** → write or update a test that exercises that action's happy path. The test must verify the mutation persists (e.g., reload the page and check the state survived).
+
+2. **Any page-level data query is changed** (e.g., nested selects, query consolidation, `!inner` joins, `foreignTable` ordering) → write or update a test that verifies the rendered data is correct, not just that the page loads.
+
+3. **Any `revalidatePath` is added or removed** → write a test that verifies the UI shows fresh data after the mutation (the exact scenario where removing `revalidatePath` can cause stale UI).
+
+4. **Any RPC function is added or changed in a migration** → ensure at least one E2E test exercises the RPC end-to-end through the UI.
+
+5. **Any function that affects user-perceived latency** (Supabase round-trips, query waterfalls, N+1 patterns) → write a test that covers the user flow so a future regression that reintroduces the waterfall or N+1 is caught.
+
+### How to evaluate:
+
+Before committing any change, ask: **"Did I modify a function that touches Supabase, a page query, or a revalidation strategy?"**
+- If YES → write or update a regression test before committing.
+- If NO → no new test needed, but the existing suite must still pass.
+
+### Test quality requirements:
+
+- Tests must **skip gracefully** when no login session is available (use the existing `if (page.url().includes('/login'))` pattern).
+- Tests that verify a mutation (create/update/delete) must check that the change is **visible in the UI** after the action completes — not just that no error was thrown.
+- Tests that verify data-correctness (e.g., nested join queries) must compare rendered output against expected values, not just check that elements exist.
+
+---
+
 ## Mandatory Workflow — After Every Bug Fix
 
 ```
