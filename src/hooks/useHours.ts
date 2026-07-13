@@ -28,7 +28,7 @@ export function useClients() {
 export function useCreateClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { name: string; target_hours: number; target_period: ClientTargetPeriod }) =>
+    mutationFn: (input: { name: string; target_hours: number; target_period: ClientTargetPeriod; hourly_rate: number }) =>
       createClient(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
@@ -45,7 +45,7 @@ export function useUpdateClient() {
       patch,
     }: {
       clientId: string
-      patch: Partial<Pick<Client, 'name' | 'target_hours' | 'target_period' | 'archived'>>
+      patch: Partial<Pick<Client, 'name' | 'target_hours' | 'target_period' | 'hourly_rate' | 'archived'>>
     }) => updateClient(clientId, patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
@@ -104,6 +104,7 @@ export function useCreateEntry() {
       start_time?: string | null
       end_time?: string | null
       description?: string | null
+      hourly_rate?: number
     }) => createEntry(input),
     onMutate: async (input) => {
       const queryKey = ['hours', 'entries', { limit: 50, offset: 0 }]
@@ -148,7 +149,7 @@ export function useUpdateEntry() {
       patch,
     }: {
       entryId: string
-      patch: Partial<{ client_id: string; entry_date: string; hours: number; description: string | null }>
+      patch: Partial<{ client_id: string; entry_date: string; hours: number; hourly_rate: number; description: string | null; start_time: string | null; end_time: string | null }>
     }) => updateEntry(entryId, patch),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })

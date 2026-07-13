@@ -10,7 +10,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { useClients, useEntries, useUpdateEntry, useDeleteEntry } from '@/hooks/useHours'
 import type { EntryWithClient } from '@/actions/hours'
-import { parseDecimalInput } from '@/lib/decimal'
 import { format, parseISO } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Trash2, Pencil, Save, X } from 'lucide-react'
@@ -33,6 +32,39 @@ function todayISO(): string {
   const tzOffset = d.getTimezoneOffset() * 60000
   return new Date(d.getTime() - tzOffset).toISOString().split('T')[0] ?? ''
 }
+
+function dateWithTime(dateISO: string, timeHHMM: string): string | null {
+  if (!dateISO || !timeHHMM) return null
+  const parts = timeHHMM.split(':')
+  const h = parts[0] !== undefined ? Number(parts[0]) : NaN
+  const m = parts[1] !== undefined ? Number(parts[1]) : NaN
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  const d = new Date(`${dateISO}T00:00:00`)
+  d.setHours(h, m, 0, 0)
+  return d.toISOString()
+}
+
+function diffHours(startISO: string, endISO: string): number | null {
+  const start = new Date(startISO)
+  const end = new Date(endISO)
+  const diffMs = end.getTime() - start.getTime()
+  if (diffMs <= 0) return null
+  return Math.round((diffMs / 3_600_000) * 100) / 100
+}
+
+function isoToHHMM(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const v = String(i).padStart(2, '0')
+  return { value: v, label: v }
+})
+const MINUTE_OPTIONS = ['00', '15', '30', '45'].map((v) => ({ value: v, label: v }))
 
 interface DayGroup {
   date: string
@@ -78,9 +110,27 @@ export function HoursHistory() {
   const { toast } = useToast()
 
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editHours, setEditHours] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editStartHour, setEditStartHour] = useState('')
+  const [editStartMinute, setEditStartMinute] = useState('')
+  const [editEndHour, setEditEndHour] = useState('')
+  const [editEndMinute, setEditEndMinute] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
+
+  const editStartTime = editStartHour && editStartMinute ? `${editStartHour}:${editStartMinute}` : ''
+  const editEndTime = editEndHour && editEndMinute ? `${editEndHour}:${editEndMinute}` : ''
+
+  const editComputedHours = useMemo(() => {
+    if (!editStartTime || !editEndTime || !editDate) return null
+    const startISO = dateWithTime(editDate, editStartTime)
+    const endISO = dateWithTime(editDate, editEndTime)
+    if (!startISO || !endISO) return null
+    return diffHours(startISO, endISO)
+  }, [editStartTime, editEndTime, editDate])
+
+  const editDisplayHours =
+    editComputedHours !== null ? String(editComputedHours).replace('.', ',') : ''
 
   const applyPreset = (preset: PeriodPreset) => {
     setPeriodPreset(preset)
@@ -108,7 +158,13 @@ export function HoursHistory() {
 
   const startEdit = (entry: EntryWithClient) => {
     setEditingId(entry.id)
-    setEditHours(String(entry.hours).replace('.', ','))
+    setEditDate(entry.entry_date)
+    const s = isoToHHMM(entry.start_time)
+    const e = isoToHHMM(entry.end_time)
+    setEditStartHour(s ? s.split(':')[0] ?? '' : '')
+    setEditStartMinute(s ? s.split(':')[1] ?? '' : '')
+    setEditEndHour(e ? e.split(':')[0] ?? '' : '')
+    setEditEndMinute(e ? e.split(':')[1] ?? '' : '')
     setEditDescription(entry.description ?? '')
     setEditError(null)
   }
@@ -119,16 +175,29 @@ export function HoursHistory() {
   }
 
   const saveEdit = (entry: EntryWithClient) => {
-    const parsed = parseDecimalInput(editHours, false)
-    if (!parsed.ok || parsed.value === null || parsed.value <= 0) {
-      setEditError(parsed.ok ? 'Uren moeten groter dan 0 zijn' : parsed.error)
+    if (!editStartTime || !editEndTime) {
+      setEditError('Start- en eindtijd zijn verplicht')
+      return
+    }
+    const startTimeISO = dateWithTime(editDate, editStartTime)
+    const endTimeISO = dateWithTime(editDate, editEndTime)
+    if (!startTimeISO || !endTimeISO) {
+      setEditError('Ongeldige start- of eindtijd')
+      return
+    }
+    const diff = diffHours(startTimeISO, endTimeISO)
+    if (diff === null) {
+      setEditError('Eindtijd moet na starttijd liggen')
       return
     }
     updateMutation.mutate(
       {
         entryId: entry.id,
         patch: {
-          hours: parsed.value,
+          entry_date: editDate,
+          hours: diff,
+          start_time: startTimeISO,
+          end_time: endTimeISO,
           description: editDescription.trim() || null,
         },
       },
@@ -243,6 +312,9 @@ export function HoursHistory() {
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {group.total.toFixed(2).replace('.', ',')} uur
+                    {group.entries.some((e) => Number(e.hourly_rate) > 0) && (
+                      <> · € {group.entries.reduce((sum, e) => sum + e.hours * Number(e.hourly_rate), 0).toFixed(2).replace('.', ',')}</>
+                    )}
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -252,30 +324,75 @@ export function HoursHistory() {
                         key={entry.id}
                         className="p-3 border rounded-lg space-y-2 bg-muted/30"
                       >
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div className="space-y-1 sm:col-span-1">
-                            <label className="text-xs text-muted-foreground">Uren</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Datum</label>
                             <Input
-                              inputMode="decimal"
-                              value={editHours}
-                              onChange={(e) => {
-                                setEditHours(e.target.value)
-                                if (editError) setEditError(null)
-                              }}
-                              autoFocus
+                              type="date"
+                              value={editDate}
+                              onChange={(e) => setEditDate(e.target.value)}
+                              max={todayISO()}
                             />
-                            {editError && (
-                              <p className="text-xs text-destructive">{editError}</p>
-                            )}
                           </div>
-                          <div className="space-y-1 sm:col-span-2">
-                            <label className="text-xs text-muted-foreground">Omschrijving</label>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">
+                              Uren (automatisch)
+                            </label>
                             <Input
-                              value={editDescription}
-                              onChange={(e) => setEditDescription(e.target.value)}
+                              value={editDisplayHours}
+                              readOnly
+                              placeholder="Vul tijden in"
+                              tabIndex={-1}
+                              className="bg-muted/50 cursor-not-allowed"
                             />
                           </div>
                         </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Starttijd</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Select
+                                value={editStartHour}
+                                onValueChange={setEditStartHour}
+                                placeholder="Uur"
+                                options={HOUR_OPTIONS}
+                              />
+                              <Select
+                                value={editStartMinute}
+                                onValueChange={setEditStartMinute}
+                                placeholder="Min"
+                                options={MINUTE_OPTIONS}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs text-muted-foreground">Eindtijd</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Select
+                                value={editEndHour}
+                                onValueChange={setEditEndHour}
+                                placeholder="Uur"
+                                options={HOUR_OPTIONS}
+                              />
+                              <Select
+                                value={editEndMinute}
+                                onValueChange={setEditEndMinute}
+                                placeholder="Min"
+                                options={MINUTE_OPTIONS}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Omschrijving</label>
+                          <Input
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                          />
+                        </div>
+                        {editError && (
+                          <p className="text-xs text-destructive">{editError}</p>
+                        )}
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" size="sm" onClick={cancelEdit}>
                             <X className="h-3 w-3 mr-1" />
@@ -300,6 +417,18 @@ export function HoursHistory() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary">{entry.client_name}</Badge>
                             <span className="font-medium">{entry.hours.toFixed(2).replace('.', ',')} uur</span>
+                            {Number(entry.hourly_rate) > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                € {entry.hourly_rate.toFixed(2).replace('.', ',')} / uur
+                                {' → '}
+                                € {(entry.hours * Number(entry.hourly_rate)).toFixed(2).replace('.', ',')}
+                              </span>
+                            )}
+                            {entry.start_time && entry.end_time && (
+                              <span className="text-xs text-muted-foreground">
+                                {isoToHHMM(entry.start_time)}–{isoToHHMM(entry.end_time)}
+                              </span>
+                            )}
                           </div>
                           {entry.description && (
                             <p className="text-sm text-muted-foreground mt-1 truncate">

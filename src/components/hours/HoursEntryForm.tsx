@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { useClients, useCreateEntry } from '@/hooks/useHours'
-import { parseDecimalInput } from '@/lib/decimal'
 import { Plus, Clock } from 'lucide-react'
 
 function todayISO(): string {
@@ -53,8 +52,6 @@ export function HoursEntryForm() {
   const [startMinute, setStartMinute] = useState('')
   const [endHour, setEndHour] = useState('')
   const [endMinute, setEndMinute] = useState('')
-  const [hoursRaw, setHoursRaw] = useState('')
-  const [hoursManual, setHoursManual] = useState(false)
   const [description, setDescription] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -62,19 +59,14 @@ export function HoursEntryForm() {
   const endTime = endHour && endMinute ? `${endHour}:${endMinute}` : ''
 
   const computedHours = useMemo(() => {
-    if (hoursManual) return null
     if (!startTime || !endTime || !entryDate) return null
     const startISO = dateWithTime(entryDate, startTime)
     const endISO = dateWithTime(entryDate, endTime)
     if (!startISO || !endISO) return null
     return diffHours(startISO, endISO)
-  }, [startTime, endTime, entryDate, hoursManual])
+  }, [startTime, endTime, entryDate])
 
-  const displayHours = hoursManual
-    ? hoursRaw
-    : computedHours !== null
-      ? String(computedHours).replace('.', ',')
-      : ''
+  const displayHours = computedHours !== null ? String(computedHours).replace('.', ',') : ''
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -88,42 +80,28 @@ export function HoursEntryForm() {
       setFormError('Datum is verplicht')
       return
     }
+    if (!startTime || !endTime) {
+      setFormError('Start- en eindtijd zijn verplicht')
+      return
+    }
 
-    let hoursValue: number | null = null
-    let startTimeISO: string | null = null
-    let endTimeISO: string | null = null
-
-    if (startTime && endTime) {
-      startTimeISO = dateWithTime(entryDate, startTime)
-      endTimeISO = dateWithTime(entryDate, endTime)
-      if (!startTimeISO || !endTimeISO) {
-        setFormError('Ongeldige start- of eindtijd')
-        return
-      }
-      const diff = diffHours(startTimeISO, endTimeISO)
-      if (diff === null) {
-        setFormError('Eindtijd moet na starttijd liggen')
-        return
-      }
-      hoursValue = diff
-    } else {
-      const parsed = parseDecimalInput(hoursRaw, false)
-      if (!parsed.ok) {
-        setFormError(parsed.error)
-        return
-      }
-      if (parsed.value === null || parsed.value <= 0) {
-        setFormError('Uren moeten groter dan 0 zijn')
-        return
-      }
-      hoursValue = parsed.value
+    const startTimeISO = dateWithTime(entryDate, startTime)
+    const endTimeISO = dateWithTime(entryDate, endTime)
+    if (!startTimeISO || !endTimeISO) {
+      setFormError('Ongeldige start- of eindtijd')
+      return
+    }
+    const diff = diffHours(startTimeISO, endTimeISO)
+    if (diff === null) {
+      setFormError('Eindtijd moet na starttijd liggen')
+      return
     }
 
     createMutation.mutate(
       {
         client_id: clientId,
         entry_date: entryDate,
-        hours: hoursValue,
+        hours: diff,
         start_time: startTimeISO,
         end_time: endTimeISO,
         description: description.trim() || null,
@@ -131,13 +109,11 @@ export function HoursEntryForm() {
       {
         onSuccess: (result) => {
           if (result.success) {
-            toast({ title: 'Opgeslagen', description: `${hoursValue} uur geregistreerd` })
+            toast({ title: 'Opgeslagen', description: `${diff} uur geregistreerd` })
             setStartHour('')
             setStartMinute('')
             setEndHour('')
             setEndMinute('')
-            setHoursRaw('')
-            setHoursManual(false)
             setDescription('')
           } else {
             toast({ title: 'Fout bij opslaan', description: result.error, variant: 'destructive' })
@@ -201,19 +177,13 @@ export function HoursEntryForm() {
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={startHour}
-                onValueChange={(v) => {
-                  setStartHour(v)
-                  setHoursManual(false)
-                }}
+                onValueChange={setStartHour}
                 placeholder="Uur"
                 options={HOUR_OPTIONS}
               />
               <Select
                 value={startMinute}
-                onValueChange={(v) => {
-                  setStartMinute(v)
-                  setHoursManual(false)
-                }}
+                onValueChange={setStartMinute}
                 placeholder="Min"
                 options={MINUTE_OPTIONS}
               />
@@ -224,19 +194,13 @@ export function HoursEntryForm() {
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={endHour}
-                onValueChange={(v) => {
-                  setEndHour(v)
-                  setHoursManual(false)
-                }}
+                onValueChange={setEndHour}
                 placeholder="Uur"
                 options={HOUR_OPTIONS}
               />
               <Select
                 value={endMinute}
-                onValueChange={(v) => {
-                  setEndMinute(v)
-                  setHoursManual(false)
-                }}
+                onValueChange={setEndMinute}
                 placeholder="Min"
                 options={MINUTE_OPTIONS}
               />
@@ -244,18 +208,15 @@ export function HoursEntryForm() {
           </div>
           <div className="space-y-1">
             <label htmlFor="hours-amount" className="text-xs font-medium text-muted-foreground">
-              Uren {computedHours !== null && !hoursManual && '(berekend)'}
+              Uren (automatisch berekend)
             </label>
             <Input
               id="hours-amount"
-              inputMode="decimal"
               value={displayHours}
-              onChange={(e) => {
-                setHoursRaw(e.target.value)
-                setHoursManual(true)
-                if (formError) setFormError(null)
-              }}
-              placeholder="bijv. 1,5 of 2,25"
+              readOnly
+              placeholder="Vul start- en eindtijd in"
+              tabIndex={-1}
+              className="bg-muted/50 cursor-not-allowed"
               aria-invalid={!!formError}
             />
           </div>
