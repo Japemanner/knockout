@@ -49,19 +49,24 @@ export function ClientManageDialog({
   const [name, setName] = useState('')
   const [targetHoursRaw, setTargetHoursRaw] = useState('')
   const [targetPeriod, setTargetPeriod] = useState<ClientTargetPeriod>('month')
+  const [hourlyRateRaw, setHourlyRateRaw] = useState('')
   const [hoursError, setHoursError] = useState<string | null>(null)
+  const [rateError, setRateError] = useState<string | null>(null)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editTargetHoursRaw, setEditTargetHoursRaw] = useState('')
   const [editTargetPeriod, setEditTargetPeriod] = useState<ClientTargetPeriod>('month')
+  const [editHourlyRateRaw, setEditHourlyRateRaw] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
 
   const resetForm = () => {
     setName('')
     setTargetHoursRaw('')
     setTargetPeriod('month')
+    setHourlyRateRaw('')
     setHoursError(null)
+    setRateError(null)
     setShowForm(false)
   }
 
@@ -77,11 +82,18 @@ export function ClientManageDialog({
       return
     }
     setHoursError(null)
+    const parsedRate = parseDecimalInput(hourlyRateRaw, false)
+    if (!parsedRate.ok || parsedRate.value === null || parsedRate.value < 0) {
+      setRateError(parsedRate.ok ? 'Uurtarief moet ≥ 0 zijn' : parsedRate.error)
+      return
+    }
+    setRateError(null)
     createMutation.mutate(
       {
         name: name.trim(),
         target_hours: parsed.value,
         target_period: targetPeriod,
+        hourly_rate: parsedRate.value,
       },
       {
         onSuccess: (result) => {
@@ -101,6 +113,7 @@ export function ClientManageDialog({
     setEditName(client.name)
     setEditTargetHoursRaw(String(client.target_hours).replace('.', ','))
     setEditTargetPeriod(client.target_period)
+    setEditHourlyRateRaw(String(client.hourly_rate).replace('.', ','))
     setEditError(null)
   }
 
@@ -119,6 +132,11 @@ export function ClientManageDialog({
       setEditError(parsed.ok ? 'Target uren moeten ≥ 0 zijn' : parsed.error)
       return
     }
+    const parsedRate = parseDecimalInput(editHourlyRateRaw, false)
+    if (!parsedRate.ok || parsedRate.value === null || parsedRate.value < 0) {
+      setEditError(parsedRate.ok ? 'Uurtarief moet ≥ 0 zijn' : parsedRate.error)
+      return
+    }
     setEditError(null)
     updateMutation.mutate(
       {
@@ -127,6 +145,7 @@ export function ClientManageDialog({
           name: editName.trim(),
           target_hours: parsed.value,
           target_period: editTargetPeriod,
+          hourly_rate: parsedRate.value,
         },
       },
       {
@@ -184,7 +203,7 @@ export function ClientManageDialog({
                 autoFocus
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Target uren</label>
                 <Input
@@ -197,6 +216,19 @@ export function ClientManageDialog({
                   placeholder="bijv. 40"
                 />
                 {hoursError && <p className="text-xs text-destructive">{hoursError}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Uurtarief (€)</label>
+                <Input
+                  inputMode="decimal"
+                  value={hourlyRateRaw}
+                  onChange={(e) => {
+                    setHourlyRateRaw(e.target.value)
+                    if (rateError) setRateError(null)
+                  }}
+                  placeholder="bijv. 75"
+                />
+                {rateError && <p className="text-xs text-destructive">{rateError}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Periode</label>
@@ -233,7 +265,7 @@ export function ClientManageDialog({
                     onChange={(e) => setEditName(e.target.value)}
                     autoFocus
                   />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
                       <Input
                         inputMode="decimal"
@@ -244,7 +276,17 @@ export function ClientManageDialog({
                         }}
                         placeholder="Target uren"
                       />
-                      {editError && <p className="text-xs text-destructive mt-1">{editError}</p>}
+                    </div>
+                    <div>
+                      <Input
+                        inputMode="decimal"
+                        value={editHourlyRateRaw}
+                        onChange={(e) => {
+                          setEditHourlyRateRaw(e.target.value)
+                          if (editError) setEditError(null)
+                        }}
+                        placeholder="Uurtarief €"
+                      />
                     </div>
                     <Select
                       value={editTargetPeriod}
@@ -252,6 +294,7 @@ export function ClientManageDialog({
                       options={PERIOD_OPTIONS}
                     />
                   </div>
+                  {editError && <p className="text-xs text-destructive">{editError}</p>}
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={cancelEdit}>
                       <X className="h-3 w-3 mr-1" />
@@ -279,6 +322,7 @@ export function ClientManageDialog({
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {Number(client.target_hours)} uur {client.target_period === 'week' ? 'per week' : client.target_period === 'month' ? 'per maand' : 'totaal'}
+                      {' · '}€ {Number(client.hourly_rate).toFixed(2).replace('.', ',')} / uur
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">

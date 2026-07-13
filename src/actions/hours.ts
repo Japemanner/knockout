@@ -49,6 +49,7 @@ export async function createClient(input: {
   name: string
   target_hours: number
   target_period: ClientTargetPeriod
+  hourly_rate: number
 }): Promise<ActionResult<Client>> {
   try {
     const { supabase, userId } = await getAuthenticatedClient()
@@ -59,6 +60,7 @@ export async function createClient(input: {
         name: input.name.trim(),
         target_hours: input.target_hours,
         target_period: input.target_period,
+        hourly_rate: input.hourly_rate,
       })
       .select()
       .single()
@@ -73,7 +75,7 @@ export async function createClient(input: {
 
 export async function updateClient(
   clientId: string,
-  patch: Partial<Pick<Client, 'name' | 'target_hours' | 'target_period' | 'archived'>>
+  patch: Partial<Pick<Client, 'name' | 'target_hours' | 'target_period' | 'hourly_rate' | 'archived'>>
 ): Promise<ActionResult<Client>> {
   try {
     const { supabase } = await getAuthenticatedClient()
@@ -81,6 +83,7 @@ export async function updateClient(
     if (patch.name !== undefined) updateData.name = patch.name.trim()
     if (patch.target_hours !== undefined) updateData.target_hours = patch.target_hours
     if (patch.target_period !== undefined) updateData.target_period = patch.target_period
+    if (patch.hourly_rate !== undefined) updateData.hourly_rate = patch.hourly_rate
     if (patch.archived !== undefined) updateData.archived = patch.archived
     if (Object.keys(updateData).length === 0) return { success: true, data: {} as Client }
 
@@ -149,6 +152,7 @@ export async function listEntries(options?: {
         client_id: row.client_id as string,
         entry_date: row.entry_date as string,
         hours: Number(row.hours),
+        hourly_rate: Number(row.hourly_rate),
         description: (row.description as string | null) ?? null,
         start_time: (row.start_time as string | null) ?? null,
         end_time: (row.end_time as string | null) ?? null,
@@ -172,9 +176,22 @@ export async function createEntry(input: {
   start_time?: string | null
   end_time?: string | null
   description?: string | null
+  hourly_rate?: number
 }): Promise<ActionResult<EntryWithClient>> {
   try {
     const { supabase, userId } = await getAuthenticatedClient()
+
+    // Haal huidig uurtarief van de opdrachtgever op als snapshot
+    let rateSnapshot = input.hourly_rate ?? 0
+    if (input.hourly_rate === undefined) {
+      const { data: clientRow } = await supabase
+        .from('kk_clients')
+        .select('hourly_rate')
+        .eq('id', input.client_id)
+        .eq('user_id', userId)
+        .single()
+      rateSnapshot = clientRow ? Number(clientRow.hourly_rate) : 0
+    }
 
     const { data, error } = await supabase
       .from('kk_hour_entries')
@@ -183,6 +200,7 @@ export async function createEntry(input: {
         client_id: input.client_id,
         entry_date: input.entry_date,
         hours: input.hours,
+        hourly_rate: rateSnapshot,
         start_time: input.start_time ?? null,
         end_time: input.end_time ?? null,
         description: input.description?.trim() || null,
@@ -200,6 +218,7 @@ export async function createEntry(input: {
       client_id: data.client_id,
       entry_date: data.entry_date,
       hours: Number(data.hours),
+      hourly_rate: Number(data.hourly_rate),
       description: data.description ?? null,
       start_time: (data.start_time as string | null) ?? null,
       end_time: (data.end_time as string | null) ?? null,
@@ -215,7 +234,7 @@ export async function createEntry(input: {
 
 export async function updateEntry(
   entryId: string,
-  patch: Partial<Pick<HourEntry, 'client_id' | 'entry_date' | 'hours' | 'description' | 'start_time' | 'end_time'>>
+  patch: Partial<Pick<HourEntry, 'client_id' | 'entry_date' | 'hours' | 'hourly_rate' | 'description' | 'start_time' | 'end_time'>>
 ): Promise<ActionResult<HourEntry>> {
   try {
     const { supabase } = await getAuthenticatedClient()
@@ -223,6 +242,7 @@ export async function updateEntry(
     if (patch.client_id !== undefined) updateData.client_id = patch.client_id
     if (patch.entry_date !== undefined) updateData.entry_date = patch.entry_date
     if (patch.hours !== undefined) updateData.hours = patch.hours
+    if (patch.hourly_rate !== undefined) updateData.hourly_rate = patch.hourly_rate
     if (patch.description !== undefined) updateData.description = patch.description?.trim() || null
     if (patch.start_time !== undefined) updateData.start_time = patch.start_time
     if (patch.end_time !== undefined) updateData.end_time = patch.end_time

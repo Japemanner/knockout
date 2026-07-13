@@ -182,6 +182,7 @@ export interface Client {
   name: string
   target_hours: number
   target_period: ClientTargetPeriod
+  hourly_rate: number
   archived: boolean
   created_at: string
   updated_at: string
@@ -193,6 +194,7 @@ export interface HourEntry {
   client_id: string
   entry_date: string
   hours: number
+  hourly_rate: number
   description: string | null
   start_time: string | null
   end_time: string | null
