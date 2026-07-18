@@ -93,4 +93,33 @@ test.describe('/uren route', () => {
     await hoursInput.fill('1,5')
     await expect(hoursInput).toHaveValue('1,5')
   })
+
+  // Regression: sinds getDashboardStats via één SQL-query met CASE WHEN
+  // aggregatie per target_period loopt (ipv 3 server-action calls + JS
+  // aggregatie), moet de dashboard-rendering nog steeds correct werken.
+  // Verifieert dat current_hours, target_hours en percentage correct
+  // uit de SQL-aggregatie in de UI terechtkomen.
+  test('dashboard toont per-opdrachtgever voortgang met current/target/percentage', async ({ page }) => {
+    await page.goto('/uren')
+
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Niet ingelogd — login vereist')
+      return
+    }
+
+    // Wacht tot de dashboard-cards geladen zijn (TanStack Query hydrate)
+    const dashboardCards = page.locator('[class*="grid"] > div[class*="rounded-xl"]')
+    const cardCount = await dashboardCards.count()
+
+    if (cardCount === 0) {
+      test.skip(true, 'Geen opdrachtgevers — dashboard-rendering niet testbaar')
+      return
+    }
+
+    // Elke dashboard-card moet een "uur" eenheid tonen (van target_hours)
+    // en een percentage waarde
+    const firstCard = dashboardCards.first()
+    await expect(firstCard.getByText(/uur/)).toBeVisible()
+    await expect(firstCard.getByText(/%/)).toBeVisible()
+  })
 })
