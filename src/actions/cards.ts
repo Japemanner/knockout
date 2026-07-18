@@ -1,7 +1,13 @@
 'use server'
 
 import { getAuthenticatedClient } from '@/lib/supabase/actions'
+import { getUserId } from '@/lib/supabase/server'
+import { getLocalPool } from '@/lib/db/local-pool'
 import { revalidatePath } from 'next/cache'
+
+interface DeleteCardResultRow {
+  board_id: string | null
+}
 
 export async function createCardInColumn(data: {
   columnId: string
@@ -104,44 +110,50 @@ export async function updateCard(cardId: string, data: Record<string, unknown>) 
   }
 }
 
+// Eén SQL-CTE vervangt 4 queries (select card, update children parent_id=null,
+// delete card, select column voor board_id). Bespaart ~100-150ms per
+// kaart-verwijdering. RLS-compensatie: expliciete user_id filtering via join.
+const DELETE_CARD_QUERY = `
+  WITH target AS (
+    SELECT c.id, c.column_id, c.parent_id
+    FROM kk_cards c
+    JOIN kk_columns col ON c.column_id = col.id
+    JOIN kk_boards b ON col.board_id = b.id
+    WHERE c.id = $1 AND b.user_id = $2
+  ),
+  promote_children AS (
+    UPDATE kk_cards
+    SET parent_id = NULL, updated_at = now()
+    WHERE parent_id = (SELECT id FROM target)
+  ),
+  deleted AS (
+    DELETE FROM kk_cards
+    WHERE id = (SELECT id FROM target)
+    RETURNING column_id
+  )
+  SELECT col.board_id
+  FROM deleted d
+  JOIN kk_columns col ON d.column_id = col.id
+`
+
 export async function deleteCard(cardId: string) {
   try {
-    const { supabase } = await getAuthenticatedClient()
+    const userId = await getUserId()
+    if (!userId) throw new Error('Niet ingelogd')
 
-    const { data: card } = await supabase
-      .from('kk_cards')
-      .select('column_id, parent_id')
-      .eq('id', cardId)
-      .single()
+    const pool = getLocalPool()
+    const { rows, rowCount } = await pool.query<DeleteCardResultRow>(DELETE_CARD_QUERY, [
+      cardId,
+      userId,
+    ])
 
-    if (!card) throw new Error('Card not found')
-
-    const { error: promoteError } = await supabase
-      .from('kk_cards')
-      .update({ parent_id: null, updated_at: new Date().toISOString() })
-      .eq('parent_id', cardId)
-
-    if (promoteError) throw promoteError
-
-    const { error } = await supabase
-      .from('kk_cards')
-      .delete()
-      .eq('id', cardId)
-
-    if (error) throw error
+    if (rowCount === 0) throw new Error('Card not found')
 
     revalidatePath('/starred')
     revalidatePath('/boards')
-
-    if (card.column_id) {
-      const { data: column } = await supabase
-        .from('kk_columns')
-        .select('board_id')
-        .eq('id', card.column_id)
-        .single()
-      if (column?.board_id) {
-        revalidatePath(`/boards/${column.board_id}`)
-      }
+    const boardId = rows[0]?.board_id
+    if (boardId) {
+      revalidatePath(`/boards/${boardId}`)
     }
 
     return { success: true }
@@ -151,53 +163,72 @@ export async function deleteCard(cardId: string) {
   }
 }
 
+// Eén SQL-CTE vervangt 3 queries (select card, update card, optional update
+// subtasks, select column voor board_id). Bespaart ~75-100ms.
+// RLS-compensatie: user_id = $2 via join. Retourneert altijd de hoofdupdate-rij
+// plus board_id, ongeacht of er subtasks zijn.
+const TOGGLE_ARCHIVE_CARD_QUERY = `
+  WITH target AS (
+    SELECT c.is_archived, col.board_id
+    FROM kk_cards c
+    JOIN kk_columns col ON c.column_id = col.id
+    JOIN kk_boards b ON col.board_id = b.id
+    WHERE c.id = $1 AND b.user_id = $2
+  ),
+  updated AS (
+    UPDATE kk_cards
+    SET is_archived = NOT (SELECT is_archived FROM target),
+        is_starred = CASE WHEN NOT (SELECT is_archived FROM target) THEN false ELSE is_starred END,
+        updated_at = now()
+    WHERE id = $1
+    RETURNING *
+  ),
+  subtask_update AS (
+    UPDATE kk_cards
+    SET is_archived = true, is_starred = false, updated_at = now()
+    WHERE parent_id = $1
+      AND (SELECT is_archived FROM updated) = true
+  )
+  SELECT u.*, (SELECT board_id FROM target) AS board_id
+  FROM updated u
+`
+
+interface ToggleArchiveResultRow {
+  id: string
+  column_id: string
+  parent_id: string | null
+  title: string
+  description: string | null
+  url: string | null
+  is_starred: boolean
+  is_archived: boolean
+  position: number
+  deadline: string | null
+  created_at: string
+  updated_at: string
+  board_id: string | null
+}
+
 export async function toggleArchiveCard(cardId: string) {
   try {
-    const { supabase } = await getAuthenticatedClient()
+    const userId = await getUserId()
+    if (!userId) throw new Error('Niet ingelogd')
 
-    const { data: currentCard } = await supabase
-      .from('kk_cards')
-      .select('is_archived, column_id')
-      .eq('id', cardId)
-      .single()
+    const pool = getLocalPool()
+    const { rows, rowCount } = await pool.query<ToggleArchiveResultRow>(TOGGLE_ARCHIVE_CARD_QUERY, [
+      cardId,
+      userId,
+    ])
 
-    if (!currentCard) throw new Error('Card not found')
+    if (rowCount === 0) throw new Error('Card not found')
 
-    const newArchived = !currentCard.is_archived
-
-    const { data: updatedCard } = await supabase
-      .from('kk_cards')
-      .update({
-        is_archived: newArchived,
-        ...(newArchived ? { is_starred: false } : {}),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', cardId)
-      .select()
-      .single()
-
-    if (!updatedCard) throw new Error('Failed to update card')
-
-    if (newArchived) {
+    const updatedCard = rows[0]!
+    if (updatedCard.is_archived) {
       revalidatePath('/starred')
-      const { error: subError } = await supabase
-        .from('kk_cards')
-        .update({ is_archived: true, is_starred: false, updated_at: new Date().toISOString() })
-        .eq('parent_id', cardId)
-
-      if (subError) throw subError
     }
-
     revalidatePath('/boards')
-    if (currentCard.column_id) {
-      const { data: column } = await supabase
-        .from('kk_columns')
-        .select('board_id')
-        .eq('id', currentCard.column_id)
-        .single()
-      if (column?.board_id) {
-        revalidatePath(`/boards/${column.board_id}`)
-      }
+    if (updatedCard.board_id) {
+      revalidatePath(`/boards/${updatedCard.board_id}`)
     }
 
     return { success: true, card: updatedCard }

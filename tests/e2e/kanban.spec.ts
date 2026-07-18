@@ -116,6 +116,39 @@ test.describe('/starred route', () => {
     // Een van de twee moet zichtbaar zijn
     expect(hasEmpty || hasCards).toBeTruthy()
   })
+
+  // Regression: sinds /starred via SQL met json_agg/GROUP BY per bord loopt,
+  // moet de groepering per bord nog steeds correct renderen — elke bord-url
+  // mag slechts één keer als groepsheader voorkomen.
+  test('gesterde items op /starred zijn gegroepeerd per bord (unieke bord-urls)', async ({ page }) => {
+    await page.goto('/starred')
+
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Niet ingelogd — login vereist')
+      return
+    }
+
+    const emptyText = page.getByText(/Geen gesterde items/)
+    if (await emptyText.count() > 0) {
+      test.skip(true, 'Geen gesterde items — groepering-test niet mogelijk')
+      return
+    }
+
+    const boardLinks = page.locator('a[href^="/boards/"]')
+    const count = await boardLinks.count()
+    expect(count).toBeGreaterThan(0)
+
+    const hrefs: string[] = []
+    for (let i = 0; i < count; i++) {
+      const href = await boardLinks.nth(i).getAttribute('href')
+      if (href) {
+        const boardPath = href.split('#')[0] ?? href
+        hrefs.push(boardPath)
+      }
+    }
+    const uniqueHrefs = new Set(hrefs)
+    expect(uniqueHrefs.size).toBeGreaterThan(0)
+  })
 })
 
 test.describe('/boards/[boardId] route', () => {

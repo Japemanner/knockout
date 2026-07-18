@@ -1,8 +1,8 @@
-import { createClient, getUserId } from '@/lib/supabase/server'
+import { getUserId } from '@/lib/supabase/server'
 import { getLocalPool } from '@/lib/db/local-pool'
 import { redirect } from 'next/navigation'
 import { CommandCenterClient } from '@/components/command-center/CommandCenterClient'
-import { getProfile } from '@/lib/supabase/profile'
+import { getCachedProfile } from '@/lib/supabase/profile'
 
 interface StarredRow {
   board_id: string
@@ -35,11 +35,10 @@ export default async function CommandCenterPage() {
   const userId = await getUserId()
   if (!userId) redirect('/login')
 
-  const supabase = await createClient()
   const pool = getLocalPool()
 
   const [profile, { rows: starredRows }] = await Promise.all([
-    getProfile(supabase, userId),
+    getCachedProfile(undefined, userId),
     pool.query<StarredRow>(STARRED_QUERY, [userId]),
   ])
 

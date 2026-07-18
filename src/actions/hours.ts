@@ -118,6 +118,40 @@ export async function unarchiveClient(clientId: string): Promise<ActionResult<nu
 // HOUR ENTRIES
 // ============================================================
 
+// Eén SQL-query met LEFT JOIN kk_clients + COUNT(*) OVER() voor total (window
+// function). Bespaart TLS-overhead en JSON-shaping van PostgREST.
+// RLS-compensatie: expliciete WHERE e.user_id = $1.
+const LIST_ENTRIES_QUERY = `
+  SELECT e.id, e.user_id, e.client_id, e.entry_date, e.hours, e.hourly_rate,
+         e.description, e.start_time, e.end_time, e.created_at, e.updated_at,
+         COALESCE(c.name, 'Onbekend') AS client_name,
+         COUNT(*) OVER() AS total_count
+  FROM kk_hour_entries e
+  LEFT JOIN kk_clients c ON c.id = e.client_id
+  WHERE e.user_id = $1
+    AND ($2::uuid IS NULL OR e.client_id = $2)
+    AND ($3::date IS NULL OR e.entry_date >= $3)
+    AND ($4::date IS NULL OR e.entry_date <= $4)
+  ORDER BY e.entry_date DESC, e.created_at DESC
+  LIMIT $5 OFFSET $6
+`
+
+interface ListEntryRow {
+  id: string
+  user_id: string
+  client_id: string
+  entry_date: string
+  hours: number
+  hourly_rate: number
+  description: string | null
+  start_time: string | null
+  end_time: string | null
+  created_at: string
+  updated_at: string
+  client_name: string
+  total_count: string
+}
+
 export async function listEntries(options?: {
   clientId?: string
   fromDate?: string
@@ -126,45 +160,40 @@ export async function listEntries(options?: {
   offset?: number
 }): Promise<{ entries: EntryWithClient[]; total: number }> {
   try {
-    const { supabase, userId } = await getAuthenticatedClient()
+    const userId = await getUserId()
+    if (!userId) return { entries: [], total: 0 }
 
-    let query = supabase
-      .from('kk_hour_entries')
-      .select('*, kk_clients!inner(name)', { count: 'exact' })
-      .eq('user_id', userId)
-      .order('entry_date', { ascending: false })
-      .order('created_at', { ascending: false })
-
-    if (options?.clientId) query = query.eq('client_id', options.clientId)
-    if (options?.fromDate) query = query.gte('entry_date', options.fromDate)
-    if (options?.toDate) query = query.lte('entry_date', options.toDate)
-
+    const pool = getLocalPool()
     const limit = options?.limit ?? 50
     const offset = options?.offset ?? 0
-    query = query.range(offset, offset + limit - 1)
 
-    const { data, count, error } = await query
-    if (error) return { entries: [], total: 0 }
+    const { rows } = await pool.query<ListEntryRow>(LIST_ENTRIES_QUERY, [
+      userId,
+      options?.clientId ?? null,
+      options?.fromDate ?? null,
+      options?.toDate ?? null,
+      limit,
+      offset,
+    ])
 
-    const entries: EntryWithClient[] = (data ?? []).map((row: Record<string, unknown>) => {
-      const client = row.kk_clients as { name: string } | null
-      return {
-        id: row.id as string,
-        user_id: row.user_id as string,
-        client_id: row.client_id as string,
-        entry_date: row.entry_date as string,
-        hours: Number(row.hours),
-        hourly_rate: Number(row.hourly_rate),
-        description: (row.description as string | null) ?? null,
-        start_time: (row.start_time as string | null) ?? null,
-        end_time: (row.end_time as string | null) ?? null,
-        created_at: row.created_at as string,
-        updated_at: row.updated_at as string,
-        client_name: client?.name ?? 'Onbekend',
-      }
-    })
+    const total = rows.length > 0 ? Number(rows[0]!.total_count) : 0
 
-    return { entries, total: count ?? 0 }
+    const entries: EntryWithClient[] = rows.map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      client_id: row.client_id,
+      entry_date: row.entry_date,
+      hours: Number(row.hours),
+      hourly_rate: Number(row.hourly_rate),
+      description: row.description ?? null,
+      start_time: row.start_time ?? null,
+      end_time: row.end_time ?? null,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      client_name: row.client_name,
+    }))
+
+    return { entries, total }
   } catch (err) {
     console.error('listEntries:', err)
     return { entries: [], total: 0 }
@@ -231,7 +260,6 @@ export async function createEntry(input: {
     }
 
     const data = rows[0]!
-    revalidatePath('/uren')
 
     const entry: EntryWithClient = {
       id: data.id,
@@ -277,7 +305,6 @@ export async function updateEntry(
       .single()
 
     if (error || !data) return { success: false, error: error?.message ?? 'Kon urenregel niet bijwerken' }
-    revalidatePath('/uren')
     return { success: true, data: data as HourEntry }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
@@ -289,7 +316,6 @@ export async function deleteEntry(entryId: string): Promise<ActionResult<null>> 
     const { supabase } = await getAuthenticatedClient()
     const { error } = await supabase.from('kk_hour_entries').delete().eq('id', entryId)
     if (error) return { success: false, error: error.message }
-    revalidatePath('/uren')
     return { success: true, data: null }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
