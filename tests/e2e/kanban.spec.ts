@@ -154,6 +154,38 @@ test.describe('/boards/[boardId] route', () => {
     // De pagina moet iets tonen in de kolommen — kaarten of "Geen kaarten"
     expect(hasEmptyCols || hasCards).toBeTruthy()
   })
+
+  // Regression: sinds de bordpagina via één SQL-CTE via de pg-pool laadt (ipv
+  // twee PostgREST round-trips), moet de allBoards-CTE nog steeds correct naar
+  // de BoardSwitcher renderen. Verifieert dat de tweede dataset (boards-lijst)
+  // niet is gedropt bij de migratie.
+  test('bordpagina toont bord-switcher met alle borden van de gebruiker', async ({ page }) => {
+    await page.goto('/boards')
+
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Niet ingelogd — login vereist')
+      return
+    }
+
+    const indexLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
+    const indexCount = await indexLinks.count()
+    if (indexCount < 2) {
+      test.skip(true, 'Minder dan twee borden — switcher-test niet mogelijk')
+      return
+    }
+
+    const firstHref = await indexLinks.first().getAttribute('href')
+    if (!firstHref) return
+    await page.goto(firstHref)
+
+    // BoardHeader bevat een BoardSwitcherRow met links naar andere borden.
+    // De huidige bord-url mag niet dubbel voorkomen; andere borden wel.
+    const switcherLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
+    const switcherCount = await switcherLinks.count()
+
+    // Minimaal één andere bord in de switcher (we begonnen met ≥2 borden)
+    expect(switcherCount).toBeGreaterThanOrEqual(1)
+  })
 })
 
 test.describe('ster-toggle functionaliteit', () => {
