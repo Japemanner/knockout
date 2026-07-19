@@ -10,6 +10,10 @@ import { Pool } from 'pg'
 // handmatige `WHERE user_id = $1` filtering in elke query; userId komt uit
 // de `x-user-id` header gevuld door middleware via getClaims() (lokale JWT
 // verificatie, niet te vervalsen door de client).
+//
+// Lenient: als DIRECT_DATABASE_URL niet geconfigureerd is (bijv. op Netlify
+// zonder env-var), returnt getLocalPoolOrNull() null in plaats van te throwen.
+// Call-sites vallen terug op de Supabase-client (PostgREST).
 
 let pool: Pool | undefined
 
@@ -30,4 +34,14 @@ export function getLocalPool(): Pool {
   })
 
   return pool
+}
+
+// Lenient versie: returnt null ipv te throwen als DIRECT_DATABASE_URL
+// ontbreekt. Call-sites moeten zelf fallback-logica implementeren.
+export function getLocalPoolOrNull(): Pool | null {
+  try {
+    return getLocalPool()
+  } catch {
+    return null
+  }
 }
