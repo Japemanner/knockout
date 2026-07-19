@@ -1,4 +1,4 @@
-import { cache } from 'react'
+﻿import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -35,6 +35,5 @@ const cachedProfileFetcher = unstable_cache(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getCachedProfile(supabase: SupabaseClient<any, 'public', any> | undefined, userId: string) {
-  // cross-request cache geldt per userId
   return cachedProfileFetcher(userId)
 }
