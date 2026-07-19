@@ -1,20 +1,24 @@
-import { createClient, getUserId } from '@/lib/supabase/server'
+import { getUserId } from '@/lib/supabase/server'
+import { getLocalPool } from '@/lib/db/local-pool'
 import { CreateBoardButton } from '@/components/kanban/CreateBoardButton'
 import { BoardCard } from '@/components/kanban/BoardCard'
 import type { Board } from '@/types/database.types'
+
+const BOARDS_QUERY = `
+  SELECT id, user_id, name, is_inbox, position, created_at, updated_at
+  FROM kk_boards
+  WHERE user_id = $1
+  ORDER BY position ASC
+`
 
 export default async function BoardsPage() {
   const userId = await getUserId()
   if (!userId) return null
 
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('kk_boards')
-    .select('*')
-    .eq('user_id', userId)
-    .order('position', { ascending: true })
+  const pool = getLocalPool()
+  const { rows } = await pool.query<Board>(BOARDS_QUERY, [userId])
 
-  const boards: Board[] = data ?? []
+  const boards: Board[] = rows
 
   return (
     <div>
