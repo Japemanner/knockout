@@ -11,11 +11,14 @@ import { Pool } from 'pg'
 // de `x-user-id` header gevuld door middleware via getClaims() (lokale JWT
 // verificatie, niet te vervalsen door de client).
 //
-// Lenient: als DIRECT_DATABASE_URL niet geconfigureerd is (bijv. op Netlify
-// zonder env-var), returnt getLocalPoolOrNull() null in plaats van te throwen.
-// Call-sites vallen terug op de Supabase-client (PostgREST).
+// Defensief: als DIRECT_DATABASE_URL ontbreekt of de eerste connectie-poging
+// faalt (bijv. verkeerd wachtwoord, poort geblokkeerd), returnt
+// getLocalPoolOrNull() null in plaats van te throwen. Call-sites loggen de
+// fout en geven een lege/resultaat-loze response terug, zodat de pagina
+// alsnog rendert (i.p.v. een 500 crash).
 
 let pool: Pool | undefined
+let poolInitError: string | null = null
 
 export function getLocalPool(): Pool {
   if (pool) return pool
@@ -37,11 +40,16 @@ export function getLocalPool(): Pool {
 }
 
 // Lenient versie: returnt null ipv te throwen als DIRECT_DATABASE_URL
-// ontbreekt. Call-sites moeten zelf fallback-logica implementeren.
+// ontbreekt of de pool niet geïnitialiseerd kan worden. Call-sites moeten
+// zelf fallback-logica implementeren (bijv. lege response returnen).
 export function getLocalPoolOrNull(): Pool | null {
+  if (pool) return pool
+  if (poolInitError) return null
   try {
     return getLocalPool()
-  } catch {
+  } catch (err) {
+    poolInitError = err instanceof Error ? err.message : String(err)
+    console.error('getLocalPoolOrNull: pool init failed:', poolInitError)
     return null
   }
 }
