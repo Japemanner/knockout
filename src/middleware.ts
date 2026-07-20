@@ -23,12 +23,6 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
-// Edge runtime verlaagt cold-start + TTFB op elke request. Op Netlify draait
-// Next.js middleware standaard al als Edge Function. De onderstaande
-// runtime-export is een expliciete bevestiging. getClaims() is edge-compatible
-// (WebCrypto API).
-export const runtime = 'experimental-edge'
-
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',

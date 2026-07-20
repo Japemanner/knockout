@@ -34,13 +34,13 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard, external: false, prefetch: true },
-  { href: '/boards', label: 'Borden', icon: Columns3, external: false, prefetch: true },
-  { href: '/crud', label: 'CRUD', icon: Database, external: false, prefetch: false },
-  { href: '/uren', label: 'Uren', icon: Clock, external: false, prefetch: true },
-  { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true, prefetch: false },
-  { href: '/team', label: 'Team', icon: Users, external: false, prefetch: false },
-  { href: '/settings', label: 'Instellingen', icon: Settings, external: false, prefetch: false },
+  { href: '/command-center', label: 'Command Center', icon: LayoutDashboard, external: false },
+  { href: '/boards', label: 'Borden', icon: Columns3, external: false },
+  { href: '/crud', label: 'CRUD', icon: Database, external: false },
+  { href: '/uren', label: 'Uren', icon: Clock, external: false },
+  { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },
+  { href: '/team', label: 'Team', icon: Users, external: false },
+  { href: '/settings', label: 'Instellingen', icon: Settings, external: false },
 ]
 
 const externalLinks = [
@@ -99,7 +99,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              prefetch={item.prefetch ?? null}
               onClick={() => setSidebarOpen(false)}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
