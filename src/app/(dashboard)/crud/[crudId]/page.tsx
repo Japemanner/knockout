@@ -109,6 +109,36 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
     )
   }
 
+  if (recordsResult.error) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-8">
+          <Link href="/crud" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">{crud.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              Eigen project · {crud.table_name} · {metaResult.meta.columns.length} kolommen
+            </p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <ColumnVisibilityDialog
+              crudId={crudId}
+              columns={metaResult.meta.columns}
+              hiddenColumns={crud.hidden_columns ?? []}
+            />
+            <CrudDetailActions crudId={crudId} name={crud.name} />
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-destructive font-medium mb-2">Fout bij laden van records</p>
+          <p className="text-sm text-muted-foreground">{recordsResult.error}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-8">

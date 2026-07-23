@@ -1,13 +1,15 @@
 'use server'
 
-import { getAuthenticatedClient } from '@/lib/supabase/actions'
+import { getAuthenticatedClient, getServiceClient } from '@/lib/supabase/actions'
 import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
 
 export { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta }
 
 // PostgREST (Supabase client) i.p.v. directe pg.Pool. Werkt over HTTPS (poort 443),
-// compatibel met Netlify serverless. RLS wordt gerespecteerd — authenticated user
-// ziet alleen eigen records. Zie /decisions/2026-07-23-crud-postgrest-migration.md.
+// compatibel met Netlify serverless. Data-operaties gebruiken de service-role client
+// (omzeilt RLS) zodat de CRUD DB-explorer alle rijen toont, conform de oorspronkelijke
+// pg.Pool behavior. Metadata-RPC's (SECURITY DEFINER) gebruiken de authenticated client.
+// Zie /decisions/2026-07-23-crud-postgrest-migration.md.
 //
 // Dynamische tabelnamen (willekeurige kk_* tabellen) zijn niet statisch getypeerd in
 // database.types.ts; we casten daarom naar een untyped client, conform het patroon
@@ -113,7 +115,7 @@ export async function getLocalTableRecords(data: {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   try {
-    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     let query = supabase.from(data.tableName).select('*', { count: 'exact' })
     if (data.orderBy) {
       query = query.order(data.orderBy, { ascending: data.orderDir !== 'desc' })
@@ -133,7 +135,7 @@ export async function getLocalTableRecords(data: {
 
 export async function createLocalRecord(data: { tableName: string; values: Record<string, unknown> }): Promise<{ record?: Record<string, unknown>; error?: string }> {
   try {
-    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { data: record, error } = await supabase
       .from(data.tableName)
       .insert(data.values)
@@ -151,7 +153,7 @@ export async function updateLocalRecord(data: {
   values: Record<string, unknown>
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     if (Object.keys(data.values).length === 0) return { success: true }
     const { error } = await supabase
       .from(data.tableName)
@@ -169,7 +171,7 @@ export async function deleteLocalRecord(data: {
   tableName: string; primaryKey: { column: string; value: unknown }
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { error } = await supabase
       .from(data.tableName)
       .delete()
@@ -185,7 +187,7 @@ export async function getLocalForeignKeyOptions(data: {
   referencedTable: string; referencedColumn: string
 }): Promise<{ options: { value: unknown; label: string }[]; error?: string }> {
   try {
-    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { data: rows, error } = await supabase
       .from(data.referencedTable)
       .select(data.referencedColumn)

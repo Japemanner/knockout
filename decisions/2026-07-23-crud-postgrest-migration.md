@@ -16,7 +16,7 @@ De CRUD-feature faalde met "password authentication failed for user postgres" bi
 
 ## Trade-offs accepted
 - ~30-80ms extra TLS-overhead per round-trip vergeleken met directe `pg` (PostgREST via HTTPS). Acceptabel: de CRUD-pagina doet 2-4 round-trips, niet honderden.
-- Tabellen zonder `user_id`-gebaseerd RLS-policy zijn niet bewerktbaar via CRUD. Acceptabel: de `kk_*` tabellen hebben RLS.
+- Data-operaties gebruiken de service-role client (omzeilt RLS) om de oorspronkelijke pg.Pool behavior te herstellen (alle rijden tonen). Metadata-RPC's gebruiken de authenticated client (SECURITY DEFINER, RLS irrelevant). De service role key zit alleen in server-side `'use server'` actions, nooit in de client bundle.
 - `getLocalTableList()` doet nu N+1 round-trips (1 list_tables + N get_table_columns voor kolom-counts in de UI). De tabel-lijstpagina is laagfrequent; acceptabel. Optimaliseer later met een gecombineerde RPC indien nodig.
 
 ## Supersedes
@@ -24,7 +24,9 @@ De CRUD-feature faalde met "password authentication failed for user postgres" bi
 
 ## Wijzigingen
 - `supabase/migrations/011_crud_table_meta_rpc.sql` — NIEUW: `get_table_columns` + `get_table_foreign_keys` RPC's (SECURITY DEFINER, GRANT TO authenticated)
-- `src/actions/local-db.ts` — HERSCHREVEN: 7 functions van pg.Pool naar PostgREST (`getAuthenticatedClient` + `.from()` / `.rpc()`)
+- `src/actions/local-db.ts` — HERSCHREVEN: 7 functions van pg.Pool naar PostgREST; data-operaties via `getServiceClient` (service role, omzeilt RLS), metadata via `getAuthenticatedClient`
+- `src/lib/supabase/actions.ts` — NIEUW: `getServiceClient()` helper (service role + login-check)
+- `src/app/(dashboard)/crud/[crudId]/page.tsx` — error-check voor `recordsResult.error` toegevoegd (was stiekem doorgeslikt)
 - `src/lib/db/local-pool.ts` — VERWIJDERD (ongebruikt)
 - `.env.example` — `DIRECT_DATABASE_URL` verwijderd
 - `src/components/db-explorer/LocalTableList.tsx` — error-tekst aangepast (verwijst niet meer naar DIRECT_DATABASE_URL)
