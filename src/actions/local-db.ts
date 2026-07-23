@@ -1,35 +1,103 @@
 'use server'
 
-import { getTables as introspectTables, getTableMeta as introspectTableMeta, getPool } from '@/lib/db'
+import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
-
-const LOCAL_CONNECTION_ID = '__local__'
-
-function getLocalConnectionString(): string {
-  const url = process.env.DIRECT_DATABASE_URL
-  if (!url) throw new Error('DIRECT_DATABASE_URL is niet geconfigureerd in je omgevingsvariabelen. Voeg het toe aan .env.local met de juiste Supabase pooler URL (bijv. postgresql://postgres.xxx:wachtwoord@aws-1-eu-north-1.pooler.supabase.com:6543/postgres)')
-  return url
-}
 
 export { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta }
 
-export async function getLocalTableMeta(tableName: string) {
+// PostgREST (Supabase client) i.p.v. directe pg.Pool. Werkt over HTTPS (poort 443),
+// compatibel met Netlify serverless. RLS wordt gerespecteerd — authenticated user
+// ziet alleen eigen records. Zie /decisions/2026-07-23-crud-postgrest-migration.md.
+//
+// Dynamische tabelnamen (willekeurige kk_* tabellen) zijn niet statisch getypeerd in
+// database.types.ts; we casten daarom naar een untyped client, conform het patroon
+// in src/lib/supabase/actions.ts (UntypedClient).
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UntypedClient = any
+
+interface RpcColumnRow {
+  column_name: string
+  data_type: string
+  is_nullable: boolean
+  column_default: string | null
+  character_maximum_length: number | null
+  is_primary_key: boolean
+  is_identity: string
+  is_generated: string
+}
+
+interface RpcFkRow {
+  column_name: string
+  referenced_table_name: string
+  referenced_column_name: string
+}
+
+interface RpcTableRow {
+  table_name: string
+  table_schema: string
+}
+
+function mapColumn(r: RpcColumnRow): ColumnInfo {
+  return {
+    name: r.column_name,
+    dataType: r.data_type,
+    isNullable: r.is_nullable,
+    isPrimaryKey: r.is_primary_key,
+    isIdentity: r.is_identity === 'YES',
+    isGenerated: (r.is_generated === 'ALWAYS' || r.is_generated === 'BY DEFAULT') ? r.is_generated as 'ALWAYS' | 'BY DEFAULT' : 'NEVER',
+    defaultValue: r.column_default,
+    maxLength: r.character_maximum_length,
+  }
+}
+
+function mapFk(r: RpcFkRow): ForeignKeyInfo {
+  return {
+    columnName: r.column_name,
+    referencedTable: r.referenced_table_name,
+    referencedColumn: r.referenced_column_name,
+  }
+}
+
+export async function getLocalTableMeta(tableName: string): Promise<{ meta: TableMeta | null; error: string | null }> {
   try {
-    const connStr = getLocalConnectionString()
-    const meta = await introspectTableMeta(LOCAL_CONNECTION_ID, connStr, 'public', tableName)
-    if (meta.columns.length === 0) {
+    const { supabase } = await getAuthenticatedClient()
+
+    const [colsRes, fksRes] = await Promise.all([
+      supabase.rpc('get_table_columns', { p_schema: 'public', p_table: tableName }),
+      supabase.rpc('get_table_foreign_keys', { p_schema: 'public', p_table: tableName }),
+    ])
+
+    if (colsRes.error) throw new Error(colsRes.error.message)
+    if (fksRes.error) throw new Error(fksRes.error.message)
+
+    const columns = (colsRes.data as RpcColumnRow[] ?? []).map(mapColumn)
+    if (columns.length === 0) {
       return { meta: null, error: `Tabel "${tableName}" niet gevonden. Controleer of de tabel bestaat in je database.` }
     }
-    return { meta, error: null }
+    const foreignKeys = (fksRes.data as RpcFkRow[] ?? []).map(mapFk)
+    return { meta: { columns, foreignKeys }, error: null }
   } catch (err) {
     return { meta: null, error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
 }
 
-export async function getLocalTableList() {
+export async function getLocalTableList(): Promise<{ tables: TableInfo[]; error?: string }> {
   try {
-    const connStr = getLocalConnectionString()
-    const tables = await introspectTables(LOCAL_CONNECTION_ID, connStr)
+    const { supabase } = await getAuthenticatedClient()
+    const { data, error } = await supabase.rpc('list_tables')
+    if (error) throw new Error(error.message)
+
+    const rows = (data as RpcTableRow[] ?? []).map((t) => ({ name: t.table_name, schema: t.table_schema }))
+
+    // Haal per tabel kolommen op (voor kolom-count in de UI). FK's niet nodig in de lijst.
+    const tables: TableInfo[] = []
+    for (const t of rows) {
+      const { data: colsData, error: colsErr } = await supabase.rpc('get_table_columns', { p_schema: t.schema, p_table: t.name })
+      if (colsErr) throw new Error(colsErr.message)
+      const columns = (colsData as RpcColumnRow[] ?? []).map(mapColumn)
+      tables.push({ name: t.name, schema: t.schema, columns, foreignKeys: [] })
+    }
     return { tables }
   } catch (err) {
     return { tables: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
@@ -39,40 +107,40 @@ export async function getLocalTableList() {
 export async function getLocalTableRecords(data: {
   tableName: string; page?: number; pageSize?: number
   orderBy?: string; orderDir?: 'asc' | 'desc'
-}) {
+}): Promise<{ rows: Record<string, unknown>[]; totalCount: number; page: number; pageSize: number; error?: string }> {
+  const page = data.page ?? 1
+  const pageSize = data.pageSize ?? 25
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
   try {
-    const connStr = getLocalConnectionString()
-    const pool = getPool(LOCAL_CONNECTION_ID, connStr)
-    const page = data.page ?? 1
-    const pageSize = data.pageSize ?? 25
-    const offset = (page - 1) * pageSize
-
-    const orderCol = data.orderBy ? `"${data.orderBy}" ${data.orderDir === 'desc' ? 'DESC' : 'ASC'}` : '1'
-    const { rows } = await pool.query(
-      `SELECT * FROM "${data.tableName}" ORDER BY ${orderCol} LIMIT $1 OFFSET $2`,
-      [pageSize, offset],
-    )
-    const { rows: countRows } = await pool.query(
-      `SELECT COUNT(*) FROM "${data.tableName}"`,
-    )
-    return { rows, totalCount: parseInt(countRows[0]?.count as string ?? '0', 10), page, pageSize }
+    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    let query = supabase.from(data.tableName).select('*', { count: 'exact' })
+    if (data.orderBy) {
+      query = query.order(data.orderBy, { ascending: data.orderDir !== 'desc' })
+    }
+    const { data: rows, count, error } = await query.range(from, to)
+    if (error) throw new Error(error.message)
+    return {
+      rows: (rows ?? []) as Record<string, unknown>[],
+      totalCount: count ?? 0,
+      page,
+      pageSize,
+    }
   } catch (err) {
-    return { rows: [], totalCount: 0, page: data.page ?? 1, pageSize: data.pageSize ?? 25, error: err instanceof Error ? err.message : 'Onbekende fout' }
+    return { rows: [], totalCount: 0, page, pageSize, error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
 }
 
-export async function createLocalRecord(data: { tableName: string; values: Record<string, unknown> }) {
+export async function createLocalRecord(data: { tableName: string; values: Record<string, unknown> }): Promise<{ record?: Record<string, unknown>; error?: string }> {
   try {
-    const connStr = getLocalConnectionString()
-    const pool = getPool(LOCAL_CONNECTION_ID, connStr)
-    const keys = Object.keys(data.values)
-    const placeholders = keys.map((_, i) => `$${i + 1}`)
-    const { rows } = await pool.query(
-      `INSERT INTO "${data.tableName}" (${keys.map((k) => `"${k}"`).join(', ')})
-       VALUES (${placeholders.join(', ')}) RETURNING *`,
-      Object.values(data.values),
-    )
-    return { record: rows[0] }
+    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { data: record, error } = await supabase
+      .from(data.tableName)
+      .insert(data.values)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return { record: record as Record<string, unknown> }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
@@ -81,19 +149,16 @@ export async function createLocalRecord(data: { tableName: string; values: Recor
 export async function updateLocalRecord(data: {
   tableName: string; primaryKey: { column: string; value: unknown }
   values: Record<string, unknown>
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   try {
-    const connStr = getLocalConnectionString()
-    const pool = getPool(LOCAL_CONNECTION_ID, connStr)
-    const keys = Object.keys(data.values)
-    if (keys.length === 0) return { success: true }
-    const setClauses = keys.map((k, i) => `"${k}" = $${i + 1}`)
-    const params = [...Object.values(data.values), data.primaryKey.value]
-    await pool.query(
-      `UPDATE "${data.tableName}" SET ${setClauses.join(', ')}
-       WHERE "${data.primaryKey.column}" = $${params.length} RETURNING *`,
-      params,
-    )
+    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    if (Object.keys(data.values).length === 0) return { success: true }
+    const { error } = await supabase
+      .from(data.tableName)
+      .update(data.values)
+      .eq(data.primaryKey.column, data.primaryKey.value)
+      .select()
+    if (error) throw new Error(error.message)
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
@@ -102,14 +167,14 @@ export async function updateLocalRecord(data: {
 
 export async function deleteLocalRecord(data: {
   tableName: string; primaryKey: { column: string; value: unknown }
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   try {
-    const connStr = getLocalConnectionString()
-    const pool = getPool(LOCAL_CONNECTION_ID, connStr)
-    await pool.query(
-      `DELETE FROM "${data.tableName}" WHERE "${data.primaryKey.column}" = $1`,
-      [data.primaryKey.value],
-    )
+    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { error } = await supabase
+      .from(data.tableName)
+      .delete()
+      .eq(data.primaryKey.column, data.primaryKey.value)
+    if (error) throw new Error(error.message)
     return { success: true }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' }
@@ -118,14 +183,20 @@ export async function deleteLocalRecord(data: {
 
 export async function getLocalForeignKeyOptions(data: {
   referencedTable: string; referencedColumn: string
-}) {
+}): Promise<{ options: { value: unknown; label: string }[]; error?: string }> {
   try {
-    const connStr = getLocalConnectionString()
-    const pool = getPool(LOCAL_CONNECTION_ID, connStr)
-    const { rows } = await pool.query(
-      `SELECT "${data.referencedColumn}" FROM "${data.referencedTable}" ORDER BY "${data.referencedColumn}" LIMIT 200`,
-    )
-    return { options: rows.map((r) => ({ value: r[data.referencedColumn], label: String(r[data.referencedColumn]) })) }
+    const { supabase } = await getAuthenticatedClient() as { supabase: UntypedClient }
+    const { data: rows, error } = await supabase
+      .from(data.referencedTable)
+      .select(data.referencedColumn)
+      .order(data.referencedColumn, { ascending: true })
+      .limit(200)
+    if (error) throw new Error(error.message)
+    const options = (rows ?? []).map((r: Record<string, unknown>) => ({
+      value: r[data.referencedColumn],
+      label: String(r[data.referencedColumn]),
+    }))
+    return { options }
   } catch (err) {
     return { options: [], error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
