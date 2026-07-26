@@ -169,7 +169,6 @@ export function HoursEntryForm() {
               type="date"
               value={entryDate}
               onChange={(e) => setEntryDate(e.target.value)}
-              max={todayISO()}
             />
           </div>
           <div className="space-y-1">

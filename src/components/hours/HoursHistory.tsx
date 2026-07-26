@@ -331,7 +331,6 @@ export function HoursHistory() {
                               type="date"
                               value={editDate}
                               onChange={(e) => setEditDate(e.target.value)}
-                              max={todayISO()}
                             />
                           </div>
                           <div className="space-y-1">

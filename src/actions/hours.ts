@@ -2,7 +2,7 @@
 
 import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
-import { startOfWeek, startOfMonth, format } from 'date-fns'
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns'
 import type { Client, ClientTargetPeriod, HourEntry } from '@/types/database.types'
 
 export type ActionResult<T = unknown> =
@@ -282,6 +282,12 @@ function periodStart(period: ClientTargetPeriod, now: Date = new Date()): Date |
   return null // total = no start boundary
 }
 
+function periodEnd(period: ClientTargetPeriod, now: Date = new Date()): Date | null {
+  if (period === 'week') return endOfWeek(now, { weekStartsOn: 1 })
+  if (period === 'month') return endOfMonth(now)
+  return null // total = no end boundary
+}
+
 function periodLabel(period: ClientTargetPeriod): string {
   if (period === 'week') return 'per week'
   if (period === 'month') return 'per maand'
@@ -298,24 +304,31 @@ export async function getRevenueStats(): Promise<RevenueStats> {
     const { supabase, userId } = await getAuthenticatedClient()
     const now = new Date()
     const weekStart = startOfWeek(now, { weekStartsOn: 1 })
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 })
     const monthStart = startOfMonth(now)
+    const monthEnd = endOfMonth(now)
 
-    // Fetch entries from the start of the current month (covers both week and month windows)
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
+    const monthStartStr = format(monthStart, 'yyyy-MM-dd')
+    const monthEndStr = format(monthEnd, 'yyyy-MM-dd')
+
+    // Fetch entries covering both week and month windows (month is the wider net)
     const { data, error } = await supabase
       .from('kk_hour_entries')
       .select('hours, hourly_rate, entry_date')
       .eq('user_id', userId)
-      .gte('entry_date', format(monthStart, 'yyyy-MM-dd'))
+      .gte('entry_date', monthStartStr)
+      .lte('entry_date', monthEndStr)
 
     if (error || !data) return { week: 0, month: 0 }
 
-    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
     let weekRevenue = 0
     let monthRevenue = 0
     for (const row of data as Array<{ hours: number; hourly_rate: number; entry_date: string }>) {
       const revenue = Number(row.hours) * Number(row.hourly_rate)
       monthRevenue += revenue
-      if (row.entry_date >= weekStartStr) {
+      if (row.entry_date >= weekStartStr && row.entry_date <= weekEndStr) {
         weekRevenue += revenue
       }
     }
@@ -337,13 +350,18 @@ export async function getDashboardStats(): Promise<ClientWithProgress[]> {
 
     const { supabase, userId } = await getAuthenticatedClient()
 
-    // Find the earliest period start across all clients (for batch filtering)
+    // Find the earliest period start and latest period end across all clients (for batch filtering)
     const now = new Date()
     let earliestStart: Date | null = null
+    let latestEnd: Date | null = null
     for (const client of clients) {
       const start = periodStart(client.target_period, now)
       if (start && (!earliestStart || start < earliestStart)) {
         earliestStart = start
+      }
+      const end = periodEnd(client.target_period, now)
+      if (end && (!latestEnd || end > latestEnd)) {
+        latestEnd = end
       }
     }
 
@@ -356,6 +374,9 @@ export async function getDashboardStats(): Promise<ClientWithProgress[]> {
 
     if (earliestStart) {
       query = query.gte('entry_date', format(earliestStart, 'yyyy-MM-dd'))
+    }
+    if (latestEnd) {
+      query = query.lte('entry_date', format(latestEnd, 'yyyy-MM-dd'))
     }
 
     const { data, error } = await query
@@ -377,14 +398,16 @@ export async function getDashboardStats(): Promise<ClientWithProgress[]> {
       entriesByClient.get(row.client_id)!.push({ hours: Number(row.hours), entry_date: row.entry_date })
     }
 
-    // Aggregate per client applying each client's own period start
+    // Aggregate per client applying each client's own period start AND end
     return clients.map((client) => {
       const entries = entriesByClient.get(client.id) ?? []
       const start = periodStart(client.target_period, now)
+      const end = periodEnd(client.target_period, now)
       const startDateStr = start ? format(start, 'yyyy-MM-dd') : null
+      const endDateStr = end ? format(end, 'yyyy-MM-dd') : null
 
       const totalHours = entries
-        .filter((e) => !startDateStr || e.entry_date >= startDateStr)
+        .filter((e) => (!startDateStr || e.entry_date >= startDateStr) && (!endDateStr || e.entry_date <= endDateStr))
         .reduce((sum, e) => sum + e.hours, 0)
 
       const target = Number(client.target_hours) || 0
