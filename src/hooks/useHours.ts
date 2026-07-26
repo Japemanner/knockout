@@ -10,6 +10,7 @@ import {
   updateEntry,
   deleteEntry,
   getDashboardStats,
+  getRevenueStats,
 } from '@/actions/hours'
 import type { Client, ClientTargetPeriod } from '@/types/database.types'
 
@@ -33,6 +34,7 @@ export function useCreateClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -50,6 +52,7 @@ export function useUpdateClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -61,6 +64,7 @@ export function useArchiveClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -72,6 +76,7 @@ export function useUnarchiveClient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -137,6 +142,7 @@ export function useCreateEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -154,6 +160,7 @@ export function useUpdateEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -182,6 +189,7 @@ export function useDeleteEntry() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
 }
@@ -194,6 +202,14 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['hours', 'dashboard'],
     queryFn: getDashboardStats,
+    staleTime: 30_000,
+  })
+}
+
+export function useRevenueStats() {
+  return useQuery({
+    queryKey: ['hours', 'revenue'],
+    queryFn: getRevenueStats,
     staleTime: 30_000,
   })
 }

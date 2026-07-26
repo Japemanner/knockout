@@ -3,9 +3,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDashboardStats } from '@/hooks/useHours'
+import { useDashboardStats, useRevenueStats } from '@/hooks/useHours'
 import type { ClientWithProgress } from '@/actions/hours'
 import { cn } from '@/lib/utils'
+
+function formatEuro(value: number): string {
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
 
 function ProgressBar({ percentage }: { percentage: number }) {
   const color =
@@ -45,6 +54,35 @@ function DashboardCard({ stat }: { stat: ClientWithProgress }) {
   )
 }
 
+function RevenueCard() {
+  const { data: revenue, isLoading } = useRevenueStats()
+
+  if (isLoading || !revenue) {
+    return <Skeleton className="h-28 w-full rounded-xl" />
+  }
+
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Totale omzet</CardTitle>
+        <Badge variant="secondary">deze periode</Badge>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Deze week</div>
+            <div className="text-xl font-bold">{formatEuro(revenue.week)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Deze maand</div>
+            <div className="text-xl font-bold">{formatEuro(revenue.month)}</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function HoursDashboard() {
   const { data: stats, isLoading } = useDashboardStats()
 
@@ -70,6 +108,7 @@ export function HoursDashboard() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <RevenueCard />
       {stats.map((stat) => (
         <DashboardCard key={stat.id} stat={stat} />
       ))}

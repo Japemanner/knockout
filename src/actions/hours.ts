@@ -288,6 +288,48 @@ function periodLabel(period: ClientTargetPeriod): string {
   return 'totaal project'
 }
 
+export interface RevenueStats {
+  week: number
+  month: number
+}
+
+export async function getRevenueStats(): Promise<RevenueStats> {
+  try {
+    const { supabase, userId } = await getAuthenticatedClient()
+    const now = new Date()
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 })
+    const monthStart = startOfMonth(now)
+
+    // Fetch entries from the start of the current month (covers both week and month windows)
+    const { data, error } = await supabase
+      .from('kk_hour_entries')
+      .select('hours, hourly_rate, entry_date')
+      .eq('user_id', userId)
+      .gte('entry_date', format(monthStart, 'yyyy-MM-dd'))
+
+    if (error || !data) return { week: 0, month: 0 }
+
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+    let weekRevenue = 0
+    let monthRevenue = 0
+    for (const row of data as Array<{ hours: number; hourly_rate: number; entry_date: string }>) {
+      const revenue = Number(row.hours) * Number(row.hourly_rate)
+      monthRevenue += revenue
+      if (row.entry_date >= weekStartStr) {
+        weekRevenue += revenue
+      }
+    }
+
+    return {
+      week: Math.round(weekRevenue * 100) / 100,
+      month: Math.round(monthRevenue * 100) / 100,
+    }
+  } catch (err) {
+    console.error('getRevenueStats:', err)
+    return { week: 0, month: 0 }
+  }
+}
+
 export async function getDashboardStats(): Promise<ClientWithProgress[]> {
   try {
     const clients = await listActiveClients()
