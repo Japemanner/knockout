@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { HoursDashboard } from '@/components/hours/HoursDashboard'
 import { HoursEntryForm } from '@/components/hours/HoursEntryForm'
+import { CurrentSection } from '@/components/hours/CurrentSection'
 import { HoursHistory } from '@/components/hours/HoursHistory'
 import { ClientManageDialog } from '@/components/hours/ClientManageDialog'
 import { PrivacyToggle } from '@/components/hours/PrivacyToggle'
@@ -35,7 +36,10 @@ export function HoursView({ initialClients }: { initialClients: Client[] }) {
       {/* Sectie 2: Tijdschrijf-formulier */}
       <HoursEntryForm />
 
-      {/* Sectie 3: Historie met filters */}
+      {/* Sectie 3: Current — lopende regels zonder eindtijd */}
+      <CurrentSection />
+
+      {/* Sectie 4: Historie met filters */}
       <HoursHistory />
 
       <ClientManageDialog open={manageOpen} onOpenChange={setManageOpen} />

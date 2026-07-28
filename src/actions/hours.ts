@@ -116,6 +116,45 @@ export async function unarchiveClient(clientId: string): Promise<ActionResult<nu
 // HOUR ENTRIES
 // ============================================================
 
+export async function listOpenEntries(): Promise<EntryWithClient[]> {
+  try {
+    const { supabase, userId } = await getAuthenticatedClient()
+
+    const { data, error } = await supabase
+      .from('kk_hour_entries')
+      .select('*, kk_clients!inner(name)')
+      .eq('user_id', userId)
+      .is('end_time', null)
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (error) return []
+
+    const entries: EntryWithClient[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const client = row.kk_clients as { name: string } | null
+      return {
+        id: row.id as string,
+        user_id: row.user_id as string,
+        client_id: row.client_id as string,
+        entry_date: row.entry_date as string,
+        hours: Number(row.hours),
+        hourly_rate: Number(row.hourly_rate),
+        description: (row.description as string | null) ?? null,
+        start_time: (row.start_time as string | null) ?? null,
+        end_time: (row.end_time as string | null) ?? null,
+        created_at: row.created_at as string,
+        updated_at: row.updated_at as string,
+        client_name: client?.name ?? 'Onbekend',
+      }
+    })
+
+    return entries
+  } catch (err) {
+    console.error('listOpenEntries:', err)
+    return []
+  }
+}
+
 export async function listEntries(options?: {
   clientId?: string
   fromDate?: string

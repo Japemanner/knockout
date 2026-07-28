@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listClients,
   listEntries,
+  listOpenEntries,
   createClient,
   updateClient,
   archiveClient,
@@ -99,6 +100,14 @@ export function useEntries(options?: {
   })
 }
 
+export function useOpenEntries() {
+  return useQuery({
+    queryKey: ['hours', 'open-entries'],
+    queryFn: listOpenEntries,
+    staleTime: 15_000,
+  })
+}
+
 export function useCreateEntry() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -141,6 +150,7 @@ export function useCreateEntry() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
+      queryClient.invalidateQueries({ queryKey: ['hours', 'open-entries'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
