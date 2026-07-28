@@ -79,29 +79,32 @@ export function PrioritiesSection() {
           Top 3 prioriteiten
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">1</label>
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-5 shrink-0 items-center justify-center text-sm font-semibold text-muted-foreground">1</span>
           <Input
             value={item1}
             onChange={(e) => setItem1(e.target.value)}
-            placeholder="Wat is je belangrijkste focus?"
+            placeholder="Belangrijkste focus"
+            className="h-8"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">2</label>
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-5 shrink-0 items-center justify-center text-sm font-semibold text-muted-foreground">2</span>
           <Input
             value={item2}
             onChange={(e) => setItem2(e.target.value)}
             placeholder="Tweede prioriteit"
+            className="h-8"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">3</label>
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-5 shrink-0 items-center justify-center text-sm font-semibold text-muted-foreground">3</span>
           <Input
             value={item3}
             onChange={(e) => setItem3(e.target.value)}
             placeholder="Derde prioriteit"
+            className="h-8"
           />
         </div>
         <div className="flex justify-end pt-1">
