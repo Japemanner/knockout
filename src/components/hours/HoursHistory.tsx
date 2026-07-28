@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast'
 import { useClients, useEntries, useUpdateEntry, useDeleteEntry } from '@/hooks/useHours'
 import { EuroSymbol } from '@/components/hours/EuroSymbol'
 import type { EntryWithClient } from '@/actions/hours'
+import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { Trash2, Pencil, Save, X } from 'lucide-react'
@@ -176,14 +177,47 @@ export function HoursHistory() {
   }
 
   const saveEdit = (entry: EntryWithClient) => {
-    if (!editStartTime || !editEndTime) {
-      setEditError('Start- en eindtijd zijn verplicht')
+    if (!editStartTime) {
+      setEditError('Starttijd is verplicht')
       return
     }
     const startTimeISO = dateWithTime(editDate, editStartTime)
+    if (!startTimeISO) {
+      setEditError('Ongeldige starttijd')
+      return
+    }
+
+    // Eindtijd optioneel bij bewerken: bij ontbreken blijft het een lopende regel (hours = 0)
+    if (!editEndTime) {
+      updateMutation.mutate(
+        {
+          entryId: entry.id,
+          patch: {
+            entry_date: editDate,
+            hours: 0,
+            start_time: startTimeISO,
+            end_time: null,
+            description: editDescription.trim() || null,
+          },
+        },
+        {
+          onSuccess: (result) => {
+            if (result.success) {
+              setEditingId(null)
+              toast({ title: 'Opgeslagen', description: 'Lopende regel — eindtijd nog open' })
+            } else {
+              toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+            }
+          },
+        }
+      )
+      return
+    }
+
+    // Eindtijd aanwezig: bereken uren
     const endTimeISO = dateWithTime(editDate, editEndTime)
-    if (!startTimeISO || !endTimeISO) {
-      setEditError('Ongeldige start- of eindtijd')
+    if (!endTimeISO) {
+      setEditError('Ongeldige eindtijd')
       return
     }
     const diff = diffHours(startTimeISO, endTimeISO)
@@ -411,22 +445,31 @@ export function HoursHistory() {
                     ) : (
                       <div
                         key={entry.id}
-                        className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                        className={cn(
+                          'flex items-start justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors',
+                          !entry.end_time && 'border-yellow-400/60 bg-yellow-50/30 dark:bg-yellow-950/10'
+                        )}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary">{entry.client_name}</Badge>
-                            <span className="font-medium">{entry.hours.toFixed(2).replace('.', ',')} uur</span>
-                            {Number(entry.hourly_rate) > 0 && (
+                            {!entry.end_time ? (
+                              <Badge variant="outline" className="text-yellow-700 border-yellow-400 dark:text-yellow-400">
+                                Eindtijd open
+                              </Badge>
+                            ) : (
+                              <span className="font-medium">{entry.hours.toFixed(2).replace('.', ',')} uur</span>
+                            )}
+                            {Number(entry.hourly_rate) > 0 && entry.end_time && (
                               <span className="text-xs text-muted-foreground">
                                 <EuroSymbol value={entry.hourly_rate} /> / uur
                                 {' → '}
                                 <EuroSymbol value={entry.hours * Number(entry.hourly_rate)} />
                               </span>
                             )}
-                            {entry.start_time && entry.end_time && (
+                            {entry.start_time && (
                               <span className="text-xs text-muted-foreground">
-                                {isoToHHMM(entry.start_time)}–{isoToHHMM(entry.end_time)}
+                                {isoToHHMM(entry.start_time)}{entry.end_time ? `–${isoToHHMM(entry.end_time)}` : '–?'}
                               </span>
                             )}
                           </div>

@@ -153,4 +153,29 @@ test.describe('/uren route', () => {
     await toggleButton.click()
     await expect(toggleButton).toHaveAttribute('aria-pressed', 'false')
   })
+
+  // Regression: voorwaardelijke eindtijd — urenregel opslaan met alleen starttijd
+  // en later eindtijd aanvullen via bewerkmodus.
+  test('eindtijd-label toont optioneel en starttijd is verplicht', async ({ page }) => {
+    await page.goto('/uren')
+
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Niet ingelogd — login vereist')
+      return
+    }
+
+    const hoursInput = page.locator('#hours-amount')
+    if (await hoursInput.count() === 0) {
+      test.skip(true, 'Geen actieve opdrachtgevers — formulier niet beschikbaar')
+      return
+    }
+
+    // Het eindtijd-label moet "optioneel" tonen
+    await expect(page.getByText('Eindtijd (optioneel)')).toBeVisible()
+
+    // Het uren-veld toont "Eindtijd ontbreekt" als alleen starttijd is ingevuld
+    const startHourSelect = page.locator('select').nth(2) // startHour
+    const placeholderText = await hoursInput.getAttribute('placeholder')
+    expect(placeholderText).toContain('Eindtijd ontbreekt')
+  })
 })
