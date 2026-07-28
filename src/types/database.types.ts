@@ -63,6 +63,11 @@ export interface Database {
         Insert: Omit<HourEntry, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<HourEntry, 'id'>>
       }
+      kk_priorities: {
+        Row: Priority
+        Insert: Omit<Priority, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Priority, 'id'>>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -198,6 +203,16 @@ export interface HourEntry {
   description: string | null
   start_time: string | null
   end_time: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Priority {
+  id: string
+  user_id: string
+  item_1: string
+  item_2: string
+  item_3: string
   created_at: string
   updated_at: string
 }
