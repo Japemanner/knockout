@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '@/store/authStore'
 import { StarredSection } from '@/components/command-center/StarredSection'
+import { PrioritiesSection } from '@/components/command-center/PrioritiesSection'
 
 interface GroupedStarred {
   boardId: string
@@ -25,7 +26,10 @@ export function CommandCenterClient({
       <h1 className="text-2xl font-bold mb-1">Welkom terug, {displayName}</h1>
       <p className="text-muted-foreground mb-8">Hier is een overzicht van je omgeving</p>
 
-      <StarredSection items={starredItems} />
+      <div className="space-y-6">
+        <PrioritiesSection />
+        <StarredSection items={starredItems} />
+      </div>
     </div>
   )
 }

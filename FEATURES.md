@@ -2,6 +2,23 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## command-center-priorities (2026-07-28)
+
+**Spec**: `specs/011-command-center-priorities/spec.md`
+**Branch**: `011-command-center-priorities`
+
+Top 3 bewerkbare prioriteiten op het command center. Drie vrije-tekst velden, per gebruiker opgeslagen in Supabase. Sectie staat boven de gesterde items met een "Opslaan"-knop die alleen actief is bij wijzigingen.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/013_command_center_priorities.sql` — kk_priorities tabel + RLS
+- `src/actions/priorities.ts` — getPriorities + savePriorities server actions
+- `src/hooks/usePriorities.ts` — TanStack Query hooks
+- `src/components/command-center/PrioritiesSection.tsx` — 3 velden + opslaan
+
+**Aangepaste bestanden**:
+- `src/types/database.types.ts` — Priority interface + kk_priorities tabel
+- `src/components/command-center/CommandCenterClient.tsx` — PrioritiesSection boven StarredSection
+
 ## uren-deferred-endtime (2026-07-28)
 
 **Spec**: `specs/010-uren-deferred-endtime/spec.md`
