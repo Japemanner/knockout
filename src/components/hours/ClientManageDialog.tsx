@@ -21,6 +21,7 @@ import {
   useArchiveClient,
   useUnarchiveClient,
 } from '@/hooks/useHours'
+import { EuroSymbol } from '@/components/hours/EuroSymbol'
 import { parseDecimalInput } from '@/lib/decimal'
 import type { Client, ClientTargetPeriod } from '@/types/database.types'
 import { Plus, Pencil, Archive, ArchiveRestore, Save, X } from 'lucide-react'
@@ -322,7 +323,7 @@ export function ClientManageDialog({
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {Number(client.target_hours)} uur {client.target_period === 'week' ? 'per week' : client.target_period === 'month' ? 'per maand' : 'totaal'}
-                      {' · '}€ {Number(client.hourly_rate).toFixed(2).replace('.', ',')} / uur
+                      {' · '}<EuroSymbol value={Number(client.hourly_rate)} /> / uur
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">

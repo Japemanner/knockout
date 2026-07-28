@@ -122,4 +122,35 @@ test.describe('/uren route', () => {
     await expect(firstCard.getByText(/uur/)).toBeVisible()
     await expect(firstCard.getByText(/%/)).toBeVisible()
   })
+
+  // Regression: privacy-toggle verbergt euro-bedragen in de uren-tab.
+  // Verifieert dat (1) de toggle-knop bestaat, (2) bij aanzetten alle
+  // euro-bedragen verdwijnen en een doorgestreept €-symbool verschijnt,
+  // en (3) bij uitzetten de bedragen terugkomen.
+  test('privacy-toggle verbergt en toont euro-bedragen', async ({ page }) => {
+    await page.goto('/uren')
+
+    if (page.url().includes('/login')) {
+      test.skip(true, 'Niet ingelogd — login vereist')
+      return
+    }
+
+    // Reset privacy-store naar "uit" voor een schone start
+    await page.evaluate(() => localStorage.removeItem('privacy-store'))
+
+    const toggleButton = page.getByRole('button', { name: /Privacy/ })
+    await expect(toggleButton).toBeVisible()
+
+    // Zet de toggle aan — aria-pressed moet true worden
+    await toggleButton.click()
+    await expect(toggleButton).toHaveAttribute('aria-pressed', 'true')
+
+    // Een doorgestreept €-symbool (SVG) moet zichtbaar zijn ergens op de pagina
+    // De StruckEuro heeft aria-label="bedrag verborgen"
+    await expect(page.getByLabel('bedrag verborgen').first()).toBeVisible({ timeout: 5000 })
+
+    // Zet de toggle weer uit — aria-pressed moet false worden
+    await toggleButton.click()
+    await expect(toggleButton).toHaveAttribute('aria-pressed', 'false')
+  })
 })

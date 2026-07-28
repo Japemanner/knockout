@@ -4,17 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDashboardStats, useRevenueStats } from '@/hooks/useHours'
+import { EuroSymbol } from '@/components/hours/EuroSymbol'
 import type { ClientWithProgress } from '@/actions/hours'
 import { cn } from '@/lib/utils'
-
-function formatEuro(value: number): string {
-  return new Intl.NumberFormat('nl-NL', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
 
 function ProgressBar({ percentage }: { percentage: number }) {
   const color =
@@ -71,11 +63,15 @@ function RevenueCard() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-muted-foreground">Deze week</div>
-            <div className="text-xl font-bold">{formatEuro(revenue.week)}</div>
+            <div className="text-xl font-bold">
+              <EuroSymbol value={revenue.week} />
+            </div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Deze maand</div>
-            <div className="text-xl font-bold">{formatEuro(revenue.month)}</div>
+            <div className="text-xl font-bold">
+              <EuroSymbol value={revenue.month} />
+            </div>
           </div>
         </div>
       </CardContent>

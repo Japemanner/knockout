@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { useClients, useEntries, useUpdateEntry, useDeleteEntry } from '@/hooks/useHours'
+import { EuroSymbol } from '@/components/hours/EuroSymbol'
 import type { EntryWithClient } from '@/actions/hours'
 import { format, parseISO } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -313,7 +314,7 @@ export function HoursHistory() {
                   <span className="text-xs text-muted-foreground">
                     {group.total.toFixed(2).replace('.', ',')} uur
                     {group.entries.some((e) => Number(e.hourly_rate) > 0) && (
-                      <> · € {group.entries.reduce((sum, e) => sum + e.hours * Number(e.hourly_rate), 0).toFixed(2).replace('.', ',')}</>
+                      <> · <EuroSymbol value={group.entries.reduce((sum, e) => sum + e.hours * Number(e.hourly_rate), 0)} /></>
                     )}
                   </span>
                 </div>
@@ -418,9 +419,9 @@ export function HoursHistory() {
                             <span className="font-medium">{entry.hours.toFixed(2).replace('.', ',')} uur</span>
                             {Number(entry.hourly_rate) > 0 && (
                               <span className="text-xs text-muted-foreground">
-                                € {entry.hourly_rate.toFixed(2).replace('.', ',')} / uur
+                                <EuroSymbol value={entry.hourly_rate} /> / uur
                                 {' → '}
-                                € {(entry.hours * Number(entry.hourly_rate)).toFixed(2).replace('.', ',')}
+                                <EuroSymbol value={entry.hours * Number(entry.hourly_rate)} />
                               </span>
                             )}
                             {entry.start_time && entry.end_time && (
