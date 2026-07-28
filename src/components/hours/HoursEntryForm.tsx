@@ -80,15 +80,53 @@ export function HoursEntryForm() {
       setFormError('Datum is verplicht')
       return
     }
-    if (!startTime || !endTime) {
-      setFormError('Start- en eindtijd zijn verplicht')
+    if (!startTime) {
+      setFormError('Starttijd is verplicht')
       return
     }
 
     const startTimeISO = dateWithTime(entryDate, startTime)
+    if (!startTimeISO) {
+      setFormError('Ongeldige starttijd')
+      return
+    }
+
+    // Eindtijd optioneel: bij ontbrekende eindtijd wordt een lopende regel opgeslagen (hours = 0)
+    if (!endTime) {
+      createMutation.mutate(
+        {
+          client_id: clientId,
+          entry_date: entryDate,
+          hours: 0,
+          start_time: startTimeISO,
+          end_time: null,
+          description: description.trim() || null,
+        },
+        {
+          onSuccess: (result) => {
+            if (result.success) {
+              toast({ title: 'Opgeslagen', description: 'Lopende urenregel gestart — vul de eindtijd later aan' })
+              setStartHour('')
+              setStartMinute('')
+              setEndHour('')
+              setEndMinute('')
+              setDescription('')
+            } else {
+              toast({ title: 'Fout bij opslaan', description: result.error, variant: 'destructive' })
+            }
+          },
+          onError: (err) => {
+            toast({ title: 'Fout bij opslaan', description: err.message, variant: 'destructive' })
+          },
+        }
+      )
+      return
+    }
+
+    // Eindtijd aanwezig: valideer en bereken uren
     const endTimeISO = dateWithTime(entryDate, endTime)
-    if (!startTimeISO || !endTimeISO) {
-      setFormError('Ongeldige start- of eindtijd')
+    if (!endTimeISO) {
+      setFormError('Ongeldige eindtijd')
       return
     }
     const diff = diffHours(startTimeISO, endTimeISO)
@@ -189,7 +227,7 @@ export function HoursEntryForm() {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Eindtijd</label>
+            <label className="text-xs font-medium text-muted-foreground">Eindtijd (optioneel)</label>
             <div className="grid grid-cols-2 gap-2">
               <Select
                 value={endHour}
@@ -213,7 +251,7 @@ export function HoursEntryForm() {
               id="hours-amount"
               value={displayHours}
               readOnly
-              placeholder="Vul start- en eindtijd in"
+              placeholder={endTime ? 'Vul geldige tijden in' : 'Eindtijd ontbreekt'}
               tabIndex={-1}
               className="bg-muted/50 cursor-not-allowed"
               aria-invalid={!!formError}

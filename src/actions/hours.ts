@@ -193,13 +193,17 @@ export async function createEntry(input: {
       rateSnapshot = clientRow ? Number(clientRow.hourly_rate) : 0
     }
 
+    // Bij ontbrekende eindtijd: hours = 0 (lopende regel, wordt later aangevuld)
+    const hasEndTime = !!input.end_time
+    const hoursToStore = hasEndTime ? input.hours : 0
+
     const { data, error } = await supabase
       .from('kk_hour_entries')
       .insert({
         user_id: userId,
         client_id: input.client_id,
         entry_date: input.entry_date,
-        hours: input.hours,
+        hours: hoursToStore,
         hourly_rate: rateSnapshot,
         start_time: input.start_time ?? null,
         end_time: input.end_time ?? null,
@@ -326,7 +330,9 @@ export async function getRevenueStats(): Promise<RevenueStats> {
     let weekRevenue = 0
     let monthRevenue = 0
     for (const row of data as Array<{ hours: number; hourly_rate: number; entry_date: string }>) {
-      const revenue = Number(row.hours) * Number(row.hourly_rate)
+      const hours = Number(row.hours)
+      if (hours <= 0) continue // lopende regels (zonder eindtijd) tellen niet mee
+      const revenue = hours * Number(row.hourly_rate)
       monthRevenue += revenue
       if (row.entry_date >= weekStartStr && row.entry_date <= weekEndStr) {
         weekRevenue += revenue
@@ -408,6 +414,7 @@ export async function getDashboardStats(): Promise<ClientWithProgress[]> {
 
       const totalHours = entries
         .filter((e) => (!startDateStr || e.entry_date >= startDateStr) && (!endDateStr || e.entry_date <= endDateStr))
+        .filter((e) => e.hours > 0) // lopende regels (zonder eindtijd) tellen niet mee
         .reduce((sum, e) => sum + e.hours, 0)
 
       const target = Number(client.target_hours) || 0
