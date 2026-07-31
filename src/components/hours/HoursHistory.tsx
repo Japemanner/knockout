@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { useClients, useEntries, useUpdateEntry, useDeleteEntry } from '@/hooks/useHours'
 import { EuroSymbol } from '@/components/hours/EuroSymbol'
+import { useHoursFilterStore } from '@/store/hoursFilterStore'
 import type { EntryWithClient } from '@/actions/hours'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
@@ -92,7 +93,8 @@ function groupByDay(entries: EntryWithClient[]): DayGroup[] {
 
 export function HoursHistory() {
   const { data: clients } = useClients()
-  const [clientFilter, setClientFilter] = useState('all')
+  const clientFilter = useHoursFilterStore((s) => s.selectedClientId)
+  const setClientFilter = useHoursFilterStore((s) => s.setSelectedClientId)
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('month')
   const [fromDate, setFromDate] = useState(startOfMonthISO())
   const [toDate, setToDate] = useState(todayISO())

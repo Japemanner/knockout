@@ -216,10 +216,10 @@ export function useDashboardStats() {
   })
 }
 
-export function useRevenueStats() {
+export function useRevenueStats(clientId?: string) {
   return useQuery({
-    queryKey: ['hours', 'revenue'],
-    queryFn: getRevenueStats,
+    queryKey: ['hours', 'revenue', clientId ?? 'all'],
+    queryFn: () => getRevenueStats(clientId),
     staleTime: 30_000,
   })
 }

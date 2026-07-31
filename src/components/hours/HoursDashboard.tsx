@@ -3,8 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useDashboardStats, useRevenueStats } from '@/hooks/useHours'
+import { useDashboardStats, useRevenueStats, useClients } from '@/hooks/useHours'
 import { EuroSymbol } from '@/components/hours/EuroSymbol'
+import { useHoursFilterStore } from '@/store/hoursFilterStore'
 import type { ClientWithProgress } from '@/actions/hours'
 import { cn } from '@/lib/utils'
 
@@ -47,7 +48,16 @@ function DashboardCard({ stat }: { stat: ClientWithProgress }) {
 }
 
 function RevenueCard() {
-  const { data: revenue, isLoading } = useRevenueStats()
+  const selectedClientId = useHoursFilterStore((s) => s.selectedClientId)
+  const { data: clients } = useClients()
+  const clientId = selectedClientId === 'all' ? undefined : selectedClientId
+  const { data: revenue, isLoading } = useRevenueStats(clientId)
+
+  const clientName =
+    clientId && clients
+      ? clients.find((c) => c.id === clientId)?.name ?? null
+      : null
+  const title = clientName ? `Omzet ${clientName}` : 'Totale omzet'
 
   if (isLoading || !revenue) {
     return <Skeleton className="h-28 w-full rounded-xl" />
@@ -56,7 +66,7 @@ function RevenueCard() {
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Totale omzet</CardTitle>
+        <CardTitle className="text-sm font-medium truncate">{title}</CardTitle>
         <Badge variant="secondary">deze periode</Badge>
       </CardHeader>
       <CardContent className="space-y-2">
