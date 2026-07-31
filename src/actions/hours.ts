@@ -342,7 +342,7 @@ export interface RevenueStats {
   month: number
 }
 
-export async function getRevenueStats(): Promise<RevenueStats> {
+export async function getRevenueStats(clientId?: string): Promise<RevenueStats> {
   try {
     const { supabase, userId } = await getAuthenticatedClient()
     const now = new Date()
@@ -357,12 +357,16 @@ export async function getRevenueStats(): Promise<RevenueStats> {
     const monthEndStr = format(monthEnd, 'yyyy-MM-dd')
 
     // Fetch entries covering both week and month windows (month is the wider net)
-    const { data, error } = await supabase
+    let query = supabase
       .from('kk_hour_entries')
       .select('hours, hourly_rate, entry_date')
       .eq('user_id', userId)
       .gte('entry_date', monthStartStr)
       .lte('entry_date', monthEndStr)
+
+    if (clientId) query = query.eq('client_id', clientId)
+
+    const { data, error } = await query
 
     if (error || !data) return { week: 0, month: 0 }
 
