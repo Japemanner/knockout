@@ -94,7 +94,9 @@ export function GenericTable({
     if (!pk || !showForm || showForm === 'create') return
     setSubmitting(true)
     const row = showForm.row
-    const result = await dataSource.updateRecord({ column: pk.name, value: row[pk.name] }, values)
+    const autoColumns = new Set(columns.filter((c) => c.isPrimaryKey || c.isIdentity || c.isGenerated === 'ALWAYS').map((c) => c.name))
+    const safeValues = Object.fromEntries(Object.entries(values).filter(([k]) => !autoColumns.has(k)))
+    const result = await dataSource.updateRecord({ column: pk.name, value: row[pk.name] }, safeValues)
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
     } else {
