@@ -27,10 +27,11 @@ import {
   Shield,
   Workflow,
   Hexagon,
-  Briefcase,
   TrendingUp,
   Clock,
-  Mail
+  Mail,
+  Send,
+  Eye
 } from 'lucide-react'
 
 const navItems = [
@@ -48,13 +49,14 @@ const externalLinks = [
   { href: 'https://jape-darwin.netlify.app/', label: 'Darwin', icon: Bot },
   { href: 'http://5.189.133.117:3000/login', label: 'Grafana', icon: LineChart },
   { href: 'https://ui.honeycomb.io/', label: 'Honeycomb', icon: Hexagon },
-  { href: 'https://app-eu1.hubspot.com/', label: 'Hubspot', icon: Briefcase },
+  { href: 'https://app.mailerlite.com/', label: 'Mailerlite', icon: Send },
   { href: 'https://eu.smith.langchain.com/', label: 'LangSmith', icon: GitBranch },
   { href: 'https://mail.cirrux.co/inbox', label: 'Mail', icon: Mail },
   { href: 'https://dashboards.jaaphoeve.com/', label: 'Metabase', icon: BarChart3 },
   { href: 'https://process.jaaphoeve.com/projects/', label: 'N8N', icon: Workflow },
   { href: 'https://eu.posthog.com/', label: 'PostHog', icon: TrendingUp },
   { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
+  { href: 'https://clarity.microsoft.com', label: 'MS Clarity', icon: Eye },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
