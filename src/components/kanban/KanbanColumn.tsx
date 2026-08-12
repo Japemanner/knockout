@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { KanbanCard } from '@/components/kanban/KanbanCard'
 import { NewCardForm } from '@/components/kanban/NewCardForm'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import type { Card } from '@/types/database.types'
 
 interface KanbanColumnProps {
@@ -30,6 +30,7 @@ export function KanbanColumn({
   onCardClick,
   onToggleStar,
 }: KanbanColumnProps) {
+  const [collapsed, setCollapsed] = useState(column.name === 'done')
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
   const columnCards = useMemo(
@@ -61,18 +62,31 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[280px] max-w-[320px] flex-shrink-0 bg-muted/50 rounded-lg transition-colors ${
+      className={`flex-shrink-0 bg-muted/50 rounded-lg transition-colors ${
         isOver ? 'ring-2 ring-primary/50 bg-muted/80' : ''
-      }`}
+      } ${collapsed ? 'min-w-[60px] max-w-[80px]' : 'min-w-[280px] max-w-[320px]'}`}
     >
       <div className="p-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-sm">{column.name}</h3>
-          <span className="text-xs text-muted-foreground">{columnCards.length}</span>
+        <div className="flex items-center justify-between mb-3 gap-1">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? `${column.name} uitklappen` : `${column.name} inklappen`}
+            className="flex items-center gap-1 min-w-0 flex-1 text-left hover:text-foreground"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-3 w-3 flex-shrink-0" />
+            ) : (
+              <ChevronDown className="h-3 w-3 flex-shrink-0" />
+            )}
+            <h3 className="font-medium text-sm truncate">{column.name}</h3>
+          </button>
+          <span className="text-xs text-muted-foreground flex-shrink-0">{columnCards.length}</span>
         </div>
 
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[40px]">
+          <div className={`space-y-2 min-h-[40px] ${collapsed ? 'hidden' : ''}`}>
             {topLevelCards.map((card) => (
               <KanbanCard
                 key={card.id}
@@ -90,19 +104,21 @@ export function KanbanColumn({
           </div>
         </SortableContext>
 
-        {isCreating ? (
-          <div className="mt-2">
-            <NewCardForm onSubmit={onCreateCard} onCancel={onCancelCreate} />
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full mt-2 text-muted-foreground hover:text-foreground"
-            onClick={onStartCreate}
-          >
-            <Plus className="h-3 w-3 mr-1" /> Kaart
-          </Button>
+        {!collapsed && (
+          isCreating ? (
+            <div className="mt-2">
+              <NewCardForm onSubmit={onCreateCard} onCancel={onCancelCreate} />
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-2 text-muted-foreground hover:text-foreground"
+              onClick={onStartCreate}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Kaart
+            </Button>
+          )
         )}
       </div>
     </div>

@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
-import { updateCard, deleteCard, toggleArchiveCard } from '@/actions/cards'
+import { updateCard, deleteCard, moveCard } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
-import { Star, Trash2, Archive, ExternalLink, ArrowUp } from 'lucide-react'
+import { Star, Trash2, ExternalLink, ArrowUp, ArrowRight } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Card } from '@/types/database.types'
+
+interface KanbanColumnRef {
+  id: string
+  name: string
+  position: number
+}
 
 interface CardDetailModalProps {
   open: boolean
@@ -25,19 +31,22 @@ interface CardDetailModalProps {
     is_archived: boolean
     deadline: string | null
     parent_id: string | null
+    column_id: string
   }
   allCards: Card[]
+  columns: KanbanColumnRef[]
   onUpdated: (updatedCard?: Card) => void
   onDeleted: (cardId: string) => void
 }
 
-export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated, onDeleted }: CardDetailModalProps) {
+export function CardDetailModal({ open, onOpenChange, card, allCards, columns, onUpdated, onDeleted }: CardDetailModalProps) {
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description ?? '')
   const [url, setUrl] = useState(card.url ?? '')
   const [deadline, setDeadline] = useState(card.deadline?.split('T')[0] ?? '')
   const [isStarred, setIsStarred] = useState(card.is_starred)
   const [isSaving, setIsSaving] = useState(false)
+  const [isMoving, setIsMoving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const { toast } = useToast()
 
@@ -58,6 +67,14 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated,
     () => allCards.filter((c) => c.parent_id === card.id && !c.is_archived),
     [card.id, allCards],
   )
+
+  const nextColumn = useMemo<KanbanColumnRef | null>(() => {
+    const current = columns.find((c) => c.id === card.column_id)
+    const currentPos = current?.position ?? -1
+    return columns
+      .filter((c) => c.position > currentPos)
+      .sort((a, b) => a.position - b.position)[0] ?? null
+  }, [columns, card.column_id])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -88,13 +105,16 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated,
     if (fullCard) onUpdated({ ...fullCard, is_starred: newVal })
   }
 
-  const handleArchive = async () => {
-    const result = await toggleArchiveCard(card.id)
+  const handleMoveNext = async () => {
+    if (!nextColumn) return
+    setIsMoving(true)
+    const result = await moveCard(card.id, nextColumn.id, 999)
+    setIsMoving(false)
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
       return
     }
-    toast({ title: card.is_archived ? 'Kaart hersteld' : 'Kaart gearchiveerd' })
+    toast({ title: 'Verplaatst', description: `Naar ${nextColumn.name}` })
     if (result.card) onUpdated(result.card)
     onOpenChange(false)
   }
@@ -192,9 +212,9 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, onUpdated,
                 <Star className={`h-4 w-4 mr-1 ${isStarred ? 'fill-yellow-500 text-yellow-500' : ''}`} />
                 {isStarred ? 'Gesterd' : 'Niet gesterd'}
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleArchive}>
-                <Archive className="h-4 w-4 mr-1" />
-                {card.is_archived ? 'Herstellen' : 'Archiveren'}
+              <Button variant="ghost" size="sm" onClick={handleMoveNext} disabled={!nextColumn || isMoving}>
+                <ArrowRight className="h-4 w-4 mr-1" />
+                {nextColumn ? `Naar ${nextColumn.name}` : 'Laatste kolom'}
               </Button>
               {!showDelete ? (
                 <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setShowDelete(true)}>

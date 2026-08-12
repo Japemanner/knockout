@@ -203,8 +203,10 @@ export function KanbanBoard({
             is_archived: selectedCard.is_archived,
             deadline: selectedCard.deadline,
             parent_id: selectedCard.parent_id,
+            column_id: selectedCard.column_id,
           }}
           allCards={cards}
+          columns={sortedColumns}
           onUpdated={handleCardUpdated}
           onDeleted={handleCardDeleted}
         />
