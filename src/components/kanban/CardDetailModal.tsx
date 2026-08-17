@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { updateCard, deleteCard, moveCard } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
-import { Star, Trash2, ExternalLink, ArrowUp, ArrowRight } from 'lucide-react'
+import { Star, Trash2, ExternalLink, ArrowUp, ArrowRight, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Card } from '@/types/database.types'
@@ -46,6 +46,8 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, columns, o
   const [deadline, setDeadline] = useState(card.deadline?.split('T')[0] ?? '')
   const [isStarred, setIsStarred] = useState(card.is_starred)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isMoving, setIsMoving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const { toast } = useToast()
@@ -56,7 +58,32 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, columns, o
     setUrl(card.url ?? '')
     setDeadline(card.deadline?.split('T')[0] ?? '')
     setIsStarred(card.is_starred)
+    setIsSaving(false)
+    setIsSaved(false)
+    if (savedTimerRef.current) {
+      clearTimeout(savedTimerRef.current)
+      savedTimerRef.current = null
+    }
   }, [card])
+
+  useEffect(() => {
+    if (isSaved) {
+      setIsSaved(false)
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current)
+        savedTimerRef.current = null
+      }
+    }
+  }, [title, description, url, deadline, isStarred])
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current)
+        savedTimerRef.current = null
+      }
+    }
+  }, [])
 
   const parentCard = useMemo(
     () => card.parent_id ? allCards.find((c) => c.id === card.parent_id) : null,
@@ -84,12 +111,23 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, columns, o
       url: url || undefined,
       deadline: deadline || undefined,
     })
+    setIsSaving(false)
+
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-    } else {
-      onUpdated(result.card)
+      return
     }
-    setIsSaving(false)
+
+    onUpdated(result.card)
+
+    if (!open) return
+
+    setIsSaved(true)
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => {
+      setIsSaved(false)
+      savedTimerRef.current = null
+    }, 2000)
   }
 
   const handleToggleStar = async () => {
@@ -228,9 +266,16 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, columns, o
                 </div>
               )}
             </div>
-            <Button size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Opslaan...' : 'Opslaan'}
-            </Button>
+            {isSaving ? (
+              <Button size="sm" disabled>Opslaan...</Button>
+            ) : isSaved ? (
+              <span className="text-green-600 dark:text-green-500 inline-flex items-center gap-1 text-sm font-medium">
+                <Check className="h-4 w-4" />
+                Opgeslagen
+              </span>
+            ) : (
+              <Button size="sm" onClick={handleSave}>Opslaan</Button>
+            )}
           </div>
         </div>
       </DialogContent>

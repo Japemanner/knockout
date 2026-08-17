@@ -2,6 +2,21 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## save-success-checkmark (2026-08-17)
+
+**Spec**: `specs/013-save-success-checkmark/spec.md`
+**Branch**: `013-save-success-checkmark`
+
+Groen vinkje na opslaan in de kaartdetail-dialoog (`CardDetailModal`). Zodra de gebruiker op "Opslaan" klikt en de `updateCard`-call slaagt, verandert de knop direct in een groen vinkje met label "Opgeslagen" op dezelfde positie. Na 2000ms verandert het vinkje automatisch terug naar de knop. Bij een nieuwe veldwijziging verdwijnt het vinkje direct. Bij een mislukte opslag blijft de knop zichtbaar en verschijnt een foutmelding. Bij sluiten van de dialoog vóór voltooiing van de opslag verschijnt er geen vinkje bij heropenen.
+
+**Nieuwe bestanden**: geen
+
+**Aangepaste bestanden**:
+- `src/components/kanban/CardDetailModal.tsx` — `isSaved`-state + `savedTimerRef`, `Check`-icoon, `handleSave`-succes-branch met `if (!open) return`, knop/vinkje-swap, reset-`useEffect` bij veldwijziging, cleanup-`useEffect` bij unmount, reset bij nieuwe kaart
+- `tests/e2e/regression.spec.ts` — 3 nieuwe regressietests: "kaart opslaan toont groen vinkje", "vinkje verdwijnt bij nieuwe wijziging", "mislukte opslag toont geen vinkje"
+
+**Test**: `tests/e2e/regression.spec.ts` — 3 nieuwe tests binnen `test.describe('kaart bewerken', ...)`
+
 ## command-center-priorities (2026-07-28)
 
 **Spec**: `specs/011-command-center-priorities/spec.md`

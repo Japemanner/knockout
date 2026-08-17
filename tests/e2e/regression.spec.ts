@@ -148,6 +148,127 @@ test.describe('kaart bewerken', () => {
     // De titel in de kolomkaart moet bijgewerkt zijn (optimistic update)
     await expect(page.getByText(newTitle)).toBeVisible({ timeout: 5000 })
   })
+
+  // Regression: sinds de opslagknop na succes een groen vinkje toont
+  // (feature 013-save-success-checkmark), moet dit zichtbaar zijn na opslaan.
+  test('kaart opslaan toont groen vinkje', async ({ page }) => {
+    await page.goto('/boards')
+    if (skipIfNotLoggedIn(page)) return
+
+    const boardLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
+    if (await boardLinks.count() === 0) {
+      test.skip(true, 'Geen borden beschikbaar')
+      return
+    }
+
+    const href = await boardLinks.first().getAttribute('href')
+    if (!href) return
+    await page.goto(href)
+
+    const cards = page.locator('[class*="cursor-grab"]')
+    if (await cards.count() === 0) {
+      test.skip(true, 'Geen kaarten op dit bord')
+      return
+    }
+
+    await cards.first().click()
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 })
+
+    const titleInput = page.locator('[role="dialog"] input').first()
+    const originalTitle = await titleInput.inputValue()
+    const newTitle = `${originalTitle} (vinkje ${Date.now()})`
+    await titleInput.fill(newTitle)
+
+    await page.getByRole('button', { name: 'Opslaan' }).click()
+
+    // Groen vinkje + "Opgeslagen" label moet zichtbaar worden in de dialog
+    await expect(page.getByRole('dialog').getByText('Opgeslagen')).toBeVisible({ timeout: 2000 })
+    await expect(page.getByRole('dialog').locator('svg.lucide-check')).toBeVisible()
+  })
+
+  // Regression: vinkje moet direct verdwijnen zodra de gebruiker opnieuw een veld wijzigt
+  test('vinkje verdwijnt bij nieuwe wijziging', async ({ page }) => {
+    await page.goto('/boards')
+    if (skipIfNotLoggedIn(page)) return
+
+    const boardLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
+    if (await boardLinks.count() === 0) {
+      test.skip(true, 'Geen borden beschikbaar')
+      return
+    }
+
+    const href = await boardLinks.first().getAttribute('href')
+    if (!href) return
+    await page.goto(href)
+
+    const cards = page.locator('[class*="cursor-grab"]')
+    if (await cards.count() === 0) {
+      test.skip(true, 'Geen kaarten op dit bord')
+      return
+    }
+
+    await cards.first().click()
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 })
+
+    const titleInput = page.locator('[role="dialog"] input').first()
+    const originalTitle = await titleInput.inputValue()
+    await titleInput.fill(`${originalTitle} (reset-test ${Date.now()})`)
+
+    await page.getByRole('button', { name: 'Opslaan' }).click()
+    await expect(page.getByRole('dialog').getByText('Opgeslagen')).toBeVisible({ timeout: 2000 })
+
+    // Nu een ander veld wijzigen — vinkje moet direct verdwijnen
+    const textarea = page.locator('[role="dialog"] textarea').first()
+    await textarea.fill('Nieuwe wijziging na opslaan')
+
+    await expect(page.getByRole('dialog').getByText('Opgeslagen')).not.toBeVisible({ timeout: 1000 })
+    await expect(page.getByRole('button', { name: 'Opslaan' })).toBeVisible()
+  })
+
+  // Regression: bij een mislukte opslag mag het groene vinkje niet verschijnen
+  test('mislukte opslag toont geen vinkje', async ({ page }) => {
+    await page.goto('/boards')
+    if (skipIfNotLoggedIn(page)) return
+
+    const boardLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
+    if (await boardLinks.count() === 0) {
+      test.skip(true, 'Geen borden beschikbaar')
+      return
+    }
+
+    const href = await boardLinks.first().getAttribute('href')
+    if (!href) return
+
+    // Blokkeer de updateCard-aanroep zodat opslaan faalt
+    await page.route('**/rest/v1/kk_cards**', (route) => {
+      if (route.request().method() === 'PATCH') {
+        route.abort()
+      } else {
+        route.continue()
+      }
+    })
+
+    await page.goto(href)
+
+    const cards = page.locator('[class*="cursor-grab"]')
+    if (await cards.count() === 0) {
+      test.skip(true, 'Geen kaarten op dit bord')
+      return
+    }
+
+    await cards.first().click()
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 })
+
+    const titleInput = page.locator('[role="dialog"] input').first()
+    const originalTitle = await titleInput.inputValue()
+    await titleInput.fill(`${originalTitle} (fout-test ${Date.now()})`)
+
+    await page.getByRole('button', { name: 'Opslaan' }).click()
+
+    // Geen "Opgeslagen" label, knop "Opslaan" blijft beschikbaar
+    await expect(page.getByRole('dialog').getByText('Opgeslagen')).not.toBeVisible({ timeout: 2000 })
+    await expect(page.getByRole('button', { name: 'Opslaan' })).toBeVisible({ timeout: 2000 })
+  })
 })
 
 // ============================================================
