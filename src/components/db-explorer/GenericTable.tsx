@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { DynamicForm } from '@/components/db-explorer/DynamicForm'
+import { DraggableTableHeader } from '@/components/db-explorer/DraggableTableHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { applyColumnOrder } from '@/lib/column-order'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/external-db'
 
 export interface TableDataSource {
@@ -21,6 +23,8 @@ interface GenericTableProps {
   columns: ColumnInfo[]
   foreignKeys: ForeignKeyInfo[]
   hiddenColumns?: string[]
+  columnOrder?: string[]
+  onColumnReorder?: (newOrder: string[]) => void
   initialRows: Record<string, unknown>[]
   initialTotal: number
   dataSource: TableDataSource
@@ -33,6 +37,8 @@ export function GenericTable({
   columns,
   foreignKeys,
   hiddenColumns = [],
+  columnOrder = [],
+  onColumnReorder,
   initialRows,
   initialTotal,
   dataSource,
@@ -121,7 +127,11 @@ export function GenericTable({
     setSubmitting(false)
   }, [pk, showDelete, dataSource, loadPage, page, toast])
 
-  const displayColumns = columns.filter((c) => !c.isPrimaryKey && !hiddenColumns.includes(c.name)).slice(0, 8)
+  const orderedColumns = useMemo(
+    () => applyColumnOrder(columns, columnOrder),
+    [columns, columnOrder]
+  )
+  const displayColumns = orderedColumns.filter((c) => !c.isPrimaryKey && !hiddenColumns.includes(c.name)).slice(0, 8)
 
   return (
     <div>
@@ -153,12 +163,16 @@ export function GenericTable({
       <div className="border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-muted/50">
-              {displayColumns.map((c) => (
-                <th key={c.name} className="text-left px-3 py-2 font-medium text-muted-foreground">{c.name}</th>
-              ))}
-              {canEdit && <th className="px-3 py-2 w-20"></th>}
-            </tr>
+            {onColumnReorder ? (
+              <DraggableTableHeader columns={displayColumns} onReorder={onColumnReorder} />
+            ) : (
+              <tr className="bg-muted/50">
+                {displayColumns.map((c) => (
+                  <th key={c.name} className="text-left px-3 py-2 font-medium text-muted-foreground">{c.name}</th>
+                ))}
+              </tr>
+            )}
+            {canEdit && <th className="px-3 py-2 w-20"></th>}
           </thead>
           <tbody>
             {loading ? (

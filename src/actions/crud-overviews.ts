@@ -9,7 +9,7 @@ export async function getCrudOverviews() {
 
     const { data, error } = await supabase
       .from('kk_crud_overviews')
-      .select('id, name, table_name, connection_id, interaction_type, hidden_columns, position, created_at, updated_at')
+      .select('id, name, table_name, connection_id, interaction_type, hidden_columns, column_order, position, created_at, updated_at')
       .eq('user_id', userId)
       .order('position', { ascending: true })
 
@@ -57,12 +57,13 @@ export async function createCrudOverview(data: {
   }
 }
 
-export async function updateCrudOverview(data: { crudId: string; name?: string; hidden_columns?: string[] }) {
+export async function updateCrudOverview(data: { crudId: string; name?: string; hidden_columns?: string[]; column_order?: string[] }) {
   try {
     const { supabase } = await getAuthenticatedClient()
     const updateData: Record<string, unknown> = {}
     if (data.name !== undefined) updateData.name = data.name
     if (data.hidden_columns !== undefined) updateData.hidden_columns = data.hidden_columns
+    if (data.column_order !== undefined) updateData.column_order = data.column_order
     if (Object.keys(updateData).length === 0) return { success: true }
     const { error } = await supabase
       .from('kk_crud_overviews')

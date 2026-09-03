@@ -1,5 +1,5 @@
 import { createClient, getUserId } from '@/lib/supabase/server'
-import { LocalDynamicTable } from '@/components/db-explorer/LocalDynamicTable'
+import { CrudTableWrapper } from '@/components/crud/CrudTableWrapper'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
 import { ColumnVisibilityDialog } from '@/components/crud/ColumnVisibilityDialog'
 import { getLocalTableMeta, getLocalTableRecords } from '@/actions/local-db'
@@ -14,6 +14,7 @@ interface CrudOverviewData {
   connection_id: string | null
   interaction_type: string
   hidden_columns: string[]
+  column_order: string[]
 }
 
 export const revalidate = 60
@@ -127,6 +128,7 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
               crudId={crudId}
               columns={metaResult.meta.columns}
               hiddenColumns={crud.hidden_columns ?? []}
+              columnOrder={crud.column_order ?? []}
             />
             <CrudDetailActions crudId={crudId} name={crud.name} />
           </div>
@@ -156,15 +158,18 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
             crudId={crudId}
             columns={metaResult.meta.columns}
             hiddenColumns={crud.hidden_columns ?? []}
+            columnOrder={crud.column_order ?? []}
           />
           <CrudDetailActions crudId={crudId} name={crud.name} />
         </div>
       </div>
-      <LocalDynamicTable
+      <CrudTableWrapper
+        crudId={crudId}
         tableName={crud.table_name}
         columns={metaResult.meta.columns}
         foreignKeys={metaResult.meta.foreignKeys}
         hiddenColumns={crud.hidden_columns ?? []}
+        columnOrder={crud.column_order ?? []}
         initialRows={recordsResult.rows as Record<string, unknown>[]}
         initialTotal={recordsResult.totalCount}
       />

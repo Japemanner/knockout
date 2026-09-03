@@ -6,17 +6,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { updateCrudOverview } from '@/actions/crud-overviews'
-import { Columns3 } from 'lucide-react'
+import { Columns3, RotateCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { isDefaultOrder } from '@/lib/column-order'
 import type { ColumnInfo } from '@/actions/local-db'
 
 interface ColumnVisibilityDialogProps {
   crudId: string
   columns: ColumnInfo[]
   hiddenColumns: string[]
+  columnOrder?: string[]
 }
 
-export function ColumnVisibilityDialog({ crudId, columns, hiddenColumns }: ColumnVisibilityDialogProps) {
+export function ColumnVisibilityDialog({ crudId, columns, hiddenColumns, columnOrder = [] }: ColumnVisibilityDialogProps) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(() => {
     const visible = columns.filter((c) => !c.isPrimaryKey && !hiddenColumns.includes(c.name))
@@ -50,6 +52,19 @@ export function ColumnVisibilityDialog({ crudId, columns, hiddenColumns }: Colum
     router.refresh()
   }
 
+  const handleResetOrder = async () => {
+    setSaving(true)
+    const result = await updateCrudOverview({ crudId, column_order: [] })
+    setSaving(false)
+    if (result.error) {
+      toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+      return
+    }
+    toast({ title: 'Kolomvolgorde hersteld' })
+    setOpen(false)
+    router.refresh()
+  }
+
   return (
     <>
       <Button
@@ -79,11 +94,22 @@ export function ColumnVisibilityDialog({ crudId, columns, hiddenColumns }: Colum
               />
             ))}
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Annuleren</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Opslaan...' : 'Opslaan'}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetOrder}
+              disabled={saving || isDefaultOrder(columnOrder)}
+              className="text-muted-foreground"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" /> Reset volgorde
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>Annuleren</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Opslaan...' : 'Opslaan'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -15,6 +15,8 @@ interface LocalDynamicTableProps {
   columns: ColumnInfo[]
   foreignKeys: ForeignKeyInfo[]
   hiddenColumns?: string[]
+  columnOrder?: string[]
+  onColumnReorder?: (newOrder: string[]) => void
   initialRows: Record<string, unknown>[]
   initialTotal: number
   pageSize?: number
@@ -25,6 +27,8 @@ export function LocalDynamicTable({
   columns,
   foreignKeys,
   hiddenColumns = [],
+  columnOrder = [],
+  onColumnReorder,
   initialRows,
   initialTotal,
   pageSize = 25,
@@ -62,6 +66,8 @@ export function LocalDynamicTable({
       columns={columns}
       foreignKeys={foreignKeys}
       hiddenColumns={hiddenColumns}
+      columnOrder={columnOrder}
+      onColumnReorder={onColumnReorder}
       initialRows={initialRows}
       initialTotal={initialTotal}
       dataSource={dataSource}

@@ -174,6 +174,7 @@ export interface CRUDOverview {
   table_name: string | null
   interaction_type: 'crud' | 'formulier'
   hidden_columns: string[]
+  column_order: string[]
   position: number
   created_at: string
   updated_at: string
