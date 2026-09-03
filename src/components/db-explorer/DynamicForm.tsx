@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { FormFieldMapper } from '@/components/db-explorer/FormFieldMapper'
 import { Button } from '@/components/ui/button'
+import { buildDateDefaults } from '@/lib/date-defaults'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/external-db'
 
 interface DynamicFormProps {
@@ -16,7 +17,10 @@ interface DynamicFormProps {
 }
 
 export function DynamicForm({ columns, foreignKeys, fkOptions, hiddenColumns = [], initialValues, onSubmit, onCancel }: DynamicFormProps) {
-  const [values, setValues] = useState<Record<string, unknown>>(initialValues)
+  const [values, setValues] = useState<Record<string, unknown>>(() => {
+    const isEmpty = Object.keys(initialValues).length === 0
+    return isEmpty ? { ...buildDateDefaults(columns) } : { ...initialValues }
+  })
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {

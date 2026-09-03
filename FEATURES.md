@@ -2,6 +2,23 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## crud-date-defaults (2026-08-29)
+
+**Spec**: `specs/014-crud-date-defaults/spec.md`
+**Branch**: `014-crud-date-defaults`
+
+Bij het openen van een "Nieuw record"-formulier in de CRUD-interface worden datum-, timestamp- en time-velden automatisch gevuld met de huidige datum/tijd, tenzij de kolom al een expliciete database-`DEFAULT` heeft. Bij bewerken van bestaande records blijven de oorspronkelijke waarden staan. Time-velden krijgen nu ook een `<input type="time">` in plaats van een plain text-input.
+
+**Nieuwe bestanden**:
+- `src/lib/date-defaults.ts` — pure helpers: `isDateColumn`, `isTimestampColumn`, `isTimeColumn`, `todayISO`, `nowLocalDateTime`, `nowLocalTime`, `buildDateDefaults`
+- `tests/e2e/date-defaults.spec.ts` — 18 unit-tests voor de helper-module
+
+**Aangepaste bestanden**:
+- `src/components/db-explorer/DynamicForm.tsx` — merge `buildDateDefaults(columns)` in initial `values` bij create-mode (lege `initialValues`)
+- `src/components/db-explorer/FormFieldMapper.tsx` — nieuwe `isTime`-branch met `<Input type="time">` voor `time`/`timetz`-kolommen
+
+**Test**: `tests/e2e/date-defaults.spec.ts` — 18 tests (alle groen)
+
 ## save-success-checkmark (2026-08-17)
 
 **Spec**: `specs/013-save-success-checkmark/spec.md`
