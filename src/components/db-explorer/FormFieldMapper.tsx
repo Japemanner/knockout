@@ -165,6 +165,7 @@ export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOption
   }
 
   const isDate = ['date', 'timestamp', 'timestamp without time zone', 'timestamp with time zone', 'timestamptz'].includes(column.dataType)
+  const isTime = ['time', 'time without time zone', 'time with time zone', 'timetz'].includes(column.dataType)
 
   if (isDate) {
     return (
@@ -172,6 +173,19 @@ export function FormFieldMapper({ column, foreignKeys, value, onChange, fkOption
         <Label>{column.name}{isRequired ? ' *' : ''}</Label>
         <Input
           type={column.dataType === 'date' ? 'date' : 'datetime-local'}
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+    )
+  }
+
+  if (isTime) {
+    return (
+      <div className="flex flex-col gap-1">
+        <Label>{column.name}{isRequired ? ' *' : ''}</Label>
+        <Input
+          type="time"
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
         />
