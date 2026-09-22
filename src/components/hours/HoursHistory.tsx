@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast'
 import { useClients, useEntries, useUpdateEntry, useDeleteEntry } from '@/hooks/useHours'
 import { EuroSymbol } from '@/components/hours/EuroSymbol'
 import { useHoursFilterStore } from '@/store/hoursFilterStore'
+import { amsterdamFirstOfMonthISO, amsterdamTodayISO } from '@/lib/hours/dates'
 import type { EntryWithClient } from '@/actions/hours'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
@@ -25,15 +26,6 @@ function startOfWeekISO(): string {
   const monday = new Date(d)
   monday.setDate(d.getDate() - day + 1)
   return monday.toISOString().split('T')[0] ?? ''
-}
-function startOfMonthISO(): string {
-  const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0] ?? ''
-}
-function todayISO(): string {
-  const d = new Date()
-  const tzOffset = d.getTimezoneOffset() * 60000
-  return new Date(d.getTime() - tzOffset).toISOString().split('T')[0] ?? ''
 }
 
 function dateWithTime(dateISO: string, timeHHMM: string): string | null {
@@ -96,8 +88,8 @@ export function HoursHistory() {
   const clientFilter = useHoursFilterStore((s) => s.selectedClientId)
   const setClientFilter = useHoursFilterStore((s) => s.setSelectedClientId)
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('month')
-  const [fromDate, setFromDate] = useState(startOfMonthISO())
-  const [toDate, setToDate] = useState(todayISO())
+  const [fromDate, setFromDate] = useState(amsterdamFirstOfMonthISO())
+  const [toDate, setToDate] = useState(amsterdamTodayISO())
   const [page, setPage] = useState(0)
   const pageSize = 50
 
@@ -141,10 +133,10 @@ export function HoursHistory() {
     setPage(0)
     if (preset === 'week') {
       setFromDate(startOfWeekISO())
-      setToDate(todayISO())
+      setToDate(amsterdamTodayISO())
     } else if (preset === 'month') {
-      setFromDate(startOfMonthISO())
-      setToDate(todayISO())
+      setFromDate(amsterdamFirstOfMonthISO())
+      setToDate(amsterdamTodayISO())
     }
   }
 

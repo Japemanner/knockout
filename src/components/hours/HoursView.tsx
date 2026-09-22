@@ -9,9 +9,8 @@ import { HoursHistory } from '@/components/hours/HoursHistory'
 import { ClientManageDialog } from '@/components/hours/ClientManageDialog'
 import { PrivacyToggle } from '@/components/hours/PrivacyToggle'
 import { Settings2 } from 'lucide-react'
-import type { Client } from '@/types/database.types'
 
-export function HoursView({ initialClients }: { initialClients: Client[] }) {
+export function HoursView() {
   const [manageOpen, setManageOpen] = useState(false)
 
   return (
@@ -43,9 +42,6 @@ export function HoursView({ initialClients }: { initialClients: Client[] }) {
       <HoursHistory />
 
       <ClientManageDialog open={manageOpen} onOpenChange={setManageOpen} />
-
-      {/* initialClients is used for SSR hydration; TanStack Query takes over after mount */}
-      <span className="hidden" data-initial-clients={initialClients.length} />
     </div>
   )
 }

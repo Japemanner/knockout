@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  listClients,
-  listEntries,
-  listOpenEntries,
+  createClient as createBrowserSupabaseClient,
+} from '@/lib/supabase/client'
+import {
   createClient,
   updateClient,
   archiveClient,
@@ -10,19 +10,45 @@ import {
   createEntry,
   updateEntry,
   deleteEntry,
-  getDashboardStats,
-  getRevenueStats,
 } from '@/actions/hours'
+import {
+  hoursKeys,
+  fetchClients,
+  fetchEntries,
+  fetchOpenEntries,
+  fetchDashboardStats,
+  fetchRevenueStats,
+  type EntriesOptions,
+} from '@/lib/hours/queries'
+import { useAuthStore } from '@/store/authStore'
 import type { Client, ClientTargetPeriod } from '@/types/database.types'
+
+// Reads gaan rechtstreeks vanuit de browser naar Supabase (RLS: user_id =
+// auth.uid() op kk_clients en kk_hour_entries). De browser-client is singleton
+// via src/lib/supabase/client.ts. Mutaties blijven server actions.
+// Bij SSR-hydratie matchen de keys met de prefetch in
+// src/app/(dashboard)/uren/page.tsx, dus geen server-action round-trips meer.
+
+function browserSupabase(): ReturnType<typeof createBrowserSupabaseClient> {
+  return createBrowserSupabaseClient()
+}
+
+function currentUserId(): string {
+  const userId = useAuthStore.getState().userId
+  if (!userId) throw new Error('Niet ingelogd')
+  return userId
+}
 
 // ============================================================
 // CLIENTS
 // ============================================================
 
 export function useClients() {
+  const userId = useAuthStore((s) => s.userId)
   return useQuery({
-    queryKey: ['hours', 'clients'],
-    queryFn: listClients,
+    queryKey: hoursKeys.clients,
+    queryFn: () => fetchClients(browserSupabase(), currentUserId()),
+    enabled: !!userId,
     staleTime: 30_000,
   })
 }
@@ -33,8 +59,8 @@ export function useCreateClient() {
     mutationFn: (input: { name: string; target_hours: number; target_period: ClientTargetPeriod; hourly_rate: number }) =>
       createClient(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.clients })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -51,8 +77,8 @@ export function useUpdateClient() {
       patch: Partial<Pick<Client, 'name' | 'target_hours' | 'target_period' | 'hourly_rate' | 'archived'>>
     }) => updateClient(clientId, patch),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.clients })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -63,8 +89,8 @@ export function useArchiveClient() {
   return useMutation({
     mutationFn: (clientId: string) => archiveClient(clientId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.clients })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -75,8 +101,8 @@ export function useUnarchiveClient() {
   return useMutation({
     mutationFn: (clientId: string) => unarchiveClient(clientId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hours', 'clients'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.clients })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -86,24 +112,22 @@ export function useUnarchiveClient() {
 // HOUR ENTRIES
 // ============================================================
 
-export function useEntries(options?: {
-  clientId?: string
-  fromDate?: string
-  toDate?: string
-  limit?: number
-  offset?: number
-}) {
+export function useEntries(options?: EntriesOptions) {
+  const userId = useAuthStore((s) => s.userId)
   return useQuery({
-    queryKey: ['hours', 'entries', options],
-    queryFn: () => listEntries(options),
+    queryKey: hoursKeys.entries(options),
+    queryFn: () => fetchEntries(browserSupabase(), currentUserId(), options),
+    enabled: !!userId,
     staleTime: 30_000,
   })
 }
 
 export function useOpenEntries() {
+  const userId = useAuthStore((s) => s.userId)
   return useQuery({
-    queryKey: ['hours', 'open-entries'],
-    queryFn: listOpenEntries,
+    queryKey: hoursKeys.openEntries,
+    queryFn: () => fetchOpenEntries(browserSupabase(), currentUserId()),
+    enabled: !!userId,
     staleTime: 15_000,
   })
 }
@@ -121,10 +145,15 @@ export function useCreateEntry() {
       hourly_rate?: number
     }) => createEntry(input),
     onMutate: async (input) => {
-      const queryKey = ['hours', 'entries', { limit: 50, offset: 0 }]
-      await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData<{ entries: unknown[]; total: number }>(queryKey)
-      if (previous) {
+      // Cancel alle in-flight entries-queries op de prefix — de exacte key
+      // varieert (fromDate/toDate/clientId zitten erin).
+      await queryClient.cancelQueries({ queryKey: ['hours', 'entries'] })
+      const snapshots = queryClient.getQueriesData<{ entries: unknown[]; total: number }>({
+        queryKey: ['hours', 'entries'],
+      })
+
+      for (const [key, previous] of snapshots) {
+        if (!previous) continue
         const optimistic = {
           id: `temp-${Date.now()}`,
           user_id: '',
@@ -136,22 +165,22 @@ export function useCreateEntry() {
           updated_at: new Date().toISOString(),
           client_name: '',
         }
-        queryClient.setQueryData(queryKey, {
+        queryClient.setQueryData(key, {
           entries: [optimistic, ...previous.entries],
           total: previous.total + 1,
         })
       }
-      return { previous }
+      return { snapshots }
     },
     onError: (_err, _input, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['hours', 'entries', { limit: 50, offset: 0 }], context.previous)
+      for (const [key, snapshot] of context?.snapshots ?? []) {
+        queryClient.setQueryData(key, snapshot)
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'open-entries'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.openEntries })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -169,7 +198,7 @@ export function useUpdateEntry() {
     }) => updateEntry(entryId, patch),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -180,25 +209,28 @@ export function useDeleteEntry() {
   return useMutation({
     mutationFn: (entryId: string) => deleteEntry(entryId),
     onMutate: async (entryId) => {
-      const queryKey = ['hours', 'entries', { limit: 50, offset: 0 }]
-      await queryClient.cancelQueries({ queryKey })
-      const previous = queryClient.getQueryData<{ entries: { id: string }[]; total: number }>(queryKey)
-      if (previous) {
-        queryClient.setQueryData(queryKey, {
+      await queryClient.cancelQueries({ queryKey: ['hours', 'entries'] })
+      const snapshots = queryClient.getQueriesData<{ entries: { id: string }[]; total: number }>({
+        queryKey: ['hours', 'entries'],
+      })
+
+      for (const [key, previous] of snapshots) {
+        if (!previous) continue
+        queryClient.setQueryData(key, {
           entries: previous.entries.filter((e) => e.id !== entryId),
           total: Math.max(0, previous.total - 1),
         })
       }
-      return { previous }
+      return { snapshots }
     },
     onError: (_err, _entryId, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(['hours', 'entries', { limit: 50, offset: 0 }], context.previous)
+      for (const [key, snapshot] of context?.snapshots ?? []) {
+        queryClient.setQueryData(key, snapshot)
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['hours', 'entries'] })
-      queryClient.invalidateQueries({ queryKey: ['hours', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: hoursKeys.dashboard })
       queryClient.invalidateQueries({ queryKey: ['hours', 'revenue'] })
     },
   })
@@ -209,17 +241,21 @@ export function useDeleteEntry() {
 // ============================================================
 
 export function useDashboardStats() {
+  const userId = useAuthStore((s) => s.userId)
   return useQuery({
-    queryKey: ['hours', 'dashboard'],
-    queryFn: getDashboardStats,
+    queryKey: hoursKeys.dashboard,
+    queryFn: () => fetchDashboardStats(browserSupabase(), currentUserId()),
+    enabled: !!userId,
     staleTime: 30_000,
   })
 }
 
 export function useRevenueStats(clientId?: string) {
+  const userId = useAuthStore((s) => s.userId)
   return useQuery({
-    queryKey: ['hours', 'revenue', clientId ?? 'all'],
-    queryFn: () => getRevenueStats(clientId),
+    queryKey: hoursKeys.revenue(clientId),
+    queryFn: () => fetchRevenueStats(browserSupabase(), currentUserId(), clientId),
+    enabled: !!userId,
     staleTime: 30_000,
   })
 }
