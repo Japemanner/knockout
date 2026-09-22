@@ -40,7 +40,8 @@ Als gebruiker wil ik dat de filters die ik instel op een CRUD-overzicht bewaard 
 1. **Given** de gebruiker heeft een filter ingesteld op een CRUD-overzicht, **When** de gebruiker de pagina herlaadt of het overzicht verlaat en later terugkeert, **Then** is het filter nog steeds actief en toont de tabel dezelfde gefilterde rijen
 2. **Given** de gebruiker heeft filters actief in CRUD-overzicht A, **When** de gebruiker CRUD-overzicht B opent, **Then** heeft overzicht B zijn eigen (onafhankelijke) filtertoestand die niet beïnvloed is door overzicht A
 3. **Given** twee gebruikers werken in hetzelfde CRUD-overzicht, **When** gebruiker 1 een filter instelt, **Then** is de filtertoestand van gebruiker 2 ongewijzigd (per-gebruiker opslag)
-4. **Given** de gebruiker heeft filters actief en wist deze, **When** de gebruiker het overzicht verlaat en terugkeert, **Then** zijn geen filters meer actief (gewiste filters blijven gewist)
+4. **Given** de gebruiker heeft filters actief, **When** de gebruiker het overzicht verlaat en terugkeert, **Then** zijn geen filters meer actief (gewiste filters blijven gewist)
+5. **Given** de gebruiker heeft filters actief op tabel X binnen een CRUD-overzicht, **When** de gebruiker binnen hetzelfde overzicht schakelt naar tabel Y en terug naar tabel X, **Then** is de filtertoestand van tabel X behouden en heeft tabel Y zijn eigen onafhankelijke filtertoestand (per-tabel opslag)
 
 ---
 
@@ -78,8 +79,8 @@ Als gebruiker wil ik dat de filterbesturing zich aanpast aan het type kolom: tek
 - **FR-002**: Het systeem MOET meerdere actieve kolomfilters combineren met een EN-voorwaarde (een rij moet aan alle filters voldoen om zichtbaar te zijn)
 - **FR-003**: Het systeem MOET de tabel direct herfilteren zodra de gebruiker een filter wijzigt, toevoegt of wist
 - **FR-004**: Het systeem MOET per kolom minimaal één filtermodus ondersteunen die past bij het kolomtype: tekst (bevat, case-insensitive), getal (vergelijking), datum (bereik of enkel), boolean (ja/nee)
-- **FR-005**: Het systeem MOET de actieve filtertoestand per gebruiker per CRUD-overzicht opslaan, onafhankelijk van andere gebruikers en andere overzichten
-- **FR-006**: Het systeem MOET de opgeslagen filtertoestand toepassen wanneer de gebruiker het CRUD-overzicht opent (persistentie over sessies)
+- **FR-005**: Het systeem MOET de actieve filtertoestand per gebruiker per tabel binnen een CRUD-overzicht opslaan, onafhankelijk van andere gebruikers, andere overzichten en andere tabellen binnen hetzelfde overzicht
+- **FR-006**: Het systeem MOET de opgeslagen filtertoestand toepassen wanneer de gebruiker het CRUD-overzicht (of een specifieke tabel daarin) opent (persistentie over sessies)
 - **FR-007**: Het systeem MOET een actie bieden om alle actieve filters in één keer te wissen ("Wis alle filters")
 - **FR-008**: Het systeem MOET een per-kolom actie bieden om het filter op die enkele kolom te wissen
 - **FR-009**: Het systeem MOET de filtertoestand bewaren in dezelfde of een vergelijkbare per-gebruiker-voorkeur-structuur als de kolomvolgorde-voorkeur (spec 015), met RLS ingeschakeld
@@ -93,7 +94,7 @@ Als gebruiker wil ik dat de filterbesturing zich aanpast aan het type kolom: tek
 ### Key Entities
 
 - **CRUDOverview**: Bestaande entiteit — de container voor één CRUD-overzicht met eigenschappen zoals id, project, tabel, naam.
-- **UserFilterPreference** (nieuw): Per gebruiker per CRUD-overzicht opgeslagen filtertoestand. Kenmerken: gebruiker-id, CRUD-overzicht-id, actieve filters (een lijst van kolomidentificaties met bijbehorende filtervoorwaarden). Eén record per gebruiker per CRUD-overzicht. Gerelateerd aan UserColumnPreference (spec 015) — kan in dezelfde voorkeursentiteit worden ondergebracht of als aparte entiteit naast de kolomvolgorde-voorkeur.
+- **UserFilterPreference** (nieuw): Per gebruiker per tabel binnen een CRUD-overzicht opgeslagen filtertoestand. Kenmerken: gebruiker-id, CRUD-overzicht-id, tabelnaam, actieve filters (een lijst van kolomidentificaties met bijbehorende filtervoorwaarden). Eén record per gebruiker per overzicht+tabel-combinatie. Gerelateerd aan UserColumnPreference (spec 015) — kan in dezelfde voorkeursentiteit worden ondergebracht of als aparte entiteit naast de kolomvolgorde-voorkeur.
 - **TableColumn**: Bestaande entiteit gebruikt voor tabel-introspectie — bepaalt het filtertype per kolom op basis van het data_type.
 
 ## Success Criteria *(mandatory)*
@@ -111,8 +112,8 @@ Als gebruiker wil ik dat de filterbesturing zich aanpast aan het type kolom: tek
 ## Assumptions
 
 - Het filter-icoon of de filterbesturing wordt geïntegreerd in of vlak bij de bestaande kolomkoppen, passend bij de huidige CRUD-interface-stijl
-- De filtertoestand wordt per gebruiker per CRUD-overzicht opgeslagen in de eigen Supabase-database, met RLS ingeschakeld zodat gebruikers alleen hun eigen filtervoorkeuren kunnen lezen/schrijven — vergelijkbaar met de kolomvolgorde-voorkeur uit spec 015
-- Eén filtertoestand geldt voor de hele CRUD-overzicht, niet per individueel tabel binnen het overzicht (indien een overzicht meerdere tabellen bevat) — [NEEDS CLARIFICATION: geldt het filter per CRUD-overzicht of per tabel binnen het overzicht?]
+- De filtertoestand wordt per gebruiker per tabel binnen een CRUD-overzicht opgeslagen in de eigen Supabase-database, met RLS ingeschakeld zodat gebruikers alleen hun eigen filtervoorkeuren kunnen lezen/schrijven — vergelijkbaar met de kolomvolgorde-voorkeur uit spec 015
+- De filtertoestand geldt per tabel binnen het CRUD-overzicht: elke tabel binnen een overzicht heeft zijn eigen onafhankelijke set filters, zodat schakelen tussen tabellen de filters niet verliest of corrumpeert
 - Bij het allereerste bezoek (geen opgeslagen filtertoestand) zijn geen filters actief
 - Filtering vindt plaats op de momenteel geladen dataset; indien de tabel gepagineerd is, wordt filtering toegepast binnen de geladen pagina's tenzij de implementatie server-side filtering kiest
 - OF-voorwaarden binnen één kolom (meerdere voorwaarden op dezelfde kolom) zijn buiten scope voor v1

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — 1 marker: per-overzicht vs per-tabel filter scope
+- [x] No [NEEDS CLARIFICATION] markers remain — resolved: filtertoestand geldt per tabel binnen het CRUD-overzicht (optie A, aanbevolen)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- 1 [NEEDS CLARIFICATION] marker remains — Q1 pending user response regarding filter scope (per CRUD-overzicht vs per tabel binnen overzicht).
+- Q1 resolved (2026-09-22): filtertoestand geldt per tabel binnen het CRUD-overzicht — elke tabel heeft zijn eigen onafhankelijke filters per gebruiker.
 - Project-context references to Supabase/RLS in Assumptions are consistent with existing specs (004, 015) and describe the persistence target, not implementation details.
-- Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
+- All items pass. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
