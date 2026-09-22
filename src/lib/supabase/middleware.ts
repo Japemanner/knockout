@@ -26,9 +26,13 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Local JWT verification via getClaims() — avoids a network round-trip to
-  // Supabase Auth on every request. Requires asymmetric JWT signing keys
-  // (RS256/ES256) enabled in the Supabase Dashboard → Project Settings →
-  // JWT Keys. Falls back to a server call for HS256 (symmetric) keys.
+  // Supabase Auth on every request. Asymmetric JWT signing keys (ES256) have
+  // been enabled in the Supabase Dashboard → Project Settings → JWT Keys
+  // since 2026-09-22 (verified by tests/e2e/auth-jwks.spec.ts), so getClaims()
+  // verifies new tokens locally. HS256 tokens issued before the rotation
+  // (valid for max ~1 hour) still fall back to a server call via
+  // /auth/v1/user until they expire. auth-js 2.110.2 caches the JWKS for
+  // 10 minutes per instance (GLOBAL_JWKS).
   let user: { id: string } | null = null
   try {
     const { data } = await supabase.auth.getClaims()
