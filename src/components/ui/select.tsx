@@ -18,9 +18,9 @@ function Select({ value, onValueChange, options, placeholder, className }: Selec
         className
       )}
     >
-      {placeholder && <option value="" disabled>{placeholder}</option>}
+      {placeholder && <option value="" disabled style={{ color: '#6b7280', backgroundColor: 'white' }}>{placeholder}</option>}
       {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>{opt.label}</option>
+        <option key={opt.value} value={opt.value} style={{ color: 'black', backgroundColor: 'white' }}>{opt.label}</option>
       ))}
     </select>
   )
