@@ -306,7 +306,7 @@ export function GenericTable({
               <DialogTitle>{showForm === 'create' ? 'Nieuw record' : 'Record bewerken'}</DialogTitle>
             </DialogHeader>
             <DynamicForm
-              columns={columns}
+              columns={orderedColumns}
               foreignKeys={foreignKeys}
               fkOptions={fkOptions}
               hiddenColumns={hiddenColumns}

@@ -37,6 +37,8 @@ export function LoginForm() {
     }
   }
 
+  const NEUTRAL_MAGIC_LINK_MESSAGE = 'Als dit adres bekend is, ontvang je een inloglink.'
+
   const handleMagicLink = async () => {
     if (!email) {
       toast({ title: 'E-mail verplicht', description: 'Vul je e-mailadres in.', variant: 'destructive' })
@@ -47,16 +49,17 @@ export function LoginForm() {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
       if (error) throw error
-      toast({ title: 'Magic link verzonden', description: 'Check je inbox voor de inloglink.' })
+      toast({ title: 'Magic link verzonden', description: NEUTRAL_MAGIC_LINK_MESSAGE })
     } catch (err) {
-      toast({
-        title: 'Magic link mislukt',
-        description: err instanceof Error ? err.message : 'Onbekende fout',
-        variant: 'destructive',
-      })
+      // Dezelfde neutrale melding als bij succes: niet lekken welk adres bestaat.
+      console.error('Magic link kon niet worden verzonden:', err)
+      toast({ title: 'Magic link verzonden', description: NEUTRAL_MAGIC_LINK_MESSAGE })
     } finally {
       setIsLoading(false)
     }
