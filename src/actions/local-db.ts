@@ -38,9 +38,9 @@ interface RpcFkRow {
   referenced_column_name: string
 }
 
-interface RpcTableRow {
-  table_name: string
+interface RpcAllColumnRow extends RpcColumnRow {
   table_schema: string
+  table_name: string
 }
 
 function mapColumn(r: RpcColumnRow): ColumnInfo {
@@ -90,18 +90,27 @@ export async function getLocalTableMeta(tableName: string): Promise<{ meta: Tabl
 export async function getLocalTableList(): Promise<{ tables: TableInfo[]; error?: string }> {
   try {
     const { supabase } = await getAuthenticatedClient()
-    const { data, error } = await supabase.rpc('list_tables')
+    // Eén set-based RPC (get_all_table_columns, migration 020) i.p.v.
+    // list_tables + N x get_table_columns — één round-trip ongeacht het aantal tabellen.
+    const { data, error } = await supabase.rpc('get_all_table_columns')
     if (error) throw new Error(error.message)
 
-    const rows = (data as RpcTableRow[] ?? []).map((t) => ({ name: t.table_name, schema: t.table_schema }))
-
-    // Haal per tabel kolommen op (voor kolom-count in de UI). FK's niet nodig in de lijst.
+    // Rijen zijn geordend op table_schema, table_name, ordinal_position:
+    // per tabel gewoon blijven doorlopen tot de volgende schema.tabel-combinatie.
+    const rows = (data as RpcAllColumnRow[] ?? [])
     const tables: TableInfo[] = []
-    for (const t of rows) {
-      const { data: colsData, error: colsErr } = await supabase.rpc('get_table_columns', { p_schema: t.schema, p_table: t.name })
-      if (colsErr) throw new Error(colsErr.message)
-      const columns = (colsData as RpcColumnRow[] ?? []).map(mapColumn)
-      tables.push({ name: t.name, schema: t.schema, columns, foreignKeys: [] })
+    let current: { name: string; schema: string; columns: ColumnInfo[] } | null = null
+    for (const r of rows) {
+      if (!current || current.name !== r.table_name || current.schema !== r.table_schema) {
+        if (current) {
+          tables.push({ ...current, foreignKeys: [] })
+        }
+        current = { name: r.table_name, schema: r.table_schema, columns: [] }
+      }
+      current.columns.push(mapColumn(r))
+    }
+    if (current) {
+      tables.push({ ...current, foreignKeys: [] })
     }
     return { tables }
   } catch (err) {

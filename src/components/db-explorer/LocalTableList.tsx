@@ -26,7 +26,7 @@ export function LocalTableList() {
     <div className="space-y-2">
       <p className="text-destructive">{error}</p>
       <p className="text-sm text-muted-foreground">
-        Controleer of de Supabase RPC-functions (list_tables, get_table_columns) geïnstalleerd zijn in je database.
+        Controleer of de Supabase RPC-function (get_all_table_columns) geïnstalleerd is in je database.
       </p>
     </div>
   )
