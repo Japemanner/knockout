@@ -2,6 +2,29 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## auth-signup-disabled (2026-09-22)
+
+**Spec**: geen (bugfix, zie `decisions/2026-09-22-registratie-uitgeschakeld.md`)
+**Branch**: `019-crud-column-order-new-record`
+
+Registratie definitief uitgeschakeld (defense in depth, single-user app):
+1. Supabase Auth-instelling `disable_signup=true` op productieproject `ythjnatklbnjtvvgpwlr` (geverifieerd via `GET /auth/v1/settings`) — blokkeert signUp en magic-link-signup server-side.
+2. DB-trigger `kk_block_new_signups` (BEFORE INSERT op `auth.users`, migration 019) — backstop die ook admin.createUser, invites en dashboard "Add user" weigert. Bestaande accounts (wachtwoord, magic link, wachtwoord-reset) raken `auth.users` niet met INSERT en blijven werken.
+3. `shouldCreateUser: false` in `signInWithOtp` (LoginForm.tsx) + neutrale toast-melding ("Als dit adres bekend is, ontvang je een inloglink.") voor succes én error — geen account-enumeration; echte fouten alleen naar console.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/019_block_new_signups.sql` — trigger-backstop (handmatig toe te passen via SQL Editor; Supabase MCP was niet gekoppeld)
+- `tests/e2e/auth-signup-disabled.spec.ts` — 2 tests: API (disable_signup===true) + UI (neutrale melding, geen "Signups not allowed")
+- `decisions/2026-09-22-registratie-uitgeschakeld.md` — beslissing + procedure voor tijdelijk account toevoegen
+
+**Aangepaste bestanden**:
+- `src/components/auth/LoginForm.tsx` — `shouldCreateUser: false` + neutrale melding + console.error i.p.v. error-toast
+- `.gitignore` — `test-results/` + `playwright-report/` toegevoegd (was UTF-16-corrupt, nu hersteld)
+- `.gitattributes` — `*.sh eol=lf` (fitness-check.sh brak op CRLF)
+- `knowledge/auth/` + `quality/auth/criteria.md` — knowledge architecture entry
+
+**Test**: `tests/e2e/auth-signup-disabled.spec.ts` — 2/2 groen. Volledige suite: 97 passed / 1 failed (pre-existing, `decimal-helper.spec.ts:156`, niet auth-gerelateerd) / 43 skipped (login-gated).
+
 ## crud-column-order-new-record (2026-09-22)
 
 **Spec**: `specs/019-crud-column-order-new-record/spec.md`
