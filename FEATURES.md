@@ -2,6 +2,21 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## crud-column-order-new-record (2026-09-22)
+
+**Spec**: `specs/019-crud-column-order-new-record/spec.md`
+**Branch**: `019-crud-column-order-new-record`
+
+De per-gebruiker opgeslagen kolomvolgorde (drag-and-drop in tabelkoppen, feature 015) wordt nu ook toegepast in het aanmaak- en bewerkformulier van records. Eerder gebruikte het formulier de ruwe database-volgorde, terwijl de tabelweergave de gesleepte volgorde toonde. Nu geeft `GenericTable` dezelfde memoized `orderedColumns`-array (via `applyColumnOrder`) door aan `DynamicForm`, zodat velden in het formulier in exact dezelfde volgorde staan als de tabelkolommen. Omdat aanmaken en bewerken één gedeeld formulier-component gebruiken, geldt de volgorde automatisch voor beide flows. Nieuwe kolommen verschijnen achteraan; verborgen kolommen blijven uitgesloten; zonder opgeslagen volgorde geldt de standaard database-volgorde.
+
+**Nieuwe bestanden**:
+- `tests/e2e/crud-form-order.spec.ts` — 3 e2e-tests (aanmaakformulier = tabelkopvolgorde, bewerkformulier = aanmaakformulier, terugval zonder opgeslagen volgorde) met login-skip-guards
+
+**Aangepaste bestanden**:
+- `src/components/db-explorer/GenericTable.tsx` — één regel: `<DynamicForm columns={orderedColumns}>` i.p.v. `columns={columns}`
+
+**Test**: `tests/e2e/crud-form-order.spec.ts` — 3 tests (subsequence-check kopvolgorde vs. formuliervelden, create/edit-consistentie, fallback). Onderliggende `applyColumnOrder`-suite: 17/17 groen.
+
 ## crud-column-filters (2026-09-22)
 
 **Spec**: `specs/018-crud-column-filters/spec.md`
