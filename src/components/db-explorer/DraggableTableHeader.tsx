@@ -4,16 +4,17 @@ import { useDndContext, DndContext, type DragEndEvent, PointerSensor, useSensor,
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { arrayMove } from '@dnd-kit/sortable'
 import type { ColumnInfo } from '@/lib/db/introspect'
 
 interface DraggableTableHeaderProps {
   columns: ColumnInfo[]
   onReorder: (newOrder: string[]) => void
+  renderFilter?: (column: ColumnInfo) => ReactNode
 }
 
-function SortableTh({ column, onReorder }: { column: ColumnInfo; onReorder: (newOrder: string[]) => void }) {
+function SortableTh({ column, onReorder, renderFilter }: { column: ColumnInfo; onReorder: (newOrder: string[]) => void; renderFilter?: (column: ColumnInfo) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.name })
 
   const style = {
@@ -34,12 +35,13 @@ function SortableTh({ column, onReorder }: { column: ColumnInfo; onReorder: (new
       <div className="flex items-center gap-1">
         <GripVertical className="h-3 w-3 opacity-40 flex-shrink-0" />
         <span>{column.name}</span>
+        {renderFilter && renderFilter(column)}
       </div>
     </th>
   )
 }
 
-export function DraggableTableHeader({ columns, onReorder }: DraggableTableHeaderProps) {
+export function DraggableTableHeader({ columns, onReorder, renderFilter }: DraggableTableHeaderProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
@@ -63,7 +65,7 @@ export function DraggableTableHeader({ columns, onReorder }: DraggableTableHeade
       <SortableContext items={columnNames} strategy={horizontalListSortingStrategy}>
         <tr className="bg-muted/50">
           {columns.map((col) => (
-            <SortableTh key={col.name} column={col} onReorder={onReorder} />
+            <SortableTh key={col.name} column={col} onReorder={onReorder} renderFilter={renderFilter} />
           ))}
         </tr>
       </SortableContext>

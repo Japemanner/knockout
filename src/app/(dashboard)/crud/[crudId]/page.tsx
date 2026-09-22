@@ -3,6 +3,8 @@ import { CrudTableWrapper } from '@/components/crud/CrudTableWrapper'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
 import { ColumnVisibilityDialog } from '@/components/crud/ColumnVisibilityDialog'
 import { getLocalTableMeta, getLocalTableRecords } from '@/actions/local-db'
+import { pruneStaleFilters } from '@/lib/column-filters'
+import type { ColumnFilters } from '@/lib/column-filters'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -15,6 +17,7 @@ interface CrudOverviewData {
   interaction_type: string
   hidden_columns: string[]
   column_order: string[]
+  column_filters: ColumnFilters | null
 }
 
 export const revalidate = 60
@@ -86,6 +89,25 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
     getLocalTableMeta(crud.table_name),
     getLocalTableRecords({ tableName: crud.table_name, page: 1, pageSize: 25 }),
   ])
+
+  // Filters op verwijderde kolommen automatisch negeren (FR-012)
+  const savedFilters: ColumnFilters = pruneStaleFilters(
+    crud.column_filters ?? {},
+    metaResult.meta?.columns.map((c) => c.name) ?? []
+  )
+
+  // Bij actieve opgeslagen filters de eerste pagina gefilterd laden
+  const hasSavedFilters = Object.keys(savedFilters).length > 0
+  let filteredRecords = recordsResult
+  if (hasSavedFilters && !recordsResult.error && metaResult.meta) {
+    filteredRecords = await getLocalTableRecords({
+      tableName: crud.table_name,
+      page: 1,
+      pageSize: 25,
+      filters: savedFilters,
+      columns: metaResult.meta.columns,
+    })
+  }
 
   if (metaResult.error || !metaResult.meta) {
     return (
@@ -170,8 +192,9 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
         foreignKeys={metaResult.meta.foreignKeys}
         hiddenColumns={crud.hidden_columns ?? []}
         columnOrder={crud.column_order ?? []}
-        initialRows={recordsResult.rows as Record<string, unknown>[]}
-        initialTotal={recordsResult.totalCount}
+        filters={savedFilters}
+        initialRows={filteredRecords.rows as Record<string, unknown>[]}
+        initialTotal={filteredRecords.totalCount}
       />
     </div>
   )

@@ -175,9 +175,27 @@ export interface CRUDOverview {
   interaction_type: 'crud' | 'formulier'
   hidden_columns: string[]
   column_order: string[]
+  column_filters: Record<string, ColumnFilter>
   position: number
   created_at: string
   updated_at: string
+}
+
+export type ColumnFilterOp =
+  | 'contains'
+  | 'equals'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'between'
+  | 'is_true'
+  | 'is_false'
+
+export interface ColumnFilter {
+  op: ColumnFilterOp
+  value?: string | number | boolean
+  value2?: string | number
 }
 
 export type ClientTargetPeriod = 'week' | 'month' | 'total'

@@ -1,17 +1,21 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { DynamicForm } from '@/components/db-explorer/DynamicForm'
 import { DraggableTableHeader } from '@/components/db-explorer/DraggableTableHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FilterX } from 'lucide-react'
 import { applyColumnOrder } from '@/lib/column-order'
+import { countActiveFilters, isFilterComplete, isActiveFilterOnHiddenColumns } from '@/lib/column-filters'
+import type { ColumnFilters } from '@/lib/column-filters'
+import { ColumnFilterPopover } from '@/components/crud/ColumnFilterPopover'
+import type { ColumnFilter } from '@/types/database.types'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/external-db'
 
 export interface TableDataSource {
-  getRecords: (page: number, pageSize: number) => Promise<{ rows: Record<string, unknown>[]; totalCount: number; error?: string }>
+  getRecords: (page: number, pageSize: number, filters?: ColumnFilters) => Promise<{ rows: Record<string, unknown>[]; totalCount: number; error?: string }>
   createRecord: (values: Record<string, unknown>) => Promise<{ error?: string }>
   updateRecord: (primaryKey: { column: string; value: unknown }, values: Record<string, unknown>) => Promise<{ error?: string }>
   deleteRecord: (primaryKey: { column: string; value: unknown }) => Promise<{ error?: string }>
@@ -25,6 +29,8 @@ interface GenericTableProps {
   hiddenColumns?: string[]
   columnOrder?: string[]
   onColumnReorder?: (newOrder: string[]) => void
+  filters?: ColumnFilters
+  onFiltersChange?: (filters: ColumnFilters) => void
   initialRows: Record<string, unknown>[]
   initialTotal: number
   dataSource: TableDataSource
@@ -39,6 +45,8 @@ export function GenericTable({
   hiddenColumns = [],
   columnOrder = [],
   onColumnReorder,
+  filters = {},
+  onFiltersChange,
   initialRows,
   initialTotal,
   dataSource,
@@ -70,16 +78,21 @@ export function GenericTable({
     return () => { cancelled = true }
   }, [foreignKeys, dataSource])
 
+  const filterable = !!onFiltersChange
+  const allColumnNames = useMemo(() => columns.map((c) => c.name), [columns])
+  const activeFilterCount = useMemo(() => countActiveFilters(filters, allColumnNames), [filters, allColumnNames])
+  const hasAnyFilter = activeFilterCount > 0
+
   const loadPage = useCallback(async (pageNum: number) => {
     setLoading(true)
-    const result = await dataSource.getRecords(pageNum, pageSize)
+    const result = await dataSource.getRecords(pageNum, pageSize, hasAnyFilter ? filters : undefined)
     if (!result.error) {
       setRows(result.rows)
       setTotal(result.totalCount)
     }
     setPage(pageNum)
     setLoading(false)
-  }, [dataSource, pageSize])
+  }, [dataSource, pageSize, filters, hasAnyFilter])
 
   const handleCreate = useCallback(async (values: Record<string, unknown>) => {
     setSubmitting(true)
@@ -132,12 +145,54 @@ export function GenericTable({
     [columns, columnOrder]
   )
   const displayColumns = orderedColumns.filter((c) => !c.isPrimaryKey && !hiddenColumns.includes(c.name)).slice(0, 8)
+  const hiddenActive = filterable && isActiveFilterOnHiddenColumns(filters, displayColumns.map((c) => c.name))
+
+  const setColumnFilter = useCallback((columnName: string, filter: ColumnFilter | undefined) => {
+    if (!onFiltersChange) return
+    const next = { ...filters }
+    if (filter === undefined || !isFilterComplete(filter)) delete next[columnName]
+    else next[columnName] = filter
+    onFiltersChange(next)
+  }, [filters, onFiltersChange])
+
+  const clearAllFilters = useCallback(() => {
+    if (!onFiltersChange) return
+    onFiltersChange({})
+  }, [onFiltersChange])
+
+  // Reset naar pagina 1 zodra de set actieve filters verandert
+  const filterSignature = JSON.stringify(filters)
+  useEffect(() => {
+    if (hasAnyFilter) setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterSignature])
+
+  // Herlaad huidige pagina zodra filters veranderen (behalve initiele mount)
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    loadPage(hasAnyFilter ? 1 : page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterSignature])
+
+  const emptyBecauseFiltered = hasAnyFilter && rows.length === 0
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">{tableName}</h2>
         <div className="flex items-center gap-2">
+          {filterable && hasAnyFilter && (
+            <Button size="sm" variant="ghost" onClick={clearAllFilters} className="text-muted-foreground">
+              <FilterX className="h-3 w-3 mr-1" /> Wis filters ({activeFilterCount})
+            </Button>
+          )}
+          {filterable && hiddenActive && (
+            <span className="text-xs text-muted-foreground">Filters actief op verborgen kolommen</span>
+          )}
           {(canEdit || showCreateWhenNoPk) && (
             <Button size="sm" variant="outline" onClick={() => setShowForm('create')}>
               <Plus className="h-3 w-3 mr-1" /> Record
@@ -164,7 +219,32 @@ export function GenericTable({
         <table className="w-full text-sm">
           <thead>
             {onColumnReorder ? (
-              <DraggableTableHeader columns={displayColumns} onReorder={onColumnReorder} />
+              <DraggableTableHeader
+                columns={displayColumns}
+                onReorder={onColumnReorder}
+                renderFilter={filterable ? (col) => (
+                  <ColumnFilterPopover
+                    column={col}
+                    filter={filters[col.name]}
+                    onChange={(f) => setColumnFilter(col.name, f)}
+                  />
+                ) : undefined}
+              />
+            ) : filterable ? (
+              <tr className="bg-muted/50">
+                {displayColumns.map((c) => (
+                  <th key={c.name} className="text-left px-3 py-2 font-medium text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="whitespace-nowrap">{c.name}</span>
+                      <ColumnFilterPopover
+                        column={c}
+                        filter={filters[c.name]}
+                        onChange={(f) => setColumnFilter(c.name, f)}
+                      />
+                    </div>
+                  </th>
+                ))}
+              </tr>
             ) : (
               <tr className="bg-muted/50">
                 {displayColumns.map((c) => (
@@ -178,7 +258,20 @@ export function GenericTable({
             {loading ? (
               <tr><td colSpan={displayColumns.length + (canEdit ? 1 : 0)} className="px-3 py-4 text-center text-muted-foreground">Laden...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={displayColumns.length + (canEdit ? 1 : 0)} className="px-3 py-4 text-center text-muted-foreground">Geen records</td></tr>
+              <tr>
+                <td colSpan={displayColumns.length + (canEdit ? 1 : 0)} className="px-3 py-4 text-center text-muted-foreground">
+                  {emptyBecauseFiltered ? (
+                    <div className="space-y-2">
+                      <p>Geen rijen voldoen aan de actieve filters</p>
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} disabled={!filterable}>
+                        <FilterX className="h-3 w-3 mr-1" /> Wis alle filters
+                      </Button>
+                    </div>
+                  ) : (
+                    'Geen records'
+                  )}
+                </td>
+              </tr>
             ) : (
               rows.map((row, i) => (
                 <tr key={i} className="border-t hover:bg-accent/50">
