@@ -1,7 +1,10 @@
 'use server'
 
 import { getAuthenticatedClient, getServiceClient } from '@/lib/supabase/actions'
+import { pruneStaleFilters, isFilterComplete, filterKindForColumn } from '@/lib/column-filters'
+import type { ColumnFilters } from '@/lib/column-filters'
 import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
+import type { ColumnFilter, ColumnFilterOp } from '@/types/database.types'
 
 export { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta }
 
@@ -106,9 +109,60 @@ export async function getLocalTableList(): Promise<{ tables: TableInfo[]; error?
   }
 }
 
+// PostgREST operator mapping per filter op. `between` wordt omgezet naar
+// gte + lte combinaties. Boolean filters gebruiken eq true/false.
+function postgrestOp(op: ColumnFilterOp): string | null {
+  switch (op) {
+    case 'contains': return 'ilike'
+    case 'equals': return 'eq'
+    case 'gt': return 'gt'
+    case 'gte': return 'gte'
+    case 'lt': return 'lt'
+    case 'lte': return 'lte'
+    case 'is_true': return 'eq'
+    case 'is_false': return 'eq'
+    default: return null
+  }
+}
+
+function applyPostgrestFilters(query: UntypedClient, filters: ColumnFilters, columns: ColumnInfo[]): UntypedClient {
+  const columnMap = new Map(columns.map((c) => [c.name, c]))
+  for (const [columnName, f] of Object.entries(filters)) {
+    if (!isFilterComplete(f)) continue
+    const kind = columnMap.has(columnName) ? filterKindForColumn(columnMap.get(columnName)!) : 'text'
+    if (f.op === 'between') {
+      const lo = normalizeFilterValue(f.value, kind)
+      const hi = normalizeFilterValue(f.value2, kind)
+      if (lo !== undefined) query = query.gte(columnName, lo)
+      if (hi !== undefined) query = query.lte(columnName, hi)
+      continue
+    }
+    const op = postgrestOp(f.op)
+    if (!op) continue
+    const value = f.op === 'is_true' ? true : f.op === 'is_false' ? false
+      : f.op === 'contains' ? `%${String(f.value)}%`
+      : normalizeFilterValue(f.value, kind)
+    if (value === undefined) continue
+    query = query[op](columnName, value)
+  }
+  return query
+}
+
+function normalizeFilterValue(value: string | number | boolean | undefined, kind: string): string | number | boolean | undefined {
+  if (value === undefined || value === '') return undefined
+  if (kind === 'number') {
+    const n = Number(value)
+    if (!Number.isNaN(n)) return n
+    return undefined
+  }
+  return value
+}
+
 export async function getLocalTableRecords(data: {
   tableName: string; page?: number; pageSize?: number
   orderBy?: string; orderDir?: 'asc' | 'desc'
+  filters?: ColumnFilters
+  columns?: ColumnInfo[]
 }): Promise<{ rows: Record<string, unknown>[]; totalCount: number; page: number; pageSize: number; error?: string }> {
   const page = data.page ?? 1
   const pageSize = data.pageSize ?? 25
@@ -119,6 +173,10 @@ export async function getLocalTableRecords(data: {
     let query = supabase.from(data.tableName).select('*', { count: 'exact' })
     if (data.orderBy) {
       query = query.order(data.orderBy, { ascending: data.orderDir !== 'desc' })
+    }
+    if (data.filters && data.columns) {
+      const valid = pruneStaleFilters(data.filters, data.columns.map((c) => c.name))
+      query = applyPostgrestFilters(query, valid, data.columns)
     }
     const { data: rows, count, error } = await query.range(from, to)
     if (error) throw new Error(error.message)

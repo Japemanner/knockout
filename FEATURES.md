@@ -2,6 +2,31 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## crud-column-filters (2026-09-22)
+
+**Spec**: `specs/018-crud-column-filters/spec.md`
+**Branch**: `018-crud-column-filters`
+
+Filterbare kolommen in CRUD-overzichten met stateful (persistente) filters. Per kolom een filterpopover in de kolomkop met kolomtype-bewuste operatoren: tekst (bevat/gelijk, case-insensitive), getal (vergelijkingen + tussen), datum (vergelijkingen + tussen), boolean (ja/nee). Meerdere filters combineren met EN. Filters worden per gebruiker per CRUD-overzicht opgeslagen in `kk_crud_overviews.column_filters` (JSONB) en server-side toegepast via PostgREST, zodat paginatie en totaaltelling correct blijven. Verwijderde kolommen worden automatisch uit opgeslagen filters gepruned; filters op verborgen kolommen blijven actief met zichtbare indicatie. "Wis alle filters"-knop + leegstaat met wis-actie bij nul resultaten.
+
+**Nieuwe bestanden**:
+- `src/lib/column-filters.ts` — pure filter-engine: `filterKindForColumn`, `availableOps`, `isFilterComplete`, `matchesFilter`, `filterRows`, `pruneStaleFilters`, `countActiveFilters`, `isActiveFilterOnHiddenColumns`
+- `src/components/crud/ColumnFilterPopover.tsx` — per-kolom filterbesturing (op-selectie, waarde-input, tussen tweede waarde, wissen/klaar)
+- `supabase/migrations/018_crud_overviews_column_filters.sql` — `column_filters JSONB NOT NULL DEFAULT '{}'` op `kk_crud_overviews`
+- `tests/e2e/column-filters.spec.ts` — 30 unit-tests voor de filter-engine
+
+**Aangepaste bestanden**:
+- `src/types/database.types.ts` — `CRUDOverview.column_filters` + `ColumnFilter`/`ColumnFilterOp` types
+- `src/actions/crud-overviews.ts` — `column_filters` in select + `updateCrudOverview`
+- `src/actions/local-db.ts` — `getLocalTableRecords` accepteert `filters` + `columns`, past PostgREST-operators server-side toe (`ilike`, `eq`, `gt/gte/lt/lte`, between via gte+lte)
+- `src/components/db-explorer/GenericTable.tsx` — `filters`/`onFiltersChange` props, filterknoppen in kolomkoppen, herlaad bij filterwijziging, reset naar pagina 1, "Wis filters (n)"-knop, verborgen-filter-indicatie, gefilterde leegstaat
+- `src/components/db-explorer/DraggableTableHeader.tsx` — optionele `renderFilter` per kolomkop (naast drag-handle)
+- `src/components/db-explorer/LocalDynamicTable.tsx` — `filters`/`onFiltersChange` doorgeven, `columns` aan `getLocalTableRecords`
+- `src/components/crud/CrudTableWrapper.tsx` — `handleFiltersChange` persisteert via `updateCrudOverview`
+- `src/app/(dashboard)/crud/[crudId]/page.tsx` — leest `column_filters`, prune't stale filters, laadt initiële pagina gefilterd bij opgeslagen filters
+
+**Test**: `tests/e2e/column-filters.spec.ts` — 30 tests (filter-kind detectie, operatoren per type, completeness, matching incl. between/case-insensitiviteit, EN-combinatie, pruning, hidden-kolom-detectie). Volledige suite: 94 passed.
+
 ## crud-date-defaults (2026-08-29)
 
 **Spec**: `specs/014-crud-date-defaults/spec.md`

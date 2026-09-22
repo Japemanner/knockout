@@ -8,6 +8,7 @@ import {
   useDeleteLocalRecord,
 } from '@/hooks/useDbExplorer'
 import { getLocalTableRecords, createLocalRecord, updateLocalRecord, deleteLocalRecord, getLocalForeignKeyOptions } from '@/actions/local-db'
+import type { ColumnFilters } from '@/lib/column-filters'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/local-db'
 
 interface LocalDynamicTableProps {
@@ -17,6 +18,8 @@ interface LocalDynamicTableProps {
   hiddenColumns?: string[]
   columnOrder?: string[]
   onColumnReorder?: (newOrder: string[]) => void
+  filters?: ColumnFilters
+  onFiltersChange?: (filters: ColumnFilters) => void
   initialRows: Record<string, unknown>[]
   initialTotal: number
   pageSize?: number
@@ -29,6 +32,8 @@ export function LocalDynamicTable({
   hiddenColumns = [],
   columnOrder = [],
   onColumnReorder,
+  filters,
+  onFiltersChange,
   initialRows,
   initialTotal,
   pageSize = 25,
@@ -38,8 +43,14 @@ export function LocalDynamicTable({
   const deleteMutation = useDeleteLocalRecord(tableName)
 
   const dataSource: TableDataSource = useMemo(() => ({
-    getRecords: async (page, size) => {
-      const result = await getLocalTableRecords({ tableName, page, pageSize: size })
+    getRecords: async (page, size, activeFilters) => {
+      const result = await getLocalTableRecords({
+        tableName,
+        page,
+        pageSize: size,
+        filters: activeFilters,
+        columns,
+      })
       return { rows: result.rows ?? [], totalCount: result.totalCount ?? 0, error: result.error }
     },
     createRecord: async (values) => {
@@ -58,7 +69,7 @@ export function LocalDynamicTable({
       const result = await getLocalForeignKeyOptions({ referencedTable, referencedColumn })
       return { options: result.options ?? [], error: result.error }
     },
-  }), [tableName, createMutation, updateMutation, deleteMutation])
+  }), [tableName, columns, createMutation, updateMutation, deleteMutation])
 
   return (
     <GenericTable
@@ -68,6 +79,8 @@ export function LocalDynamicTable({
       hiddenColumns={hiddenColumns}
       columnOrder={columnOrder}
       onColumnReorder={onColumnReorder}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
       initialRows={initialRows}
       initialTotal={initialTotal}
       dataSource={dataSource}
