@@ -2,6 +2,20 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## fix-dark-dropdown-text (2026-09-22)
+
+**Spec**: `specs/017-fix-dark-dropdown-text/spec.md`
+**Branch**: `017-fix-dark-dropdown-text`
+
+In dark mode werden `<option>` elementen in alle dropdowns onleesbaar: witte tekst (geërfd van `--foreground`) op een browser-native uitklaplijst-achtergrond. Fix: expliciete `color: black` + `backgroundColor: white` op elk `<option>` element in de herbruikbare `Select`-component. Het gesloten `<select>` veld behoudt thema-styling (donkere bg + lichte tekst in dark mode). Geldt voor alle 6+ locaties waar `Select` wordt gebruikt: thema-selector, uren-invoer, uren-geschiedenis, client-beheer, db-explorer, current section.
+
+**Nieuwe bestanden**: geen
+
+**Aangepaste bestanden**:
+- `src/components/ui/select.tsx` — inline `style` op `<option>` elementen (color + backgroundColor)
+
+**Test**: `tests/e2e/dark-dropdown.spec.ts` — 4 tests (dark mode optie-leesbaarheid, gesloten veld thema-styling, light mode geen regressie, uren-formulier dropdown)
+
 ## crud-date-defaults (2026-08-29)
 
 **Spec**: `specs/014-crud-date-defaults/spec.md`
