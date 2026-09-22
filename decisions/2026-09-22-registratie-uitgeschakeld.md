@@ -30,7 +30,14 @@ Productie (https://knockout-jape.netlify.app) draait op Supabase-project `ythjna
 
 ## Verificatie
 - `GET https://ythjnatklbnjtvvgpwlr.supabase.co/auth/v1/settings` → `"disable_signup": true` (2026-09-22)
-- `supabase/migrations/019_block_new_signups.sql` — toe te passen via SQL Editor (Supabase MCP was niet gekoppeld in de sessie; project_id `ythjnatklbnjtvvgpwlr`)
-- Trigger-verificatie-query: zie "Hoe voeg ik later tijdelijk een account toe?" stap 4
+- `supabase/migrations/019_block_new_signups.sql` — **toegepast op productie via SQL Editor, bevestigd door Jaap op 2026-09-22** (Supabase MCP was niet gekoppeld in de sessie; project_id `ythjnatklbnjtvvgpwlr`)
+- Live API-check 2026-09-22: `POST /auth/v1/signup` met een nieuw adres wordt geweigerd (HTTP 422, geen account aangemaakt)
+- Aanbevolen (nog uit te voeren): trigger-verificatie-query: `select tgname, tgenabled from pg_trigger where tgrelid = 'auth.users'::regclass and not tgisinternal;` — zowel `kk_block_new_signups` als `on_auth_user_created` moeten erin staan
 - `tests/e2e/auth-signup-disabled.spec.ts` — API-test (disable_signup===true) + UI-test (neutrale melding, geen "Signups not allowed")
 - Grep `src/` op `signUp(|inviteUserByEmail|admin.createUser` → 0 hits
+
+## Status: compleet
+Alle drie de lagen zijn actief in productie:
+1. Auth-instelling `disable_signup=true` (geverifieerd via settings-endpoint)
+2. DB-trigger `kk_block_new_signups` op `auth.users` (migration 019 toegepast 2026-09-22)
+3. UI: `shouldCreateUser: false` + neutrale melding (live na deploy van commit 825a5de)

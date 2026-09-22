@@ -12,9 +12,14 @@
 
 ### Registratiepaden die nu dicht zijn (defense in depth)
 1. `disable_signup=true` (Auth-instelling) — blokkeert signUp + magic-link-signup op server-niveau.
-2. DB-trigger `kk_block_new_signups` (BEFORE INSERT op `auth.users`, migration 019) — backstop voor admin.createUser, invites, dashboard "Add user".
+2. DB-trigger `kk_block_new_signups` (BEFORE INSERT op `auth.users`, migration 019) — backstop voor admin.createUser, invites, dashboard "Add user". **Toegepast op productie via SQL Editor, bevestigd door Jaap op 2026-09-22.**
 3. `shouldCreateUser: false` in `signInWithOtp` (LoginForm.tsx) — UI stuurt nooit signup-intent.
 4. Neutrale toast-melding bij magic link (succes én error identiek) — geen account-enumeration; echte error alleen naar console.
+
+### Live verificatie (2026-09-22)
+- `GET /auth/v1/settings` → `disable_signup: true`.
+- `POST /auth/v1/signup` met nieuw adres → geweigerd (HTTP 422, geen account aangemaakt).
+- Alle drie de lagen actief; zie `/decisions/2026-09-22-registratie-uitgeschakeld.md` voor de procedure voor tijdelijk account toevoegen.
 
 ### Bestaande login-flows blijven werken
 - Wachtwoord-login (`signInWithPassword`), magic link voor bestaande accounts, wachtwoord-reset (`resetPasswordForEmail` in forgot-password/page.tsx) — geen van deze doet INSERT op `auth.users`.

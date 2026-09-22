@@ -13,7 +13,7 @@ Registratie definitief uitgeschakeld (defense in depth, single-user app):
 3. `shouldCreateUser: false` in `signInWithOtp` (LoginForm.tsx) + neutrale toast-melding ("Als dit adres bekend is, ontvang je een inloglink.") voor succes én error — geen account-enumeration; echte fouten alleen naar console.
 
 **Nieuwe bestanden**:
-- `supabase/migrations/019_block_new_signups.sql` — trigger-backstop (handmatig toe te passen via SQL Editor; Supabase MCP was niet gekoppeld)
+- `supabase/migrations/019_block_new_signups.sql` — trigger-backstop (toegepast op productie via SQL Editor op 2026-09-22)
 - `tests/e2e/auth-signup-disabled.spec.ts` — 2 tests: API (disable_signup===true) + UI (neutrale melding, geen "Signups not allowed")
 - `decisions/2026-09-22-registratie-uitgeschakeld.md` — beslissing + procedure voor tijdelijk account toevoegen
 
