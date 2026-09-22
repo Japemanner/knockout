@@ -32,12 +32,15 @@ Productie (https://knockout-jape.netlify.app) draait op Supabase-project `ythjna
 - `GET https://ythjnatklbnjtvvgpwlr.supabase.co/auth/v1/settings` → `"disable_signup": true` (2026-09-22)
 - `supabase/migrations/019_block_new_signups.sql` — **toegepast op productie via SQL Editor, bevestigd door Jaap op 2026-09-22** (Supabase MCP was niet gekoppeld in de sessie; project_id `ythjnatklbnjtvvgpwlr`)
 - Live API-check 2026-09-22: `POST /auth/v1/signup` met een nieuw adres wordt geweigerd (HTTP 422, geen account aangemaakt)
-- Aanbevolen (nog uit te voeren): trigger-verificatie-query: `select tgname, tgenabled from pg_trigger where tgrelid = 'auth.users'::regclass and not tgisinternal;` — zowel `kk_block_new_signups` als `on_auth_user_created` moeten erin staan
+- Trigger-verificatie 2026-09-22 (SQL Editor): `select tgname, tgenabled from pg_trigger where tgrelid = 'auth.users'::regclass and not tgisinternal;` → beide triggers aanwezig en enabled: `kk_block_new_signups` (O) en `on_auth_user_created` (O)
+- Account-audit 2026-09-22 (SQL Editor, read-only): `auth.users` bevat precies 1 account — `jaap@jaaphoeve.com` (id `db5cdc91-…`, aangemaakt 2026-06-03, bevestigd, laatste login 2026-09-12). Geen onbekende of onbevestigde accounts; niets te verwijderen.
 - `tests/e2e/auth-signup-disabled.spec.ts` — API-test (disable_signup===true) + UI-test (neutrale melding, geen "Signups not allowed")
 - Grep `src/` op `signUp(|inviteUserByEmail|admin.createUser` → 0 hits
 
-## Status: compleet
-Alle drie de lagen zijn actief in productie:
-1. Auth-instelling `disable_signup=true` (geverifieerd via settings-endpoint)
-2. DB-trigger `kk_block_new_signups` op `auth.users` (migration 019 toegepast 2026-09-22)
-3. UI: `shouldCreateUser: false` + neutrale melding (live na deploy van commit 825a5de)
+## Status: compleet en geverifieerd
+Alle drie de lagen zijn actief en geverifieerd in productie:
+1. Auth-instelling `disable_signup=true` (geverifieerd via settings-endpoint + live signup-poging geweigerd)
+2. DB-trigger `kk_block_new_signups` op `auth.users` (migration 019 toegepast 2026-09-22, trigger-verificatie bevestigt beide triggers enabled)
+3. UI: `shouldCreateUser: false` + neutrale melding (live sinds deploy van commit 825a5de op 2026-09-22, bundle geverifieerd)
+
+Account-audit: alleen het eigenaaraccount bestaat. Registratie is volledig dicht.

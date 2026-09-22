@@ -19,6 +19,8 @@
 ### Live verificatie (2026-09-22)
 - `GET /auth/v1/settings` → `disable_signup: true`.
 - `POST /auth/v1/signup` met nieuw adres → geweigerd (HTTP 422, geen account aangemaakt).
+- Trigger-verificatie (SQL Editor): `kk_block_new_signups` (O) en `on_auth_user_created` (O) beide aanwezig en enabled op `auth.users`.
+- Account-audit (read-only): `auth.users` bevat 1 account — `jaap@jaaphoeve.com` (aangemaakt 2026-06-03, bevestigd, laatste login 2026-09-12). Geen onbekende of onbevestigde accounts.
 - Alle drie de lagen actief; zie `/decisions/2026-09-22-registratie-uitgeschakeld.md` voor de procedure voor tijdelijk account toevoegen.
 
 ### Bestaande login-flows blijven werken
