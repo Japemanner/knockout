@@ -20,6 +20,7 @@ import {
   Gauge,
   BarChart3,
   Bot,
+  Calculator,
   ExternalLink,
   Database,
   GitBranch,
@@ -57,6 +58,7 @@ const externalLinks = [
   { href: 'https://eu.posthog.com/', label: 'PostHog', icon: TrendingUp },
   { href: 'https://supabase.com/dashboard/org/uugfxsnmwvodxsxcbqub', label: 'Supabase', icon: Database },
   { href: 'https://clarity.microsoft.com', label: 'MS Clarity', icon: Eye },
+  { href: 'https://portaal.hrsg.nl/', label: 'Exact', icon: Calculator },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
