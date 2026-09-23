@@ -2,6 +2,21 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## extern-exact-link (2026-09-23)
+
+**Spec**: `specs/020-extern-exact-link/spec.md`
+**Branch**: `020-extern-exact-link`
+
+Externe link naar het Exact-accountingportaal toegevoegd onder de "Extern"-header in de sidebar. Nieuw item "Exact" met URL `https://portaal.hrsg.nl/`, calculator-icoon, opent in een nieuw tabblad (`rel="noopener noreferrer"`) — visueel consistent met de 12 bestaande externe links (Amfico, Darwin, Grafana, etc.). Zichtbaar in zowel de desktop-sidebar als de mobiele drawer.
+
+**Nieuwe bestanden**:
+- `tests/e2e/extern-exact-link.spec.ts` — 3 e2e-tests (zichtbaarheid onder Extern-header, href + target=_blank + popup-URL, mobiele drawer) met login-skip-guards
+
+**Aangepaste bestanden**:
+- `src/components/layout/AppShell.tsx` — `Calculator` toegevoegd aan lucide-react import + één item in `externalLinks`-array
+
+**Test**: `tests/e2e/extern-exact-link.spec.ts` — 3 tests (geskipt zonder sessie, conform bestaand patroon). Volledige suite: 98 passed / 1 failed (pre-existing, `decimal-helper.spec.ts:156`, niet gerelateerd) / 51 skipped (login-gated).
+
 ## auth-signup-disabled (2026-09-22)
 
 **Spec**: geen (bugfix, zie `decisions/2026-09-22-registratie-uitgeschakeld.md`)
