@@ -179,7 +179,7 @@ test.describe('/boards/[boardId] route', () => {
 
     await page.goto(href)
 
-    // Bordpagina moet kolommen tonen (Backlog, Doing, Review, Done zijn de defaults)
+    // Bordpagina moet kolommen tonen (Backlog, Doing, Done zijn de vaste defaults)
     // Elke kolom heeft een header met de kolomnaam
     const columnHeaders = page.locator('h3.font-medium')
     const colCount = await columnHeaders.count()

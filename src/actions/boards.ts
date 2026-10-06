@@ -18,8 +18,7 @@ export async function createBoard(data: { name: string }) {
     await supabase.from('kk_columns').insert([
       { board_id: board.id, name: 'Backlog', position: 0 },
       { board_id: board.id, name: 'Doing', position: 1 },
-      { board_id: board.id, name: 'Review', position: 2 },
-      { board_id: board.id, name: 'Done', position: 3 },
+      { board_id: board.id, name: 'Done', position: 2 },
     ])
 
     revalidatePath('/boards')

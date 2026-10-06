@@ -7,11 +7,9 @@ import { useKanbanDrag } from '@/hooks/useKanbanDrag'
 import { KanbanColumn } from '@/components/kanban/KanbanColumn'
 import { BoardHeader } from '@/components/kanban/BoardHeader'
 import { DeleteBoardDialog } from '@/components/kanban/DeleteBoardDialog'
-import { AddColumnForm } from '@/components/kanban/AddColumnForm'
 import { BoardSwitcherRow } from '@/components/kanban/BoardSwitcherRow'
 import { DragOverlayCard } from '@/components/kanban/DragOverlayCard'
 import { useToast } from '@/components/ui/toast'
-import { createColumn } from '@/actions/columns'
 import { createCardInColumn } from '@/actions/cards'
 import { toggleStar } from '@/actions/starred'
 import { deleteBoard } from '@/actions/boards'
@@ -61,10 +59,6 @@ export function KanbanBoard({
     onCardsChange: setCards,
   })
 
-  const refreshBoard = useCallback(() => {
-    router.refresh()
-  }, [router])
-
   const handleCardUpdated = useCallback((updatedCard?: Card) => {
     if (updatedCard) {
       setCards((prev) => prev.map((c) => c.id === updatedCard.id ? updatedCard : c))
@@ -76,13 +70,6 @@ export function KanbanBoard({
     setCards((prev) => prev.filter((c) => c.id !== cardId && c.parent_id !== cardId))
     setSelectedCard(null)
   }, [])
-
-  const handleAddColumn = useCallback(async (name: string) => {
-    if (!name) return
-    const result = await createColumn({ boardId: board.id, name })
-    if (result.error) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-    refreshBoard()
-  }, [board.id, toast, refreshBoard])
 
   const handleCreateCard = useCallback(async (columnId: string, title: string) => {
     setCreatingCardColumnId(null)
@@ -182,7 +169,6 @@ export function KanbanBoard({
               onToggleStar={handleToggleStar}
             />
           ))}
-          <AddColumnForm onAddColumn={handleAddColumn} />
         </div>
 
         <DragOverlay>

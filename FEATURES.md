@@ -2,6 +2,30 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## standardize-board-columns (2026-10-06)
+
+**Spec**: `specs/021-standardize-board-columns/spec.md`
+**Branch**: `021-standardize-board-columns`
+
+Alle borden krijgen de vaste kolomstructuur Backlog / Doing / Done. (1) Case-bugfix: de collapse-initialisatie in `KanbanColumn.tsx` vergeleek `column.name === 'done'` (case-sensitive) terwijl de kolom `Done` heet — de Done-kolom startte daardoor nooit ingeklapt; nu `trim().toLowerCase() === 'done'`, consistent met de `ILIKE 'done'`-semantiek van de bestaande RPC's. Done start bij elk bordbezoek ingeklapt (titel + aantal zichtbaar), handmatig uit-/inklappen blijft mogelijk, herladen reset naar ingeklapt. (2) `createBoard` maakt nieuwe borden met exact Backlog(0)/Doing(1)/Done(2) — Review vervalt. (3) Migratie `021_standardize_board_columns.sql` normaliseert bestaande borden: case-varianten canoniseren, duplicaat-kolommen mergen (kaarten naar canonieke kolom), kaarten uit niet-standaard kolommen (bijv. Review) naar Doing verplaatsen met behoud van volgorde, subtasks volgen de parent-kolom, posities hernormaliseren — atomair en idempotent, geen kaartverlies. (4) Kolom-CRUD verwijderd (`columns.ts`, `AddColumnForm.tsx` en de usage in `KanbanBoard.tsx`) zodat de vaste structuur niet breekbaar is; drag-and-drop van kaarten tussen de drie kolommen blijft ongewijzigd werken.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/021_standardize_board_columns.sql` — éénmalige normalisatie (uitvoeren via Supabase MCP)
+- `tests/e2e/board-standard-columns.spec.ts` — 4 e2e-tests (nieuw bord = exact Backlog/Doing/Done, geen "Kolom toevoegen"-knop, Done ingeklapt→uitklapbaar→reset na herladen, kaartteller zichtbaar) met login-skip-guards
+
+**Aangepaste bestanden**:
+- `src/actions/boards.ts` — `createBoard` insert 3 kolommen i.p.v. 4 (Review weg)
+- `src/components/kanban/KanbanColumn.tsx` — case-bugfix collapse-initialisatie
+- `src/components/kanban/KanbanBoard.tsx` — AddColumnForm/createColumn-import, `handleAddColumn` en dode `refreshBoard` verwijderd
+- `tests/e2e/regression.spec.ts` — kolomvolgorde-test naar Backlog/Doing/Done + exact-3-kolommen assert; verouderde "kolom aanmaken"-test verwijderd
+- `tests/e2e/kanban.spec.ts` — comment bijgewerkt (geen Review meer)
+
+**Verwijderde bestanden**:
+- `src/actions/columns.ts` — createColumn (en dode updateColumn/deleteColumn/reorderColumns)
+- `src/components/kanban/AddColumnForm.tsx`
+
+**Test**: `tests/e2e/board-standard-columns.spec.ts` — 4 tests. Volledige suite: 98 passed / 1 failed (pre-existing, `decimal-helper.spec.ts:156`, niet gerelateerd) / 54 skipped (login-gated). Migratie-uitvoering + RLS-verificatie (F-01) vereist Supabase MCP — nog uit te voeren.
+
 ## extern-exact-link (2026-09-23)
 
 **Spec**: `specs/020-extern-exact-link/spec.md`

@@ -330,49 +330,9 @@ test.describe('ster toggle persistentie', () => {
 })
 
 // ============================================================
-// Kolom aanmaken — createColumn server action (2 Supabase queries)
+// Kolom-CRUD is verwijderd in feature 021 (vaste kolommenstructuur) —
+// de oude "kolom aanmaken"-test is komen te vervallen.
 // ============================================================
-test.describe('kolom aanmaken', () => {
-  test('nieuwe kolom toevoegen verschijnt op het bord', async ({ page }) => {
-    await page.goto('/boards')
-    if (skipIfNotLoggedIn(page)) return
-
-    const boardLinks = page.locator('a[href^="/boards/"]:not([href$="/boards"])')
-    if (await boardLinks.count() === 0) {
-      test.skip(true, 'Geen borden beschikbaar')
-      return
-    }
-
-    const href = await boardLinks.first().getAttribute('href')
-    if (!href) return
-    await page.goto(href)
-
-    // Tel bestaande kolommen
-    const existingColumns = page.locator('h3.font-medium')
-    const initialCount = await existingColumns.count()
-
-    // Klik op "Kolom toevoegen"
-    const addColumnButton = page.getByRole('button', { name: /Kolom toevoegen/ })
-    await addColumnButton.click()
-
-    // Vul kolomnaam in
-    const columnName = `Test Kolom ${Date.now()}`
-    await page.getByPlaceholder('Kolomnaam...').fill(columnName)
-    await page.getByRole('button', { name: 'Toevoegen' }).click()
-
-    // Wacht op page refresh en verifieer dat de kolom verschijnt
-    await page.waitForLoadState('networkidle')
-
-    // Herlaad om de nieuwe kolom te zien (createColumn roept revalidatePath aan)
-    await page.reload()
-
-    const newColumns = page.locator('h3.font-medium')
-    const newCount = await newColumns.count()
-    expect(newCount).toBe(initialCount + 1)
-
-    await expect(page.getByText(columnName)).toBeVisible()
-  })
-})
 
 // ============================================================
 // Kaart verwijderen — deleteCard (4 Supabase queries)
@@ -473,9 +433,10 @@ test.describe('kaart archiveren', () => {
 
 // ============================================================
 // Board pagina kolom-volgorde — nested query met foreignTable ordering
+// Feature 021: vaste kolommen Backlog/Doing/Done (Review is weggehaald)
 // ============================================================
 test.describe('bordpagina kolom-volgorde', () => {
-  test('kolommen tonen in de juiste volgorde (Backlog, Doing, Review, Done)', async ({ page }) => {
+  test('kolommen tonen in de juiste volgorde (Backlog, Doing, Done)', async ({ page }) => {
     await page.goto('/boards')
     if (skipIfNotLoggedIn(page)) return
 
@@ -498,11 +459,12 @@ test.describe('bordpagina kolom-volgorde', () => {
     }
 
     const names = await headers.allTextContents()
-    // Als de eerste kolom "Backlog" is, verifieer de default volgorde
+    // Als de eerste kolom "Backlog" is, verifieer de vaste volgorde
     if (names[0]?.trim() === 'Backlog') {
       expect(names[1]?.trim()).toBe('Doing')
-      if (count >= 3) expect(names[2]?.trim()).toBe('Review')
-      if (count >= 4) expect(names[3]?.trim()).toBe('Done')
+      if (count >= 3) expect(names[2]?.trim()).toBe('Done')
+      // Vaste structuur: nooit meer dan drie kolommen
+      expect(count).toBe(3)
     }
     // Als de volgorde anders is (aangepast bord), verify alleen dat
     // de kolommen niet leeg zijn en uniek

@@ -30,7 +30,7 @@ export function KanbanColumn({
   onCardClick,
   onToggleStar,
 }: KanbanColumnProps) {
-  const [collapsed, setCollapsed] = useState(column.name === 'done')
+  const [collapsed, setCollapsed] = useState(column.name.trim().toLowerCase() === 'done')
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
   const columnCards = useMemo(
