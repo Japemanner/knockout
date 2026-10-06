@@ -1,21 +1,18 @@
 'use client'
 
 import { useAuthStore } from '@/store/authStore'
-import { StarredSection } from '@/components/command-center/StarredSection'
+import { StarredKanbanSection } from '@/components/command-center/StarredKanbanSection'
 import { PrioritiesSection } from '@/components/command-center/PrioritiesSection'
-
-interface GroupedStarred {
-  boardId: string
-  boardName: string
-  cards: { id: string; title: string }[]
-}
+import type { StarredKanbanCard, StarredBoardColumns } from '@/app/(dashboard)/command-center/page'
 
 export function CommandCenterClient({
   firstName,
-  starredItems,
+  starredCards,
+  boardColumns,
 }: {
   firstName: string
-  starredItems: GroupedStarred[]
+  starredCards: StarredKanbanCard[]
+  boardColumns: StarredBoardColumns
 }) {
   const { profile } = useAuthStore()
 
@@ -28,7 +25,7 @@ export function CommandCenterClient({
 
       <div className="space-y-6">
         <PrioritiesSection />
-        <StarredSection items={starredItems} />
+        <StarredKanbanSection cards={starredCards} boardColumns={boardColumns} />
       </div>
     </div>
   )

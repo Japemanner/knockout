@@ -2,6 +2,26 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## command-center-starred-kanban (2026-10-06)
+
+**Spec**: `specs/022-command-center-starred-kanban/spec.md`
+**Branch**: `022-command-center-starred-kanban`
+
+De platte "Gesterde items"-lijst op het command center is vervangen door een kanban bord met precies de vaste kolommen Backlog / Doing / Done. Het bord is een weergave-aggregatie: elke kaart is de bestaande, gesterde top-level kaart uit één van de borden (geen kopie), gelabeld met het bronbord (uppercase klein label) en gesorteerd per kolom op bronbordnaam dan positie. Kolomtoewijzing via hoofdletterongevoelige match op de bronkolomnaam (fallback Backlog). Sleep een kaart naar een andere kolom → nieuwe server action `moveStarredCardByColumn` zoekt de gelijknamige kolom op het bronbord, berekent de append-positie en roept de bestaande RPC `kk_move_card` aan (Done-regel blijft: ster wordt uitgezet, kaart verdwijnt dan uit het CC-bord) gevolgd door `revalidatePath` op `/command-center` én `/boards/<id>` — mutatie persistent op beide weergaven. Omgekeerde sync: bronbord-mutaties (`moveCard`) revalideren nu ook `/command-center`, en de CC-kolom wordt bij elke load uit de actuele kolomnaam afgeleid. Kaartklik opent de bestaande `CardDetailModal` (subtasks + de drie kolommen van het bronbord). Lege staat behoudt de bestaande uitleg-tekst.
+
+**Nieuwe bestanden**:
+- `src/components/command-center/StarredKanbanSection.tsx` — CC-bord: 3 droppable kolommen, draggable kaarten met bronbord-label, DndContext + DragOverlay, optimistische update met rollback + toast, CardDetailModal-integratie
+- `tests/e2e/command-center-kanban.spec.ts` — 4 e2e-tests (kolomstructuur Backlog/Doing/Done in volgorde, lege staat, kaart-in-kolom + bronbord-label, drag-sync naar bronbord persistent) met login-skip-guards
+
+**Aangepaste bestanden**:
+- `src/app/(dashboard)/command-center/page.tsx` — nieuwe query: gesterde top-level kaarten (`is('parent_id', null)`) met kolom+board join, subtasks per kaart, kolommen per bronbord; exports `StarredKanbanCard`/`StarredBoardColumns` types
+- `src/components/command-center/CommandCenterClient.tsx` — `StarredKanbanSection` i.p.v. `StarredSection`
+- `src/actions/starred.ts` — `moveStarredCardByColumn` action (guards + ILIKE-kolomlookup + append-positie + `kk_move_card` RPC + dubbele revalidatePath); `UntypedClient`-workaround verwijderd (hergebruik `getAuthenticatedClient()`)
+- `src/actions/cards.ts` — `moveCard` revalideert nu ook `/command-center` (omgekeerde sync)
+- `tests/e2e/kanban.spec.ts` — `/command-center route` describe herschreven naar bord-weergave (kolomkop-assertions i.p.v. platte-lijst/link-assertions)
+
+**Test**: `tests/e2e/command-center-kanban.spec.ts` — 4 tests + herschreven kanban.spec.ts. Volledige suite: 98 passed / 1 failed (pre-existing, `decimal-helper.spec.ts:156`, niet gerelateerd) / 58 skipped (login-gated). Geen schema-wijzigingen; F-01 RLS ongewijzigd.
+
 ## standardize-board-columns (2026-10-06)
 
 **Spec**: `specs/021-standardize-board-columns/spec.md`

@@ -221,6 +221,8 @@ export async function moveCard(cardId: string, newColumnId: string, newPosition:
 
     if (error || !updatedCard) throw new Error(error?.message ?? 'Failed to move card')
 
+    revalidatePath('/command-center')
+
     return { success: true, card: updatedCard }
   } catch (error) {
     console.error('Error moving card:', error)

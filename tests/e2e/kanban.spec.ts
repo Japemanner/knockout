@@ -19,7 +19,7 @@ test.describe('/command-center route', () => {
     await expect(page.getByText('Gesterde items')).toBeVisible()
   })
 
-  test('gesterde items worden gegroepeerd per bord getoond', async ({ page }) => {
+  test('gesterde items worden als kanban bord met vaste kolommen getoond', async ({ page }) => {
     await page.goto('/command-center')
 
     if (page.url().includes('/login')) {
@@ -27,60 +27,46 @@ test.describe('/command-center route', () => {
       return
     }
 
-    // Als er gesterde items zijn, moeten ze in de StarredSection getoond worden
-    // met een link naar het bord en de kaarttitel.
-    // Als er geen gesterde items zijn, toont de sectie de placeholder tekst.
+    // Het command center toont sinds feature 022 een kanban bord met precies
+    // de vaste kolommen Backlog, Doing en Done — ook wanneer er geen gesterde
+    // kaarten zijn (lege staat toont dan uitleg binnen de sectie).
     const starredSection = page.locator('text=Gesterde items').locator('..')
-    const emptyMessage = starredSection.getByText(/Geen gesterde items/)
-    const hasEmptyMessage = await emptyMessage.count() > 0
+    await expect(starredSection).toBeVisible()
 
-    if (!hasEmptyMessage) {
-      // Er zijn gesterde items — verify dat er minimaal één bord-link is
-      const boardLinks = starredSection.getByRole('link')
-      const linkCount = await boardLinks.count()
-      expect(linkCount).toBeGreaterThan(0)
+    await expect(page.locator('h3:has-text("Backlog")').first()).toBeVisible()
+    await expect(page.locator('h3:has-text("Doing")').first()).toBeVisible()
+    await expect(page.locator('h3:has-text("Done")').first()).toBeVisible()
+
+    // Als er gesterde items zijn, toont elke kaart het bronbord als label
+    const emptyMessage = page.getByText(/Geen gesterde items/)
+    if ((await emptyMessage.count()) === 0) {
+      const boardLabels = page.locator('span.uppercase.tracking-wide')
+      expect(await boardLabels.count()).toBeGreaterThan(0)
     }
   })
 
-  // Regression: sinds de gesterde-items query via één SQL met json_agg/GROUP BY
-  // loopt (ipv geneste PostgREST + client-side for-loop groepering), moet de
-  // groepering per bord nog steeds correct renderen. Verifieert dat elke
-  // bord-link uniek is (geen dubbele borden door missed GROUP BY) en dat
-  // kaart-links binnen een bord daadwerkelijk bij dat bord horen.
-  test('gesterde items zijn gegroepeerd: elke bordnaam verschijnt maximaal één keer', async ({ page }) => {
+  // Regression: sinds de gesterde-items sectie een kanban bord is (feature 022),
+  // moet de vaste kolomstructuur correct renderen — elke kolomkop verschijnt
+  // precies eenmaal binnen de sectie.
+  test('gesterde items bord: elke kolomkop verschijnt eenmaal', async ({ page }) => {
     await page.goto('/command-center')
 
     if (page.url().includes('/login')) {
-      test.skip(true, 'Niet ingelogd — login vereist')
+      test.skip(true, 'Niet ingelogd — login vereist voor /command-center structuurcontrole')
       return
     }
 
     const starredSection = page.locator('text=Gesterde items').locator('..')
     const emptyMessage = starredSection.getByText(/Geen gesterde items/)
     if (await emptyMessage.count() > 0) {
-      test.skip(true, 'Geen gesterde items — groepering-test niet mogelijk')
+      test.skip(true, 'Geen gesterde items — kolomstructuur-test niet mogelijk')
       return
     }
 
-    // Verzamel alle bord-links (href=/boards/<id>) in de StarredSection
-    const boardLinks = starredSection.locator('a[href^="/boards/"]')
-    const count = await boardLinks.count()
-    expect(count).toBeGreaterThan(0)
-
-    const hrefs: string[] = []
-    for (let i = 0; i < count; i++) {
-      const href = await boardLinks.nth(i).getAttribute('href')
-      if (href) {
-        const boardPath = href.split('#')[0] ?? href
-        hrefs.push(boardPath)
-      }
+    for (const name of ['Backlog', 'Doing', 'Done']) {
+      const headers = starredSection.locator(`h3:has-text("${name}")`)
+      expect(await headers.count()).toBe(1)
     }
-
-    // Elke bord-url mag slechts één keer als groepsheader voorkomen.
-    // (Kaart-links hebben een #anchor, maar die filteren we hier niet uit
-    // omdat ze een ander patroon volgen — we tellen alleen unieke bord-urls.)
-    const uniqueHrefs = new Set(hrefs)
-    expect(uniqueHrefs.size).toBeGreaterThan(0)
   })
 })
 
