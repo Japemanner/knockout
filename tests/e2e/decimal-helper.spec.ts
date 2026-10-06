@@ -5,6 +5,7 @@ import {
   normalizeForDisplay,
   parseDecimalInput,
   parseIntegerInput,
+  validateDecimalFinal,
 } from '@/lib/decimal'
 
 test.describe('isDecimalType', () => {
@@ -153,9 +154,42 @@ test.describe('parseDecimalInput', () => {
     expect(r2.ok).toBe(false)
   })
 
-  test('wijst enkele punt of komma af', () => {
-    expect(parseDecimalInput('.', true).ok).toBe(false)
-    expect(parseDecimalInput(',', true).ok).toBe(false)
+  test('enkele punt of komma is een geldige tussenstatus tijdens typen (null, geen fout)', () => {
+    const r1 = parseDecimalInput('.', true)
+    expect(r1.ok).toBe(true)
+    if (r1.ok) expect(r1.value).toBeNull()
+
+    const r2 = parseDecimalInput(',', true)
+    expect(r2.ok).toBe(true)
+    if (r2.ok) expect(r2.value).toBeNull()
+  })
+
+  test('enkele punt of komma in verplicht veld is ook een tussenstatus (null)', () => {
+    // Live-typen blokkeert niet; submit-lagen (zoals ClientManageDialog)
+    // wijzen value === null zelf af met hun eigen foutmelding.
+    const r = parseDecimalInput('.', false)
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.value).toBeNull()
+  })
+
+  test('tussenstatus "-" en "-." zijn geldig tijdens typen', () => {
+    const r1 = parseDecimalInput('-', true)
+    expect(r1.ok).toBe(true)
+    if (r1.ok) expect(r1.value).toBeNull()
+
+    const r2 = parseDecimalInput('-.', true)
+    expect(r2.ok).toBe(true)
+    if (r2.ok) expect(r2.value).toBeNull()
+  })
+
+  test('tussenstatus "3." en "3," zijn geldig tijdens typen', () => {
+    const r1 = parseDecimalInput('3.', true)
+    expect(r1.ok).toBe(true)
+    if (r1.ok) expect(r1.value).toBe(3)
+
+    const r2 = parseDecimalInput('3,', true)
+    expect(r2.ok).toBe(true)
+    if (r2.ok) expect(r2.value).toBe(3)
   })
 
   test('trimt whitespace rondom geldige invoer', () => {
@@ -215,5 +249,39 @@ test.describe('parseIntegerInput', () => {
     const result = parseIntegerInput('', false)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error).toBe('Dit veld is verplicht')
+  })
+})
+
+test.describe('validateDecimalFinal', () => {
+  test('wijst tussenstatussen af die parseDecimalInput toestaat', () => {
+    expect(validateDecimalFinal('.', true).ok).toBe(false)
+    expect(validateDecimalFinal(',', true).ok).toBe(false)
+    expect(validateDecimalFinal('-', true).ok).toBe(false)
+    expect(validateDecimalFinal('-.', true).ok).toBe(false)
+    expect(validateDecimalFinal('3.', true).ok).toBe(false)
+    expect(validateDecimalFinal('3,', true).ok).toBe(false)
+  })
+
+  test('accepteert complete decimale waarden', () => {
+    const r1 = validateDecimalFinal('1.5', true)
+    expect(r1.ok).toBe(true)
+    if (r1.ok) expect(r1.value).toBe(1.5)
+
+    const r2 = validateDecimalFinal('1,5', true)
+    expect(r2.ok).toBe(true)
+    if (r2.ok) expect(r2.value).toBe(1.5)
+
+    const r3 = validateDecimalFinal('42', false)
+    expect(r3.ok).toBe(true)
+    if (r3.ok) expect(r3.value).toBe(42)
+  })
+
+  test('leeg + nullable => null; leeg + niet-nullable => fout', () => {
+    const r1 = validateDecimalFinal('', true)
+    expect(r1.ok).toBe(true)
+    if (r1.ok) expect(r1.value).toBeNull()
+
+    const r2 = validateDecimalFinal('', false)
+    expect(r2.ok).toBe(false)
   })
 })
