@@ -1,13 +1,43 @@
--- Migration: 021_standardize_board_columns.sql
--- Description: Normaliseer alle borden naar vaste kolommen Backlog/Doing/Done.
---   - Case-varianten canoniseren (ILIKE 'backlog'/'doing'/'done' -> exacte naam)
---   - Duplicaat-kolommen per standaardnaam mergen (kaarten -> canonieke kolom)
---   - Kaarten uit niet-standaard kolommen (bijv. Review) -> Doing (geappend)
---   - Subtasks volgen de kolom van hun parent (invariant subtask = kolom parent)
---   - Posities hernormaliseren naar 0/1/2; ontbrekende standaardkolommen aanvullen
--- Atomic: DO-block in één transactie. Idempotent: borden die al voldoen blijven ongewijzigd.
--- Date: 2026-10-06
+# Migratie 021 — Copy-paste pakket voor Supabase SQL Editor
 
+**Feature**: 021-standardize-board-columns | **Doel**: alle bestaande borden normaliseren naar Backlog/Doing/Done | **Datum**: 2026-10-06
+
+## Stappen
+
+1. Open **Supabase Dashboard** → project `ythjnatklbnjtvvgpwlr` → **SQL Editor** → "New query"
+2. Plak **Deel 1 — Pre-check** hieronder en klik **Run** — noteer de resultaten
+3. Plak **Deel 2 — Migratie** en klik **Run** — dit past de wijzigingen toe (atomair, idempotent)
+4. Plak **Deel 3 — Post-check** en klik **Run** — alles moet voldoen
+5. Als Deel 3 iets anders toont: plak Deel 2 opnieuw (idempotent) of rapporteer de output terug
+
+---
+
+## Deel 1 — Pre-check (alleen lezen)
+
+```sql
+-- Hoe zien de borden er nu uit?
+SELECT
+  b.id            AS board_id,
+  b.name          AS board,
+  count(DISTINCT c.id)                    AS kolommen,
+  string_agg(c.name, ', ' ORDER BY c.position) AS kolomnamen,
+  count(DISTINCT k.id)                   AS kaarten
+FROM kk_boards b
+LEFT JOIN kk_columns c ON c.board_id = b.id
+LEFT JOIN kk_cards  k ON k.column_id = c.id
+GROUP BY b.id, b.name
+ORDER BY b.name;
+```
+
+**Verwacht**: borden met 4 kolommen (Backlog, Doing, Review, Done) — mogelijk variaties.
+
+---
+
+## Deel 2 — Migratie (voert de normalisatie uit)
+
+> Volledige inhoud van `supabase/migrations/021_standardize_board_columns.sql` — atomair DO-blok, veilig bij herhaalde uitvoering.
+
+```sql
 DO $$
 DECLARE
   v_board          record;
@@ -17,10 +47,7 @@ DECLARE
 BEGIN
   FOR v_board IN SELECT id FROM kk_boards LOOP
 
-    -- ---------------------------------------------------------
     -- Stap 1: Ontbrekende standaardkolommen leeg aanvullen
-    -- (vóór verplaatsingen, zodat 'Doing' als bestemming kan dienen)
-    -- ---------------------------------------------------------
     IF NOT EXISTS (SELECT 1 FROM kk_columns WHERE board_id = v_board.id AND name = 'Backlog') THEN
       INSERT INTO kk_columns (board_id, name, position)
       VALUES (v_board.id, 'Backlog', 0);
@@ -36,9 +63,7 @@ BEGIN
       VALUES (v_board.id, 'Done', 2);
     END IF;
 
-    -- ---------------------------------------------------------
     -- Stap 2: Case-varianten canoniseren naar exacte standaardnamen
-    -- ---------------------------------------------------------
     UPDATE kk_columns SET name = 'Backlog', updated_at = now()
     WHERE board_id = v_board.id AND name ILIKE 'backlog' AND name <> 'Backlog';
 
@@ -48,11 +73,7 @@ BEGIN
     UPDATE kk_columns SET name = 'Done', updated_at = now()
     WHERE board_id = v_board.id AND name ILIKE 'done' AND name <> 'Done';
 
-    -- ---------------------------------------------------------
-    -- Stap 3: Duplicaat-kolommen per standaardnaam mergen.
-    -- Canoniek = laagste position. Kaarten uit duplicaten worden
-    -- geappend aan de canonieke kolom (behoud relatieve volgorde).
-    -- ---------------------------------------------------------
+    -- Stap 3: Duplicaat-kolommen per standaardnaam mergen
     -- Backlog
     SELECT id INTO v_canon_id
     FROM kk_columns
@@ -158,10 +179,7 @@ BEGIN
       WHERE board_id = v_board.id AND name = 'Done' AND id <> v_canon_id;
     END IF;
 
-    -- ---------------------------------------------------------
-    -- Stap 4: Kaarten uit niet-standaard kolommen -> Doing,
-    -- geappend na bestaande Doing-kaarten (behoud relatieve volgorde).
-    -- ---------------------------------------------------------
+    -- Stap 4: Kaarten uit niet-standaard kolommen -> Doing (geappend)
     SELECT id INTO v_doing_id
     FROM kk_columns
     WHERE board_id = v_board.id AND name = 'Doing'
@@ -190,19 +208,12 @@ BEGIN
     FROM numbered n
     WHERE card.id = n.id;
 
-    -- ---------------------------------------------------------
     -- Stap 5: Niet-standaard kolommen verwijderen
-    -- (kaarten zijn in stap 4 al verplaatst — geen kaartverlies)
-    -- ---------------------------------------------------------
     DELETE FROM kk_columns
     WHERE board_id = v_board.id
       AND name NOT IN ('Backlog', 'Doing', 'Done');
 
-    -- ---------------------------------------------------------
-    -- Stap 6: Subtask-veiligheidsnet — subtask volgt de kolom
-    -- van de parent wanneer de parent in een standaardkolom ligt.
-    -- (invariant: subtask in dezelfde kolom als parent)
-    -- ---------------------------------------------------------
+    -- Stap 6: Subtask-veiligheidsnet — subtask volgt de parent-kolom
     UPDATE kk_cards sub
     SET column_id = parent.column_id,
         updated_at = now()
@@ -213,9 +224,7 @@ BEGIN
       AND pcol.name IN ('Backlog', 'Doing', 'Done')
       AND sub.column_id <> parent.column_id;
 
-    -- ---------------------------------------------------------
     -- Stap 7: Posities hernormaliseren naar 0/1/2
-    -- ---------------------------------------------------------
     UPDATE kk_columns SET position = 0, updated_at = now()
     WHERE board_id = v_board.id AND name = 'Backlog';
 
@@ -227,3 +236,45 @@ BEGIN
 
   END LOOP;
 END $$;
+```
+
+---
+
+## Deel 3 — Post-check (verificatie)
+
+```sql
+-- A) Elk bord moet exact 3 standaardkolommen hebben met posities 0/1/2
+SELECT
+  b.id  AS board_id,
+  b.name AS board,
+  count(c.id) AS kolommen,
+  string_agg(c.name || ' (' || c.position || ')', ', ' ORDER BY c.position) AS kolommen_met_positie,
+  CASE
+    WHEN string_agg(c.name, ',' ORDER BY c.position) = 'Backlog,Doing,Done'
+     AND string_agg(c.position::text, ',' ORDER BY c.position) = '0,1,2'
+    THEN 'OK'
+    ELSE 'FOUT — migratie opnieuw draaien'
+  END AS status
+FROM kk_boards b
+LEFT JOIN kk_columns c ON c.board_id = b.id
+GROUP BY b.id, b.name
+ORDER BY b.name;
+
+-- B) RLS moet nog aanstaan op beide tabellen
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE tablename IN ('kk_columns', 'kk_cards');
+-- Verwacht: beide rijen rowsecurity = true
+
+-- C) Geen kaartverlies — totaal aantal kaarten ongewijzigd t.o.v. pre-check
+SELECT count(*) AS totaal_kaarten FROM kk_cards;
+
+-- D) Geen weeskaarten: elke kaart moet in een kolom van een bestaand bord liggen
+SELECT count(*) AS wees_kaarten
+FROM kk_cards k
+LEFT JOIN kk_columns c ON k.column_id = c.id
+WHERE c.id IS NULL;
+-- Verwacht: 0
+```
+
+**Acceptatie**: alle borden status OK, RLS true, totaal kaarten gelijk aan pre-check, 0 wezen.
