@@ -109,7 +109,7 @@ Feature 021 (vaste kolommen Backlog/Doing/Done) is geïmplementeerd: migratie `s
 - [X] T021 Werk FEATURES.md bij via het `@feature-tracker`-protocol: entry voor `022-command-center-starred-kanban` met referentie naar `specs/022-command-center-starred-kanban/spec.md`
 - [X] T022 Run `@fitness-checker` (fitness-check.sh + Supabase MCP F-01/F-10; geen schema-wijzigingen dus RLS ongewijzigd) en schrijf FITNESS.md
 - [ ] T023 Run quickstart.md validatie (`specs/022-command-center-starred-kanban/quickstart.md`, stappen 1-9) in de browser
-- [ ] T024 Commit met conventioneel bericht: `feat(command-center): gesterde items als kanban bord met sync naar bronbord`
+- [X] T024 Commit met conventioneel bericht: `feat(command-center): gesterde items als kanban bord met sync naar bronbord`
 
 ---
 
