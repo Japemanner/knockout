@@ -12,10 +12,10 @@ class NoopWebSocket {
   protocol = ''
   url = ''
 
-  onclose: ((this: WebSocket, ev: CloseEvent) => any) | null = null
-  onerror: ((this: WebSocket, ev: Event) => any) | null = null
-  onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null = null
-  onopen: ((this: WebSocket, ev: Event) => any) | null = null
+  onclose: ((this: WebSocket, ev: CloseEvent) => void) | null = null
+  onerror: ((this: WebSocket, ev: Event) => void) | null = null
+  onmessage: ((this: WebSocket, ev: MessageEvent) => void) | null = null
+  onopen: ((this: WebSocket, ev: Event) => void) | null = null
 
   close() { return this }
   send(_data: string | ArrayBufferLike | Blob | ArrayBufferView) { return this }

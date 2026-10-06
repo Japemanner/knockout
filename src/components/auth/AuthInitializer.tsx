@@ -2,12 +2,9 @@
 
 import { useRef } from 'react'
 import { useAuthStore } from '@/store/authStore'
+import type { Profile } from '@/types/database.types'
 
-type PartialProfile = {
-  full_name: string | null
-  role: string | null
-  avatar_url: string | null
-}
+type ProfilePatch = Pick<Profile, 'full_name' | 'role' | 'avatar_url'>
 
 export function AuthInitializer({
   userId,
@@ -15,7 +12,7 @@ export function AuthInitializer({
   children,
 }: {
   userId: string
-  profile: PartialProfile | null
+  profile: ProfilePatch | null
   children: React.ReactNode
 }) {
   const initialized = useRef(false)
@@ -24,7 +21,7 @@ export function AuthInitializer({
 
   if (!initialized.current) {
     setUserId(userId)
-    if (profile) setProfile(profile as any)
+    if (profile) setProfile(profile as Profile)
     initialized.current = true
   }
 

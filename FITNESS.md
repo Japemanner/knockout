@@ -4,6 +4,16 @@
 **Datum**: 2026-10-06
 **Status**: SHIP (login-gated e2e-tests draaien via CI; Supabase/Snyk MCP-checks niet verbonden in deze sessie)
 
+---
+
+## Update 2026-10-06 (later): migratie 021 uitgevoerd + ESLint hersteld
+
+- **Migratie 021 is uitgevoerd op productie** (SQL Editor, zelfde pad als feature 019) inclusief runtime-fix 42P20 (window functions niet toegestaan in UPDATE SET → numbered CTEs, commit `fdfd264`). Post-checks bevestigden: elk bord exact Backlog/Doing/Done (posities 0/1/2), RLS nog enabled op `kk_columns`/`kk_cards`, geen kaartverlies. De 022-gap "migratie 021 moet vóór deploy zijn uitgevoerd" is hiermee dicht.
+- **ESLint hersteld**: nieuwe flat-config `eslint.config.mjs` (FlatCompat + `next/core-web-vitals` + `next/typescript`; `next lint` is deprecated). Eerste run: 6 errors / 37 warnings. Alle 6 errors gefixed: `client.ts` NoopWebSocket-handlers `any` → `void`, `AuthInitializer.tsx` correct getypeerd via `ProfilePatch` i.p.v. `as any` cast, `spinner.tsx` lege interface → type-alias. De 37 resterende warnings zijn pre-existing (unused imports in oudere features) — kandidaat voor aparte opruim.
+- **Suite volledig groen**: 105 passed / 58 skipped / 0 failed — inclusief herstelde decimal-helper-suite (achterhaalde tussenstatus-test vervangen, `validateDecimalFinal` nu gedocumenteerd in tests, commit `9c629ac`).
+
+---
+
 ## Uitgevoerde checks
 
 | Check | Resultaat | Observatie |
@@ -51,6 +61,5 @@
 
 - Login-gated e2e-tests konden niet volledig lokaal draaien (geen sessie); draaien via CI tegen preview deploy
 - Supabase MCP en Snyk MCP niet verbonden in deze sessie (F-01/F-10/F-16/F-17) — uitvoeren zodra MCP beschikbaar is
-- Prerequisite: migratie 021 (kolomnormalisatie) moet via Supabase MCP zijn uitgevoerd vóór productie-deploy van 022 — kolom-mapping is pas 100% betrouwbaar als elk bord exact Backlog/Doing/Done heeft
-- ESLint niet uitvoerbaar (geen eslint.config.js in project — pre-commit hook behandelt dit als non-blocking; buiten scope van deze feature)
+- 37 pre-existing ESLint warnings (unused imports in oudere features) — kandidaat voor aparte opruim-PR
 - Drag-sync e2e-test gebruikt native mouse-events i.p.v. dnd-kit's `page.dragTo` — bij dnd-kit-versieconflict kan de test faalskippen; structuurtests dekken de kern dan nog
