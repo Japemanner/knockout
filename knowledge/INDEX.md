@@ -6,3 +6,4 @@ Routetabel naar domein-knowledge. Zie ~/.claude/CLAUDE.md Blok 1 voor het kennis
 |---------------|------------------------|
 | Netlify       | `/knowledge/netlify/`  |
 | Auth          | `/knowledge/auth/`     |
+| Kanban        | `/knowledge/kanban/`   |

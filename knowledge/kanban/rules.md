@@ -1,0 +1,5 @@
+# Kanban — Rules (bevestigd)
+
+- **R1 — Vaste kolommen**: borden hebben exact Backlog/Doing/Done (posities 0/1/2). Geen kolom-CRUD in de applicatie; schema-wijzigingen aan de kolomset gaan via éénmalige migratie. Bevestigd: feature 021 + 022 bouwt hierop (starred-kanban gebruikt ILIKE-match op de drie vaste namen).
+- **R2 — Case-insensitive done-match**: done-detectie altijd via ILIKE / toLowerCase, nooit exacte case-match. Bevestigd: de case-bug `name === 'done'` (KanbanColumn.tsx) hield de Done-kolom permanent uitgeklapt; alle bestaande RPC's gebruiken ILIKE 'done'.
+- **R3 — Migratiepatroon bij geen MCP**: Supabase-database-wijzigingen gaan via migration-bestand in `supabase/migrations/` + copy-paste-pakket voor SQL Editor (pre-check / migratie / post-check) als Supabase MCP en CLI-token niet beschikbaar zijn. Bevestigd: features 019 en 021.
