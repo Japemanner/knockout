@@ -12,6 +12,12 @@
 - **ESLint hersteld**: nieuwe flat-config `eslint.config.mjs` (FlatCompat + `next/core-web-vitals` + `next/typescript`; `next lint` is deprecated). Eerste run: 6 errors / 37 warnings. Alle 6 errors gefixed: `client.ts` NoopWebSocket-handlers `any` → `void`, `AuthInitializer.tsx` correct getypeerd via `ProfilePatch` i.p.v. `as any` cast, `spinner.tsx` lege interface → type-alias. De 37 resterende warnings zijn pre-existing (unused imports in oudere features) — kandidaat voor aparte opruim.
 - **Suite volledig groen**: 105 passed / 58 skipped / 0 failed — inclusief herstelde decimal-helper-suite (achterhaalde tussenstatus-test vervangen, `validateDecimalFinal` nu gedocumenteerd in tests, commit `9c629ac`).
 
+## Update 2026-10-07: ESLint-warnings opgeruimd — hook nu volledig actief
+
+- Alle 37 pre-existing warnings opgeruimd (commit `4d656d5`): unused imports weg, dode props/interfaces verwijderd (CreateCrudButton.overviews, CreateBoardDialog.allBoards, CreateBoardButton.boards — callers bijgewerkt), twee `react-hooks/exhaustive-deps`-gaps gedicht (GenericTable `handleUpdate` miste `columns`; CardDetailModal vinkje-reset miste `isSaved`), `_`-prefix-conventie + `argsIgnorePattern` in eslint.config.mjs, scoped `no-img-element`-exception met motivatie in avatar.tsx.
+- **Pre-commit hook rapporteert nu "ESLint clean"** bij `--max-warnings 0` — voor het eerst sinds projectstart functioneert stap 4/4 als echte quality gate.
+- Verificatie: tsc 0 errors, eslint exit 0, suite 105 passed / 58 skipped / 0 failed.
+
 ---
 
 ## Uitgevoerde checks
@@ -61,5 +67,4 @@
 
 - Login-gated e2e-tests konden niet volledig lokaal draaien (geen sessie); draaien via CI tegen preview deploy
 - Supabase MCP en Snyk MCP niet verbonden in deze sessie (F-01/F-10/F-16/F-17) — uitvoeren zodra MCP beschikbaar is
-- 37 pre-existing ESLint warnings (unused imports in oudere features) — kandidaat voor aparte opruim-PR
 - Drag-sync e2e-test gebruikt native mouse-events i.p.v. dnd-kit's `page.dragTo` — bij dnd-kit-versieconflict kan de test faalskippen; structuurtests dekken de kern dan nog
