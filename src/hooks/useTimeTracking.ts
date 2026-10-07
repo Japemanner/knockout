@@ -7,7 +7,6 @@ import {
   updateTimeEntry,
   deleteTimeEntry,
 } from '@/actions/time-tracking'
-import type { TimeEntry } from '@/actions/time-tracking'
 
 export function useActiveTimeEntry() {
   return useQuery({

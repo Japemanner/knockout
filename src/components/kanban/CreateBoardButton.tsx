@@ -8,11 +8,7 @@ import { createBoard } from '@/actions/boards'
 import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-interface CreateBoardButtonProps {
-  boards: { id: string; name: string }[]
-}
-
-export function CreateBoardButton({ boards }: CreateBoardButtonProps) {
+export function CreateBoardButton() {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -36,7 +32,6 @@ export function CreateBoardButton({ boards }: CreateBoardButtonProps) {
       <CreateBoardDialog
         open={open}
         onOpenChange={setOpen}
-        allBoards={boards}
         onCreateBoard={handleCreateBoard}
       />
     </>

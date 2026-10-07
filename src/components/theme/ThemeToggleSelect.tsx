@@ -3,7 +3,6 @@
 import { useThemeStore } from '@/store/themeStore'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { Moon, Sun, Monitor } from 'lucide-react'
 
 export function ThemeToggleSelect() {
   const { theme, setTheme } = useThemeStore()

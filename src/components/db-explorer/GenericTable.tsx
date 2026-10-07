@@ -124,7 +124,7 @@ export function GenericTable({
       loadPage(page)
     }
     setSubmitting(false)
-  }, [pk, showForm, dataSource, loadPage, page, toast])
+  }, [pk, showForm, dataSource, loadPage, page, toast, columns])
 
   const handleDelete = useCallback(async () => {
     if (!pk || !showDelete) return

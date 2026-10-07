@@ -71,7 +71,7 @@ export function matchesFilter(cellValue: unknown, filter: ColumnFilter): boolean
   }
 }
 
-function toComparable(a: unknown, hint: unknown): number | null {
+function toComparable(a: unknown, _hint: unknown): number | null {
   if (a === null || a === undefined || a === '') return null
   if (typeof a === 'number') return a
   if (typeof a === 'boolean') return a ? 1 : 0
@@ -85,7 +85,7 @@ function toComparable(a: unknown, hint: unknown): number | null {
 export function filterRows(
   rows: Record<string, unknown>[],
   filters: ColumnFilters,
-  columns: ColumnInfo[]
+  _columns: ColumnInfo[]
 ): Record<string, unknown>[] {
   const active = Object.entries(filters).filter(([, f]) => isFilterComplete(f))
   if (active.length === 0) return rows

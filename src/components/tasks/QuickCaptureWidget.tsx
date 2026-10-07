@@ -10,7 +10,6 @@ import { Plus, Link, Calendar } from 'lucide-react'
 import { createCard } from '@/actions/cards'
 import { useToast } from '@/components/ui/toast'
 import { format } from 'date-fns'
-import { nl } from 'date-fns/locale'
 
 interface QuickCaptureWidgetProps {
   compact?: boolean

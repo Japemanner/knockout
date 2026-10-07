@@ -4,7 +4,7 @@ import { getAuthenticatedClient, getServiceClient } from '@/lib/supabase/actions
 import { pruneStaleFilters, isFilterComplete, filterKindForColumn } from '@/lib/column-filters'
 import type { ColumnFilters } from '@/lib/column-filters'
 import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
-import type { ColumnFilter, ColumnFilterOp } from '@/types/database.types'
+import type { ColumnFilterOp } from '@/types/database.types'
 
 export { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta }
 

@@ -8,11 +8,7 @@ import { createCrudOverview } from '@/actions/crud-overviews'
 import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-interface CreateCrudButtonProps {
-  overviews: { id: string; name: string }[]
-}
-
-export function CreateCrudButton({ overviews }: CreateCrudButtonProps) {
+export function CreateCrudButton() {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()

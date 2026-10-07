@@ -1,6 +1,6 @@
 'use client'
 
-import { useDndContext, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
@@ -14,7 +14,7 @@ interface DraggableTableHeaderProps {
   renderFilter?: (column: ColumnInfo) => ReactNode
 }
 
-function SortableTh({ column, onReorder, renderFilter }: { column: ColumnInfo; onReorder: (newOrder: string[]) => void; renderFilter?: (column: ColumnInfo) => ReactNode }) {
+function SortableTh({ column, renderFilter }: { column: ColumnInfo; renderFilter?: (column: ColumnInfo) => ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: column.name })
 
   const style = {
@@ -65,7 +65,7 @@ export function DraggableTableHeader({ columns, onReorder, renderFilter }: Dragg
       <SortableContext items={columnNames} strategy={horizontalListSortingStrategy}>
         <tr className="bg-muted/50">
           {columns.map((col) => (
-            <SortableTh key={col.name} column={col} onReorder={onReorder} renderFilter={renderFilter} />
+            <SortableTh key={col.name} column={col} renderFilter={renderFilter} />
           ))}
         </tr>
       </SortableContext>

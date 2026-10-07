@@ -7,7 +7,7 @@ import {
   useUpdateLocalRecord,
   useDeleteLocalRecord,
 } from '@/hooks/useDbExplorer'
-import { getLocalTableRecords, createLocalRecord, updateLocalRecord, deleteLocalRecord, getLocalForeignKeyOptions } from '@/actions/local-db'
+import { getLocalTableRecords, getLocalForeignKeyOptions } from '@/actions/local-db'
 import type { ColumnFilters } from '@/lib/column-filters'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/local-db'
 

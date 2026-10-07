@@ -37,7 +37,7 @@ export default async function BoardPage({ params }: { params: Promise<{ boardId:
   const nested = boardWithNested as unknown as NestedBoard
 
   // Flatten nested result into the same shape KanbanBoard expects
-  const columns: KColumn[] = (nested.kk_columns ?? []).map(({ kk_cards: _, ...col }) => col)
+  const columns: KColumn[] = (nested.kk_columns ?? []).map(({ kk_cards: _kk_cards, ...col }) => col)
   const cards: Card[] = (nested.kk_columns ?? []).flatMap((col) => col.kk_cards ?? [])
 
   return (

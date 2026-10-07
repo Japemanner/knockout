@@ -2,12 +2,11 @@
 
 import { GenericTable, type TableDataSource } from '@/components/db-explorer/GenericTable'
 import {
-  useTableRecords,
   useCreateRecord,
   useUpdateRecord,
   useDeleteRecord,
 } from '@/hooks/useDbExplorer'
-import { getForeignKeyOptions, getTableRecords, createRecord, updateRecord, deleteRecord } from '@/actions/external-db'
+import { getForeignKeyOptions, getTableRecords } from '@/actions/external-db'
 import type { ColumnInfo, ForeignKeyInfo } from '@/actions/external-db'
 
 interface DynamicTableProps {

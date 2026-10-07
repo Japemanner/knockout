@@ -18,6 +18,9 @@ function Avatar({ className, src, fallback, size = "default", ...props }: Avatar
       {...props}
     >
       {src ? (
+        // Externe avatar-URL's (Supabase auth providers) zonder next/image
+        // domain-config; bewust plain img i.p.v. Image-loader-setup per provider.
+        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={fallback} className="h-full w-full object-cover" />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-medium text-muted-foreground">

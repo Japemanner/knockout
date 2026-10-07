@@ -50,7 +50,7 @@ function makeCollisionDetection(): CollisionDetection {
   }
 }
 
-export function useKanbanDrag({ boardId, otherBoards, columns, cards, onCardsChange }: UseKanbanDragProps) {
+export function useKanbanDrag({ otherBoards, columns, cards, onCardsChange }: UseKanbanDragProps) {
   const [activeCard, setActiveCard] = useState<Card | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const collisionDetectionRef = useRef(makeCollisionDetection())

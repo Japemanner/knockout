@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Star, Paperclip, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { Star, Paperclip, ChevronDown, ChevronRight } from 'lucide-react'
 import type { Card } from '@/types/database.types'
 
 interface KanbanCardProps {

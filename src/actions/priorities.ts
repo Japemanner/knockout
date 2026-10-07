@@ -2,7 +2,6 @@
 
 import { getAuthenticatedClient } from '@/lib/supabase/actions'
 import { revalidatePath } from 'next/cache'
-import type { Priority } from '@/types/database.types'
 
 export type ActionResult<T = unknown> =
   | { success: true; data: T }

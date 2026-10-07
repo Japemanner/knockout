@@ -74,7 +74,7 @@ export function CardDetailModal({ open, onOpenChange, card, allCards, columns, o
         savedTimerRef.current = null
       }
     }
-  }, [title, description, url, deadline, isStarred])
+  }, [title, description, url, deadline, isStarred, isSaved])
 
   useEffect(() => {
     return () => {

@@ -9,11 +9,10 @@ import { useToast } from '@/components/ui/toast'
 interface CreateBoardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  allBoards: { id: string; name: string }[]
   onCreateBoard: (name: string) => Promise<{ id: string; error?: string }>
 }
 
-export function CreateBoardDialog({ open, onOpenChange, allBoards, onCreateBoard }: CreateBoardDialogProps) {
+export function CreateBoardDialog({ open, onOpenChange, onCreateBoard }: CreateBoardDialogProps) {
   const [name, setName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()

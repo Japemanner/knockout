@@ -26,6 +26,16 @@ const eslintConfig = [
     ],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  {
+    rules: {
+      // Bewust ongebruikte parameters (noop-implementaties, destructuring-rests,
+      // event-handlers zonder body) krijgen een _-prefix.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
 ]
 
 export default eslintConfig
