@@ -1,0 +1,5 @@
+# Content-kalender — Hypotheses (onvoldoende data om te bevestigen)
+
+- **H1 — Uren-datalaag schaalt naar alle data-intensieve modules**: SSR-prefetch + browser-reads + React Query-invalidatie (i.p.v. revalidatePath) werkt voor /uren (beslissing 2026-09-22) én nu ook /content (kalender + ideeënbak, 3 queries). Bevestigingen: 2. Promoveer naar rule na het derde modulegebruik (kandidaat: feature 024 bijlagen-upload).
+- **H2 — Pure-logica-module + unit-style Playwright-spec is de beste dekking voor kalenderberekening**: de 25 unit-tests vingen alle randgevallen (maandgrens-week, aanmaakdatum-grens, emoji) zonder DB of login. Bevestigingen: 1 (content). Kolom-filters (feature 018) gebruikte hetzelfde patroon → feitelijke telling: 2.
+- **H3 — Geplande-feature-navigatie uit React Query-cache is voldoende voor SC-004**: maandnavigatie haalt de doelmaand via de browser-client (directe Supabase-reads, geen server actions); gebruikers ervaren dit als instant. Nog geen UX-meting (kanarie/latency-check ontbreekt). Bevestigingen: 1.
