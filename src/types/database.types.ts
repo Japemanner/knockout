@@ -68,6 +68,21 @@ export interface Database {
         Insert: Omit<Priority, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Priority, 'id'>>
       }
+      kk_content_pillars: {
+        Row: ContentPillar
+        Insert: Omit<ContentPillar, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ContentPillar, 'id'>>
+      }
+      kk_content_slots: {
+        Row: ContentSlot
+        Insert: Omit<ContentSlot, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ContentSlot, 'id'>>
+      }
+      kk_content_posts: {
+        Row: ContentPost
+        Insert: Omit<ContentPost, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ContentPost, 'id'>>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -232,6 +247,56 @@ export interface Priority {
   item_1: string
   item_2: string
   item_3: string
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================
+// CONTENT-KALENDER (feature 023)
+// ============================================================
+
+export type ContentStatus = 'idee' | 'concept' | 'klaar' | 'gepland' | 'live'
+export type ContentFormat = 'tekst' | 'afbeelding' | 'carrousel' | 'video' | 'poll'
+export type PillarColor = 'blue' | 'green' | 'orange' | 'purple' | 'pink' | 'yellow' | 'teal' | 'gray'
+
+export interface ContentPillar {
+  id: string
+  user_id: string
+  name: string
+  audience: string | null
+  description: string | null
+  color: PillarColor
+  archived: boolean
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ContentSlot {
+  id: string
+  user_id: string
+  pillar_id: string
+  weekday: number // ISO 1-7: 1 = maandag
+  post_time: string // 'HH:mm:ss' uit PostgreSQL time
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ContentPost {
+  id: string
+  user_id: string
+  pillar_id: string | null
+  title: string
+  body: string
+  format: ContentFormat
+  status: ContentStatus
+  planned_date: string | null // 'YYYY-MM-DD'; null = ideeënbak
+  planned_time: string | null // 'HH:mm:ss' uit PostgreSQL time
+  source_url: string | null
+  linkedin_url: string | null
+  notes: string | null
+  scheduled_on_linkedin_at: string | null
   created_at: string
   updated_at: string
 }
