@@ -2,6 +2,30 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## content-kalender (2026-10-14)
+
+**Spec**: `specs/023-content-kalender/spec.md`
+**Branch**: `023-content-kalender`
+
+LinkedIn content-kalender onder nieuw nav-item "Content" (direct onder Uren): plan, schrijf en houd LinkedIn-posts bij voor het persoonlijke profiel — Knockout publiceert niets zelf, de status "Gepland" zet je handmatig na het inplannen in LinkedIn. Drie nieuwe tabellen (`kk_content_pillars`, `kk_content_slots`, `kk_content_posts`) met RLS in idempotente migratie `022_content_calendar.sql` (handmatig te draaien via SQL Editor). Alle kalenderlogica staat in pure module `src/lib/content/calendar.ts` (unit-testbaar): maandraster van hele weken, slotvoorkomens (alleen actieve slots van niet-gearchiveerde soorten, pas vanaf de Amsterdamse aanmaakdag), slotmatching per ISO-week + contentsoort (i-de post op volgorde vult het i-de voorkomen — verplaatsing binnen de week laat het slot dus gevuld), gemist/open-status, verlopen-markering, emoji-veilige tekentelling, hook-preview (derde regeleinde of 210 tekens), statusguards (Klaar/Gepland/Live vereisen niet-lege tekst ≤ 3.000, Gepland/Live datum+tijd, LinkedIn-URL-prefix) en de tijdregel bij slepen (slottijd > bestaande tijd > 08:00). Datalaag exact als /uren (SSR-prefetch + browser-reads, geen revalidatePath, SC-004): server actions in `src/actions/content.ts` valideren dezelfde statusregels server-side (API-bypass onmogelijk), het inplan-moment (`scheduled_on_linkedin_at`) wordt bij Gepland vastgelegd en bij terugkeer naar een lagere status gewist. UI: maandkalender met lege slots (klik = Concept-post met datum/tijd/soort, editor opent), ideeënbak met quick-add naast het raster, drag & drop (idee → dag, post → andere dag — gepland met toast "Pas de datum ook aan in LinkedIn", post → ideeënbak alleen bij Idee/Concept/Klaar, live niet sleepbaar, rollback + toast bij serverfout), post-editor (tekenteller rood > 3.000, hook-preview, Kopieer tekst, Ctrl/Cmd+S, in-app bevestigingen bij sluiten-met-wijzigingen en verwijderen), beheer-dialog "Soorten & slots" (naam/doelgroep/beschrijving/8 kleuren, archiveren, 7 dag-chips met tijd) en mobiele daglijst onder 768 px met de ideeënbak eronder.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/022_content_calendar.sql` — 3 tabellen, RLS + 4 policies per tabel, indexen, updated_at-triggers, `unique (pillar_id, weekday)`, DB-check gepland/live ⇒ datum+tijd; nog handmatig via SQL Editor te draaien
+- `src/lib/content/calendar.ts` — pure kalender- en slotlogica (geen React/Supabase)
+- `src/lib/content/queries.ts` — contentKeys (pillars/month/ideas) + fetchers, maandquery over het volledige raster, fouten gooien
+- `src/actions/content.ts` — 10 server actions (createPillar t/m deletePost), server-side validateStatusChange, geen revalidatePath
+- `src/hooks/useContent.ts` — useQuery-hooks + mutaties; useMovePost optimistisch met snapshot-rollback + toast
+- `src/components/content/` — ContentView (header, DndContext + DragOverlay, mobiele lijst), MonthGrid + MobileDayList, DayCell (+data-date), PostChip, SlotPlaceholder, IdeasPanel, PostEditorDialog, PillarsDialog, colors.ts (8 kleur-mapping met dark:)
+- `src/app/(dashboard)/content/page.tsx` — SSR-prefetch (pillars, month, ideas) + HydrationBoundary
+- `tests/e2e/content-calendar-logic.spec.ts` — 25 unit-tests (alle 12 quickstart-gevallen)
+- `tests/e2e/content-calendar.spec.ts` — 5 e2e-tests met login-skip-guards
+
+**Aangepaste bestanden**:
+- `src/components/layout/AppShell.tsx` — nav-item "Content" (CalendarDays) direct na Uren, zelfde zichtbaarheid
+- `src/types/database.types.ts` — ContentPillar/ContentSlot/ContentPost + Database-mapping + unies
+
+**Test**: `tests/e2e/content-calendar-logic.spec.ts` (25 unit-tests) + `tests/e2e/content-calendar.spec.ts` (5 e2e). Volledige suite: 130 passed / 63 skipped (login-gated) / 0 failed. Fitness-check: FAIL:0 WARN:1 PASS:12 SKIP:5; migratie nog uitvoeren via SQL Editor (zie FITNESS.md).
+
 ## command-center-starred-kanban (2026-10-06)
 
 **Spec**: `specs/022-command-center-starred-kanban/spec.md`

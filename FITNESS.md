@@ -1,3 +1,60 @@
+# Fitness Check — 023-content-kalender
+
+**Feature**: 023-content-kalender
+**Datum**: 2026-10-14
+**Status**: SHIP mits migratie 022_content_calendar.sql eerst handmatig in de Supabase SQL Editor wordt gedraaid (vastgestelde werkwijze; F-01 RLS-check draait dan mee)
+
+---
+
+## Uitgevoerde checks
+
+| Check | Resultaat | Observatie |
+|-------|-----------|------------|
+| F-01 RLS (Supabase MCP) | SKIP | MCP niet verbonden in deze sessie. Migratie `022_content_calendar.sql` zet RLS aan op alle drie nieuwe tabellen (`kk_content_pillars`, `kk_content_slots`, `kk_content_posts`) met elk vier `user_id = auth.uid()`-policies. Post-check via SQL Editor: `select tablename, rowsecurity from pg_tables where tablename like 'kk_content_%'` — verwacht `rowsecurity = true` × 3. |
+| F-02 Geen secrets in client | PASS | `src/lib/content/queries.ts` bevat geen secrets (zelfde afweging als de uren-beslissing); alleen anon key in de client bundle. |
+| F-03 Supabase client instances | WARN | Heuristiek telt 25× `createClient` over routes. Content-module hergebruikt uitsluitend de patronen: browser-singleton (`src/lib/supabase/client.ts`), server-client via `createClient()` in de SSR-prefetch, `getAuthenticatedClient()` in actions — geen tweede instantie. |
+| F-04 PKCE flow | PASS | Onveranderd — geen auth-wijziging. |
+| F-05 Netlify config | PASS | Onveranderd. |
+| F-06 TypeScript strict | PASS | `"strict": true` onveranderd. |
+| F-07 TypeScript compileert | PASS | `npx tsc --noEmit` — 0 errors (noUncheckedIndexedAccess ving twee rastergrens-indices → `monthGridRange()`-helper met guard). |
+| F-08 Geen unjustified `any` | PASS | `UntypedClient`-patroon met eslint-disable alleen in `queries.ts`, conform `src/lib/hours/queries.ts`. |
+| F-09 Geen admin client | PASS | Alleen user-scoped mutaties onder RLS. |
+| F-10 Storage buckets | SKIP | Geen storage in deze feature (bijlagen zijn feature 024). |
+| F-11 Geen waitForTimeout in tests | PASS | Nieuwe tests gebruiken geen waitForTimeout. |
+| F-12 .env.local in .gitignore | PASS | Onveranderd. |
+| F-13 .env.example bestaat | PASS | Onveranderd. |
+| F-14 Geen DOM-manipulatie | PASS | React-state only. |
+| F-15 Conventional commits | PASS | Commit volgt `feat(content):` formaat (gecontroleerd in commit-msg hook). |
+| F-16 Snyk SAST | SKIP | Snyk MCP niet verbonden in deze sessie. |
+| F-17 Snyk SCA | SKIP | Geen nieuwe dependencies toegevoegd — package.json ongewijzigd. |
+
+**Lokale fitness-check.sh run** (2026-10-14T17:47Z): FAIL:0 WARN:1 PASS:12 SKIP:5 — 0 blocking. De enige WARN is de F-03-heuristiek (createClient-telling over alle routes, pre-existing patroon).
+
+## Architectuur-conformiteit
+
+- [x] Geen nieuwe dependencies — hergebruik date-fns v4, @dnd-kit/core, TanStack Query v5, bestaande Radix/ui-componenten
+- [x] Datalaag exact conform decisions/2026-09-22-uren-reads-browser-client.md: SSR-prefetch + HydrationBoundary, reads in queries.ts (geen 'use server', fouten gooien), mutaties server actions, **geen revalidatePath** (client invalideert React Query-keys)
+- [x] SC-004: 0 server-action-calls voor reads na hydratie van /content
+- [x] RLS + 4 policies per tabel in idempotente migratie (stijl 007_hours_tracking.sql), `unique (pillar_id, weekday)`, DB-check gepland/live ⇒ datum+tijd als vangnet
+- [x] Tijdzone-veilig: alle datums 'YYYY-MM-DD'-strings, Amsterdamse dag via Intl-patroon (`amsterdamDateOf`), vandaag via `amsterdamTodayISO()`, nooit toISOString() op lokale datum
+- [x] Slotmatching per ISO-week + soort in pure module — week over maandgrens gedekt door unit-test (29 sep + 1 okt 2026)
+- [x] Optimistisch slepen met cancelQueries/getQueriesData/setQueriesData op `['content','month']` + `['content','ideas']`, snapshot-rollback + destructive toast (FR-033)
+- [x] Server-side weigeringen vóór DB-call: gepland/live → ideeënbak geweigerd (FR-030), live niet sleepbaar (FR-032), validateStatusChange in elke status/tekst-mutatie (API-bypass onmogelijk)
+
+## Tests
+
+- `tests/e2e/content-calendar-logic.spec.ts` (nieuw): 25 unit-tests op `src/lib/content/calendar.ts` — alle twaalf quickstart-gevallen gedekt (raster, voorkomens, aanmaakdatum-grens, matching incl. maandgrens-week, isOverdue, emoji-telling, hook-preview-grenzen, vier validateStatusChange-weigeringen, drie resolveDropTime-varianten)
+- `tests/e2e/content-calendar.spec.ts` (nieuw): 5 e2e-tests met login-skip-guards — nav-volgorde onder Uren, soort+slot aanmaken → leeg slot, klik-op-slot → editor (Concept, datum/tijd/soort), idee slepen → persistent in raster, geplande post slepen → LinkedIn-melding
+- Volledige suite: **130 passed / 63 skipped (login-gated) / 0 failed**
+
+## Gaps
+
+- Migratie `022_content_calendar.sql` is nog niet gedraaid (handmatig via SQL Editor, vastgestelde werkwijze) — draaien vóór deploy; quickstart-stapvalidatie (tasks T033) kan daarna pas volledig
+- Login-gated e2e-tests konden niet volledig lokaal draaien (geen sessie); draaien via CI tegen preview deploy
+- Supabase MCP en Snyk MCP niet verbonden in deze sessie (F-01/F-10/F-16/F-17) — F-01 post-check via SQL Editor-query hierboven
+
+---
+
 # Fitness Check — 022-command-center-starred-kanban
 
 **Feature**: 022-command-center-starred-kanban
