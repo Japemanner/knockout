@@ -8,6 +8,13 @@
 
 **Input**: User description: "Aanpassen dat ik onder de categorie kan maken deze categorieën moeten namaken zijn moeten horizontaal dan verschillende borden oren en moet ik qua namen kunnen aanpassen. Ook wil ik een knop hebben dat ik dan kan synchroniseren met SupaBase zodat ik nieuwe kolom of types ook ophaal. Daar hoef ik niet telkens een heel crud te verwijderen en dan dit toe te voegen."
 
+## Clarifications
+
+### Session 2026-10-29
+
+- Categorieën gelden op het **CRUD-tabblad**: de CRUD overzichten zijn de "borden" die onder de categorietabs worden gegroepeerd. Het Borden-tabblad (kanban) valt buiten deze feature; categorieën daar kunnen als vervolgfeature worden toegevoegd.
+- De sync-knop komt **per CRUD overzicht** op de detailpagina. Een globale knop om alles tegelijk te synchroniseren is niet nodig.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Categorieën aanmaken en horizontaal tonen (Priority: P1)
