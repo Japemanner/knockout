@@ -2,6 +2,32 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## crud-categorie-sync (2026-10-29)
+
+**Spec**: `specs/025-crud-categorie-sync/spec.md`
+**Branch**: `025-crud-categorie-sync`
+
+Twee uitbreidingen op het CRUD-tabblad. (1) Categorieën: groepeer je CRUD overzichten onder horizontale categorietabs (`kk_crud_categories`, RLS + 4 policies, idempotente migratie `024_crud_categories.sql` — nog handmatig via SQL Editor te draaien; nullable `category_id` op `kk_crud_overviews` met `ON DELETE SET NULL`, dus categorie verwijderen houdt alle overzichten als ongecategoriseerd behouden). De overzichtspagina toont een tabrij "Alle" + één tab per categorie (één horizontale rij, scrollbaar bij ruimtegebrek, nooit verticaal gestapeld); categoriewissel verloopt via URL-parameter `?category=<id>` met server-side filtering (de pagina is door searchParams dynamisch i.p.v. ISR — categoriewijzigingen zijn direct zichtbaar). Categorie aanmaken via "+", hernoemen en verwijderen via hover-menu per tab (bevestiging noemt dat overzichten blijven bestaan), verplaatsen van overzichten via het kaart-menu (FolderInput-icoon), en het aanmaakdialoog van nieuwe overzichten heeft een categorie-select vooringevuld met de actieve tab. (2) Supabase-sync: knop "Synchroniseren" op de CRUD-detailpagina haalt de actuele tabelstructuur op via de bestaande metadata-RPC's, saneert kolominstellingen (verborgen kolommen, volgorde, filters) tegen de actuele kolommen — alleen bewaard bij wijziging — en revalideert de detailroute: schemawijzigingen zijn zichtbaar na één klik, zonder het overzicht te verwijderen en opnieuw aan te maken. Feedback via toast ("Structuur bijgewerkt (n toegevoegd, m verwijderd)" / "Structuur is actueel"); bij fouten (tabel weg/onbereikbaar) verandert er niets. De sync-action ontvangt `knownColumns` (de door de pagina gerenderde kolommen) uitsluitend voor de diff-feedback; de pruning is server-autoritair.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/024_crud_categories.sql` — tabel kk_crud_categories + RLS + 4 policies, indexen, updated_at-trigger, category_id op kk_crud_overviews (SET NULL); nog handmatig via SQL Editor te draaien (023 is gereserveerd voor 024-post-bijlagen)
+- `src/actions/crud-categories.ts` — createCrudCategory (positie MAX+1), renameCrudCategory, deleteCrudCategory
+- `src/lib/crud/schema-sync.ts` — pure helpers diffColumns + pruneColumnSettings (filters via bestaande pruneStaleFilters)
+- `src/components/crud/CategoryTabs.tsx` — horizontale tabrij met aanmaak-, hernoem- en verwijder-dialogen
+- `src/components/crud/SyncSchemaButton.tsx` — sync-knop met spinner + toast-feedback + router.refresh()
+- `tests/e2e/crud-schema-sync-logic.spec.ts` — 11 unit-tests (diff + pruning incl. hernoemde-kolom edge case, mutatie-vrijheid)
+- `tests/e2e/crud-categorieen.spec.ts` — 6 e2e-tests met login-skip-guards (tabrij, filter, hernoemen persisteert, preselect, verwijderen houdt overzichten, sync-knop + feedback)
+
+**Aangepaste bestanden**:
+- `src/actions/crud-overviews.ts` — category_id in get/create + setCrudOverviewCategory + syncCrudOverviewSchema (meta → prune → persist bij wijziging → revalidatePath detail + overzicht → added/removed)
+- `src/app/(dashboard)/crud/page.tsx` — categorieën + overzichten parallel laden, ?category-filter, tabrij; revalidate-export vervallen (dynamisch door searchParams)
+- `src/app/(dashboard)/crud/[crudId]/page.tsx` — SyncSchemaButton in beide actiebalk-varianten
+- `src/components/crud/CreateCrudButton.tsx` + `CreateCrudDialog.tsx` — categorie-props, categorie-select ("Geen categorie" + lijst), category_id meegegeven aan createCrudOverview
+- `src/components/crud/CrudOverviewCard.tsx` — hover-menu met Verplaatsen naar categorie (dialog met categorielijst, huidige gemarkeerd) naast bestaand verwijderen
+- `src/types/database.types.ts` — CrudCategory-interface + kk_crud_categories-mapping + CRUDOverview.category_id
+
+**Test**: `tests/e2e/crud-schema-sync-logic.spec.ts` (11 unit) + `tests/e2e/crud-categorieen.spec.ts` (6 e2e, login-gated). Volledige suite: 141 passed / 69 skipped (login-gated) / 0 failed. tsc + eslint groen. Fitness-check: FAIL:0 WARN:2 PASS:11 SKIP:5; migratie nog uitvoeren via SQL Editor (zie FITNESS.md).
+
 ## content-kalender (2026-10-14)
 
 **Spec**: `specs/023-content-kalender/spec.md`
