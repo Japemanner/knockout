@@ -37,8 +37,8 @@ Alle actions draaien onder `'use server'` en gebruiken `getAuthenticatedClient()
 | Action | Wijziging |
 |--------|-----------|
 | `getCrudOverviews` | select-lijst uitbreiden met `category_id` |
-| `createCrudOverview` | input + insert `category_id: string \| null`; bij gevulde waarde eerst ownership-check op `kk_crud_categories` (id behoort tot de gebruiker) |
-| `updateCrudOverview` | `category_id` toestaan in `updateData` (optioneel) |
+| `createCrudOverview` | input + insert `category_id: string \| null`; bij gevulde waarde ownership-check op `kk_crud_categories` (id behoort tot de gebruiker) |
+| `updateCrudOverview` | ongewijzigd — categoriewijzigingen gaan uitsluitend via `setCrudOverviewCategory` |
 
 ### Nieuw: setCrudOverviewCategory
 
@@ -46,13 +46,13 @@ Alle actions draaien onder `'use server'` en gebruiken `getAuthenticatedClient()
 |---|---|
 | Input | `{ crudId: string; categoryId: string \| null }` |
 | Output | `{ success: boolean; error: string \| null }` |
-| Regels | ownership overzicht (user_id); bij niet-null `categoryId` ownership-check op de categorie; update `category_id` (FR-007) |
+| Regels | ownership overzicht (user_id); bij niet-null `categoryId` ownership-check op de categorie; update `category_id` (FR-007); `revalidatePath('/crud')` |
 
 ### Nieuw: syncCrudOverviewSchema
 
 | | |
 |---|---|
-| Input | `{ crudId: string }` |
+| Input | `{ crudId: string; knownColumns?: string[] }` — `knownColumns` zijn de kolomnamen zoals de detailpagina ze op het moment van klikken rendert (client-props); dienen uitsluitend voor de toegevoegd/verwijderd-feedback; de pruning is server-autoritair via de RPC |
 | Output | `{ success: boolean; added: string[]; removed: string[]; error: string \| null }` |
 | Flow | 1. overzicht ophalen (`table_name`, `hidden_columns`, `column_order`, `column_filters`) — zonder `table_name` of niet gevonden → fout, niets wijzigen<br>2. `getLocalTableMeta(table_name)` — fout → fout retourneren, niets wijzigen (FR-014)<br>3. `pruneColumnSettings` (uit `src/lib/crud/schema-sync.ts`) tegen de actuele kolommen<br>4. alleen bij wijzigingen: gesaneerde `hidden_columns` / `column_order` / `column_filters` persisteren (FR-013)<br>5. `revalidatePath('/crud/' + crudId)` + `revalidatePath('/crud')`<br>6. `{ added, removed }` retourneren voor de toast (FR-015) |
 

@@ -8,7 +8,12 @@ import { createCrudOverview } from '@/actions/crud-overviews'
 import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export function CreateCrudButton() {
+interface CreateCrudButtonProps {
+  categories: { id: string; name: string }[]
+  defaultCategoryId: string | null
+}
+
+export function CreateCrudButton({ categories, defaultCategoryId }: CreateCrudButtonProps) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -17,12 +22,14 @@ export function CreateCrudButton() {
     name: string
     table_name: string
     interaction_type: 'crud' | 'formulier'
+    category_id: string | null
   }): Promise<{ id: string; error?: string }> => {
     const result = await createCrudOverview({
       name: data.name,
       connection_id: null,
       table_name: data.table_name,
       interaction_type: data.interaction_type,
+      category_id: data.category_id,
     })
     if (result.error) {
       toast({ title: 'Fout', description: result.error, variant: 'destructive' })
@@ -42,6 +49,8 @@ export function CreateCrudButton() {
         open={open}
         onOpenChange={setOpen}
         onCreate={handleCreate}
+        categories={categories}
+        defaultCategoryId={defaultCategoryId}
       />
     </>
   )

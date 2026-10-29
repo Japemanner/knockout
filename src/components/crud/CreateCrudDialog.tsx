@@ -10,10 +10,12 @@ import { getLocalTableList } from '@/actions/local-db'
 interface CreateCrudDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreate: (data: { name: string; table_name: string; interaction_type: 'crud' | 'formulier' }) => Promise<{ id: string; error?: string }>
+  onCreate: (data: { name: string; table_name: string; interaction_type: 'crud' | 'formulier'; category_id: string | null }) => Promise<{ id: string; error?: string }>
+  categories: { id: string; name: string }[]
+  defaultCategoryId: string | null
 }
 
-export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDialogProps) {
+export function CreateCrudDialog({ open, onOpenChange, onCreate, categories, defaultCategoryId }: CreateCrudDialogProps) {
   const [name, setName] = useState('')
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false)
   const [tables, setTables] = useState<{ name: string; schema: string }[]>([])
@@ -21,6 +23,7 @@ export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDia
   const [tablesLoading, setTablesLoading] = useState(false)
   const [tablesError, setTablesError] = useState('')
   const [interactionType, setInteractionType] = useState<'crud' | 'formulier'>('crud')
+  const [categoryId, setCategoryId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -42,6 +45,7 @@ export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDia
   useEffect(() => {
     if (open) {
       loadTables()
+      setCategoryId(defaultCategoryId ?? '')
     } else {
       setName('')
       setNameManuallyEdited(false)
@@ -50,8 +54,9 @@ export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDia
       setTablesLoading(false)
       setTablesError('')
       setInteractionType('crud')
+      setCategoryId('')
     }
-  }, [open, loadTables])
+  }, [open, loadTables, defaultCategoryId])
 
   const handleTableChange = (value: string) => {
     setTableName(value)
@@ -74,6 +79,7 @@ export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDia
       name: name.trim(),
       table_name: tableName,
       interaction_type: interactionType,
+      category_id: categoryId || null,
     })
     setIsLoading(false)
     if (result.error) {
@@ -92,6 +98,27 @@ export function CreateCrudDialog({ open, onOpenChange, onCreate }: CreateCrudDia
           <DialogTitle>Nieuw CRUD overzicht</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
+          {categories.length > 0 && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">Categorie</label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">Geen categorie</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                In welke categorie hoort dit overzicht?
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">Interactie</label>
             <div className="flex gap-2">

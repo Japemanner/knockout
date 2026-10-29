@@ -2,6 +2,7 @@ import { createClient, getUserId } from '@/lib/supabase/server'
 import { CrudTableWrapper } from '@/components/crud/CrudTableWrapper'
 import { CrudDetailActions } from '@/components/crud/CrudDetailActions'
 import { ColumnVisibilityDialog } from '@/components/crud/ColumnVisibilityDialog'
+import { SyncSchemaButton } from '@/components/crud/SyncSchemaButton'
 import { getLocalTableMeta, getLocalTableRecords } from '@/actions/local-db'
 import { pruneStaleFilters } from '@/lib/column-filters'
 import type { ColumnFilters } from '@/lib/column-filters'
@@ -146,6 +147,7 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <SyncSchemaButton crudId={crudId} knownColumns={metaResult.meta.columns.map((c) => c.name)} />
             <ColumnVisibilityDialog
               crudId={crudId}
               columns={metaResult.meta.columns}
@@ -176,6 +178,7 @@ export default async function CrudDetailPage({ params }: { params: Promise<{ cru
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <SyncSchemaButton crudId={crudId} knownColumns={metaResult.meta.columns.map((c) => c.name)} />
           <ColumnVisibilityDialog
             crudId={crudId}
             columns={metaResult.meta.columns}

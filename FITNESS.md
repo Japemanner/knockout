@@ -1,3 +1,60 @@
+# Fitness Check — 025-crud-categorie-sync
+
+**Feature**: 025-crud-categorie-sync
+**Datum**: 2026-10-29
+**Status**: SHIP mits migratie 024_crud_categories.sql eerst handmatig in de Supabase SQL Editor wordt gedraaid (vastgestelde werkwijze; F-01 RLS-check draait dan mee). Tot die tijd degradeert de /crud-pagina gracieel: categorieën-query levert lege lijst (PostgREST-error genegeerd), tabrij toont alleen "Alle" + "+"-knop (aanmaak faalt met Supabase-fout).
+
+---
+
+## Uitgevoerde checks
+
+| Check | Resultaat | Observatie |
+|-------|-----------|------------|
+| F-01 RLS (Supabase MCP) | SKIP | MCP niet verbonden in deze sessie. Migratie `024_crud_categories.sql` zet RLS aan met vier `user_id = auth.uid()`-policies (003-patroon). Post-check via SQL Editor: `select tablename, rowsecurity from pg_tables where tablename = 'kk_crud_categories'` — verwacht `rowsecurity = true`. |
+| F-02 Geen secrets in client | PASS | Geen nieuwe env-waarden; sync-action gebruikt `getAuthenticatedClient()` en de bestaande SECURITY DEFINER-RPC's (besluit 2026-07-23). |
+| F-03 Supabase client instances | WARN | Heuristiek telt 25× createClient (pre-existing). Nieuwe code hergebruikt uitsluitend `getAuthenticatedClient()` in actions en de server-client in de page — geen tweede instantie. |
+| F-04 PKCE flow | PASS | Onveranderd — geen auth-wijziging. |
+| F-05 Netlify config | PASS | Onveranderd. |
+| F-06 TypeScript strict | PASS | `"strict": true` onveranderd. |
+| F-07 TypeScript compileert | PASS | `npx tsc --noEmit` — 0 errors. |
+| F-08 Geen unjustified `any` | PASS | Eén `eslint-disable` op `resolveOwnedCategoryId` in `crud-overviews.ts` (UntypedClient-patroon, conform bestaand patroon in het bestand). |
+| F-09 Geen admin client | PASS | Alleen user-scoped mutaties onder RLS; sync leest meta via authenticated client. |
+| F-10 Storage buckets | SKIP | Geen storage in deze feature. |
+| F-11 Geen waitForTimeout in tests | PASS | Nieuwe tests gebruiken geen waitForTimeout. |
+| F-12 .env.local in .gitignore | PASS | Onveranderd. |
+| F-13 .env.example bestaat | PASS | Onveranderd. |
+| F-14 Geen DOM-manipulatie | PASS | React-state only. |
+| F-15 Conventional commits | PASS | Feature-commit volgt `feat(crud):` formaat (commit-msg hook). |
+| F-16 Snyk SAST | SKIP | Snyk MCP niet verbonden in deze sessie. |
+| F-17 Snyk SCA | SKIP | Geen nieuwe dependencies toegevoegd — package.json ongewijzigd. |
+
+**Lokale pre-commit runs** (2× doorlopen, 2026-10-29): FAIL:0 WARN:2 PASS:11 SKIP:5 — 0 blocking. Warns zijn pre-existing (F-03 createClient-telling, F-15 historisch commit-formaat).
+
+## Architectuur-conformiteit
+
+- [x] Geen nieuwe dependencies — hergebruik bestaande shadcn/ui-componenten, lucide-react, getAuthenticatedClient
+- [x] CRUD-module blijft op het bestaande server-render + revalidatePath-patroon; categoriefilter via URL-parameter met server-side filtering; door `searchParams`-gebruik is de pagina dynamisch geworden (`revalidate = 60`-export vervallen — verse data per request, de geplande "ISR per URL-variant" is daarmee vervangen door iets eenvoudigers en beters)
+- [x] Sync-action: server-autoritaire pruning (meta-RPC server-side), `knownColumns` van de client dient alleen de diff-feedback; bij fouten wordt niets gewist (FR-014)
+- [x] RLS + 4 policies op `kk_crud_categories` (003-patroon) in idempotente migratie; `ON DELETE SET NULL` op `category_id` garandeert FR-008 (overzichten overleven categorieverwijdering)
+- [x] Ownership-check op `category_id` vóór insert/update (action-laag), RLS als vangnet
+- [x] `pruneColumnSettings` hergebruikt de bestaande `pruneStaleFilters` (feature 018) — geen dubbele filterlogica
+- [x] Nieuwe `revalidatePath` op de detailroute (sync) — E2E verifieert feedback + refresh (AGENTS.md-regressieregel)
+
+## Tests
+
+- `tests/e2e/crud-schema-sync-logic.spec.ts` (nieuw): 11 unit-tests op `src/lib/crud/schema-sync.ts` — diff (identiek, lege sets, hernoemde kolom), pruning (verborgen/volgorde/filters behoud + opschoning, relatieve volgorde, mutatie-vrijheid)
+- `tests/e2e/crud-categorieen.spec.ts` (nieuw): 6 e2e-tests met login-skip-guards — tabrij + aanmaken, categoriefilter + "Alle", hernoemen persisteert na herladen, preselect in aanmaakdialoog, verwijderen houdt overzichten, sync-knop + feedback-toast
+- Volledige suite: **141 passed / 69 skipped (login-gated) / 0 failed**
+- `npx tsc --noEmit` en `npx eslint src/ --max-warnings 0` groen
+
+## Gaps
+
+- Migratie `024_crud_categories.sql` is nog niet gedraaid (handmatig via SQL Editor, vastgestelde werkwijze) — draaien vóór deploy; daarna `npm run types:update` draaien om de handmatige types te vervangen en de quickstart-handchecks (US1/US2/US3 incl. live schemadrift) uitvoeren
+- Login-gated e2e-tests konden niet volledig lokaal draaien (geen sessie); draaien via CI tegen preview deploy
+- Supabase MCP en Snyk MCP niet verbonden in deze sessie (F-01/F-10/F-16/F-17) — F-01 post-check via SQL Editor-query hierboven
+
+---
+
 # Fitness Check — 023-content-kalender
 
 **Feature**: 023-content-kalender

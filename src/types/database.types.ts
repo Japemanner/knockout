@@ -53,6 +53,11 @@ export interface Database {
         Insert: Omit<CRUDOverview, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<CRUDOverview, 'id'>>
       }
+      kk_crud_categories: {
+        Row: CrudCategory
+        Insert: Omit<CrudCategory, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CrudCategory, 'id'>>
+      }
       kk_clients: {
         Row: Client
         Insert: Omit<Client, 'id' | 'created_at' | 'updated_at'>
@@ -191,6 +196,16 @@ export interface CRUDOverview {
   hidden_columns: string[]
   column_order: string[]
   column_filters: Record<string, ColumnFilter>
+  category_id: string | null
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CrudCategory {
+  id: string
+  user_id: string
+  name: string
   position: number
   created_at: string
   updated_at: string
