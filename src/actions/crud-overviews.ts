@@ -24,17 +24,6 @@ export async function getCrudOverviews() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolveOwnedCategoryId(supabase: any, userId: string, categoryId: string) {
-  const { data } = await supabase
-    .from('kk_crud_categories')
-    .select('id')
-    .eq('id', categoryId)
-    .eq('user_id', userId)
-    .single()
-  return { valid: !!data, error: data ? null : 'Categorie niet gevonden' }
-}
-
 export async function createCrudOverview(data: {
   name: string
   connection_id: null
@@ -47,8 +36,13 @@ export async function createCrudOverview(data: {
 
     let categoryId: string | null = null
     if (data.category_id) {
-      const check = await resolveOwnedCategoryId(supabase, userId, data.category_id)
-      if (!check.valid) return { id: '', error: check.error }
+      const { data: category } = await supabase
+        .from('kk_crud_categories')
+        .select('id')
+        .eq('id', data.category_id)
+        .eq('user_id', userId)
+        .single()
+      if (!category) return { id: '', error: 'Categorie niet gevonden' }
       categoryId = data.category_id
     }
 
@@ -137,8 +131,13 @@ export async function setCrudOverviewCategory(data: { crudId: string; categoryId
     const { supabase, userId } = await getAuthenticatedClient()
 
     if (data.categoryId) {
-      const check = await resolveOwnedCategoryId(supabase, userId, data.categoryId)
-      if (!check.valid) return { success: false, error: check.error }
+      const { data: category } = await supabase
+        .from('kk_crud_categories')
+        .select('id')
+        .eq('id', data.categoryId)
+        .eq('user_id', userId)
+        .single()
+      if (!category) return { success: false, error: 'Categorie niet gevonden' }
     }
 
     const { error } = await supabase
