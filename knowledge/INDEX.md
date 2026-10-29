@@ -9,3 +9,4 @@ Routetabel naar domein-knowledge. Zie ~/.claude/CLAUDE.md Blok 1 voor het kennis
 | Kanban        | `/knowledge/kanban/`   |
 | Tooling       | `/knowledge/tooling/`  |
 | Content       | `/knowledge/content/`  |
+| CRUD          | `/knowledge/crud/`     |
