@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -29,6 +29,7 @@ export function ContentView() {
   const [view, setView] = useState<ContentViewName>('ideeen')
   const [pillarsOpen, setPillarsOpen] = useState(false)
   const [editorPostId, setEditorPostId] = useState<string | null>(null)
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const pillarsQuery = usePillars()
   const postsQuery = usePosts()
@@ -65,7 +66,7 @@ export function ContentView() {
     const next = TABS[nextIndex]
     if (!next) return
     setView(next.id)
-    document.getElementById(`content-tab-${next.id}`)?.focus()
+    tabRefs.current[nextIndex]?.focus()
   }
 
   return (
@@ -80,6 +81,7 @@ export function ContentView() {
               <button
                 key={tab.id}
                 id={`content-tab-${tab.id}`}
+                ref={(element) => { tabRefs.current[index] = element }}
                 type="button"
                 role="tab"
                 aria-selected={selected}

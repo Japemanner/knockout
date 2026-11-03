@@ -28,9 +28,9 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 **Purpose**: De niet-destructieve migratie en de type-documentatie klaarzetten.
 
-- [ ] T001 Maak `supabase/migrations/025_content_ideas.sql` met een idempotente `DROP CONSTRAINT IF EXISTS kk_content_posts_datetime_required` op `kk_content_posts`, `DROP POLICY IF EXISTS "Users can delete own content pillars" ON kk_content_pillars`, en `CREATE INDEX IF NOT EXISTS idx_kk_content_posts_user_created ON kk_content_posts (user_id, created_at DESC)`.
-- [ ] T002 Pas `supabase/migrations/025_content_ideas.sql` toe via Supabase MCP of de SQL Editor en verifieer dat de constraint weg is, de DELETE-policy op `kk_content_pillars` weg is, de index bestaat en RLS op `kk_content_pillars`, `kk_content_posts` en `kk_content_slots` nog aanstaat.
-- [ ] T003 Documenteer in `src/types/database.types.ts` dat `format`, `planned_date`, `planned_time`, `linkedin_url` en `scheduled_on_linkedin_at` legacy-kolommen zijn die de content-UI niet meer leest of schrijft; laat `ContentFormat` en `ContentSlot` bestaan voor de bestaande tabellen.
+- [x] T001 Maak `supabase/migrations/025_content_ideas.sql` met een idempotente `DROP CONSTRAINT IF EXISTS kk_content_posts_datetime_required` op `kk_content_posts`, `DROP POLICY IF EXISTS "Users can delete own content pillars" ON kk_content_pillars`, en `CREATE INDEX IF NOT EXISTS idx_kk_content_posts_user_created ON kk_content_posts (user_id, created_at DESC)`.
+- [x] T002 Pas `supabase/migrations/025_content_ideas.sql` toe via Supabase MCP of de SQL Editor en verifieer dat de constraint weg is, de DELETE-policy op `kk_content_pillars` weg is, de index bestaat en RLS op `kk_content_pillars`, `kk_content_posts` en `kk_content_slots` nog aanstaat.
+- [x] T003 Documenteer in `src/types/database.types.ts` dat `format`, `planned_date`, `planned_time`, `linkedin_url` en `scheduled_on_linkedin_at` legacy-kolommen zijn die de content-UI niet meer leest of schrijft; laat `ContentFormat` en `ContentSlot` bestaan voor de bestaande tabellen.
 
 **Checkpoint**: De database accepteert statuswijzigingen zonder datum/tijd en de types zijn gedocumenteerd.
 
@@ -42,13 +42,13 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 **⚠️ CRITICAL**: Geen user story kan beginnen voordat deze fase klaar is.
 
-- [ ] T004 [P] Maak `src/lib/content/ideas.ts` met `MAX_BODY_LENGTH`, `HOOK_CHAR_LIMIT`, `charCount`, `hookPreview`, `statusLabel`, `validateStatusChange` (alleen de tekstregel voor Klaar/Gepland/Live), `buildPostWritePayload` (whitelist voor title/pillar_id/body/status/source_url/notes), `countIdeasByPillar` en `formatIdeaDate` volgens `data-model.md`.
-- [ ] T005 [P] Schrijf `tests/e2e/content-ideas-logic.spec.ts` met pure tests voor `countIdeasByPillar` (0-soorten, gearchiveerd, "Geen soort", totaal, volgorde), `validateStatusChange` (tekstregel; Gepland/Live zonder datum/tijd toegestaan), `buildPostWritePayload` (legacy-keys via een cast worden genegeerd), `charCount`, `hookPreview` en `formatIdeaDate`.
-- [ ] T006 [P] Herschrijf `src/lib/content/queries.ts` naar `contentKeys = { pillars, posts }`, `fetchPillars(supabase, userId)` (alle soorten, incl. gearchiveerd, op `position`/`name`) en `fetchPosts(supabase, userId)` (alle posts, `created_at DESC` + `id`, paginering in batches van 1.000 via `.range()`); verwijder `PillarWithSlots`, `fetchPillarsWithSlots`, `fetchMonthPosts` en `fetchIdeas`.
-- [ ] T007 [P] Herschrijf `src/hooks/useContent.ts` naar `usePillars`, `usePosts`, `useCreatePillar`, `useUpdatePillar`, `useSetPillarArchived`, `useCreatePost`, `useUpdatePost` en `useDeletePost`; werk de posts-cache direct bij (prepend/vervang/verwijder) en invalideer `contentKeys.posts`; verwijder alle slot- en verplaats-hooks.
-- [ ] T008 [P] Herschrijf `src/actions/content.ts`: behoud `createPillar`, `updatePillar`, `setPillarArchived` en `deletePost`; versmal `createPost`/`updatePost` tot titel, soort, body, status, bron-URL en notities; schrijf via `buildPostWritePayload`; voeg server-side controle toe dat een nieuw gekozen soort bestaat, van de gebruiker is en niet gearchiveerd is (een ongewijzigde gearchiveerde soort mag blijven); valideer de status met `validateStatusChange`; verwijder `upsertSlot`, `deleteSlot`, `movePost` en alle schrijfacties op legacy-kolommen.
-- [ ] T009 Herschrijf `src/app/(dashboard)/content/page.tsx` naar een SSR-prefetch van `contentKeys.pillars` en `contentKeys.posts` met `fetchPillars`/`fetchPosts`; verwijder `monthGridRange`, `amsterdamTodayISO` en de `initialYm`-prop.
-- [ ] T010 Voer `npx tsc --noEmit` uit en los alle typefouten op die door de nieuwe foundational code zijn ontstaan.
+- [x] T004 [P] Maak `src/lib/content/ideas.ts` met `MAX_BODY_LENGTH`, `HOOK_CHAR_LIMIT`, `charCount`, `hookPreview`, `statusLabel`, `validateStatusChange` (alleen de tekstregel voor Klaar/Gepland/Live), `buildPostWritePayload` (whitelist voor title/pillar_id/body/status/source_url/notes), `countIdeasByPillar` en `formatIdeaDate` volgens `data-model.md`.
+- [x] T005 [P] Schrijf `tests/e2e/content-ideas-logic.spec.ts` met pure tests voor `countIdeasByPillar` (0-soorten, gearchiveerd, "Geen soort", totaal, volgorde), `validateStatusChange` (tekstregel; Gepland/Live zonder datum/tijd toegestaan), `buildPostWritePayload` (legacy-keys via een cast worden genegeerd), `charCount`, `hookPreview` en `formatIdeaDate`.
+- [x] T006 [P] Herschrijf `src/lib/content/queries.ts` naar `contentKeys = { pillars, posts }`, `fetchPillars(supabase, userId)` (alle soorten, incl. gearchiveerd, op `position`/`name`) en `fetchPosts(supabase, userId)` (alle posts, `created_at DESC` + `id`, paginering in batches van 1.000 via `.range()`); verwijder `PillarWithSlots`, `fetchPillarsWithSlots`, `fetchMonthPosts` en `fetchIdeas`.
+- [x] T007 [P] Herschrijf `src/hooks/useContent.ts` naar `usePillars`, `usePosts`, `useCreatePillar`, `useUpdatePillar`, `useSetPillarArchived`, `useCreatePost`, `useUpdatePost` en `useDeletePost`; werk de posts-cache direct bij (prepend/vervang/verwijder) en invalideer `contentKeys.posts`; verwijder alle slot- en verplaats-hooks.
+- [x] T008 [P] Herschrijf `src/actions/content.ts`: behoud `createPillar`, `updatePillar`, `setPillarArchived` en `deletePost`; versmal `createPost`/`updatePost` tot titel, soort, body, status, bron-URL en notities; schrijf via `buildPostWritePayload`; voeg server-side controle toe dat een nieuw gekozen soort bestaat, van de gebruiker is en niet gearchiveerd is (een ongewijzigde gearchiveerde soort mag blijven); valideer de status met `validateStatusChange`; verwijder `upsertSlot`, `deleteSlot`, `movePost` en alle schrijfacties op legacy-kolommen.
+- [x] T009 Herschrijf `src/app/(dashboard)/content/page.tsx` naar een SSR-prefetch van `contentKeys.pillars` en `contentKeys.posts` met `fetchPillars`/`fetchPosts`; verwijder `monthGridRange`, `amsterdamTodayISO` en de `initialYm`-prop.
+- [x] T010 Voer `npx tsc --noEmit` uit en los alle typefouten op die door de nieuwe foundational code zijn ontstaan.
 
 **Checkpoint**: De datalaag, pure logica en pagina-prefetch zijn gereed; user stories kunnen starten.
 
@@ -62,15 +62,15 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Voeg in `tests/e2e/content-ideas.spec.ts` de US1-tests toe: standaard tab "Ideeën", titel-only opslaan via Enter, zichtbaar in de lijst, persistent na `reload()`, formulier leeg + focus terug, lege titel geblokkeerd, mislukte opslag + retry (netwerk aborteren via `page.route`), dubbel Enter geeft één idee, verwijderbevestiging, sluiten-met-wijzigingen-bevestiging, en geen Format/Datum/Tijd/LinkedIn-URL in composer of editor (met login-skip-guard).
+- [x] T011 [P] [US1] Voeg in `tests/e2e/content-ideas.spec.ts` de US1-tests toe: standaard tab "Ideeën", titel-only opslaan via Enter, zichtbaar in de lijst, persistent na `reload()`, formulier leeg + focus terug, lege titel geblokkeerd, mislukte opslag + retry (netwerk aborteren via `page.route`), dubbel Enter geeft één idee, verwijderbevestiging, sluiten-met-wijzigingen-bevestiging, en geen Format/Datum/Tijd/LinkedIn-URL in composer of editor (met login-skip-guard).
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Maak `src/components/content/IdeaComposer.tsx`: titel (autofocus, verplicht), contentsoort, idee-tekst; bron-URL en notities achter "Meer details"; Enter in titel en Ctrl/Cmd+Enter submit, geen submit vanuit de tekstarea; pending-blokkade, inline titelfout, leegmaken + focus + toast na succes, inhoud behouden bij fout.
-- [ ] T013 [P] [US1] Maak `src/components/content/IdeaList.tsx`: alle posts nieuwste eerst, kleurstip + soortnaam of "Geen soort", statusbadge, aanmaakdatum via `formatIdeaDate`, archiefmarkering, toetsenbord-bedienbare rij die de editor opent, en lege/laad-/foutstaat.
-- [ ] T014 [P] [US1] Maak `src/components/content/IdeaEditorDialog.tsx` op basis van `PostEditorDialog.tsx`: titel, soort, status, idee-tekst, bron-URL en notities; behoud tekenteller, hook-preview, "Kopieer tekst", Ctrl/Cmd+S, in-app sluit- en verwijderbevestiging; verwijder Format/Datum/Tijd/LinkedIn-URL en de bijbehorende meldingen.
-- [ ] T015 [US1] Herschrijf `src/components/content/ContentView.tsx` naar de shell met een toegankelijke tablist ("Ideeën" default, "Overzicht" voorlopig als leeg paneel), `usePillars()`/`usePosts()`, `pillarById`, editor-state en de composer/lijst/editor; voeg de `data-testid`-haken uit `contracts/ui-components.md` toe.
-- [ ] T016 [US1] Verwijder `src/components/content/PostEditorDialog.tsx` zodra `IdeaEditorDialog` alle gebruiken heeft overgenomen.
+- [x] T012 [P] [US1] Maak `src/components/content/IdeaComposer.tsx`: titel (autofocus, verplicht), contentsoort, idee-tekst; bron-URL en notities achter "Meer details"; Enter in titel en Ctrl/Cmd+Enter submit, geen submit vanuit de tekstarea; pending-blokkade, inline titelfout, leegmaken + focus + toast na succes, inhoud behouden bij fout.
+- [x] T013 [P] [US1] Maak `src/components/content/IdeaList.tsx`: alle posts nieuwste eerst, kleurstip + soortnaam of "Geen soort", statusbadge, aanmaakdatum via `formatIdeaDate`, archiefmarkering, toetsenbord-bedienbare rij die de editor opent, en lege/laad-/foutstaat.
+- [x] T014 [P] [US1] Maak `src/components/content/IdeaEditorDialog.tsx` op basis van `PostEditorDialog.tsx`: titel, soort, status, idee-tekst, bron-URL en notities; behoud tekenteller, hook-preview, "Kopieer tekst", Ctrl/Cmd+S, in-app sluit- en verwijderbevestiging; verwijder Format/Datum/Tijd/LinkedIn-URL en de bijbehorende meldingen.
+- [x] T015 [US1] Herschrijf `src/components/content/ContentView.tsx` naar de shell met een toegankelijke tablist ("Ideeën" default, "Overzicht" voorlopig als leeg paneel), `usePillars()`/`usePosts()`, `pillarById`, editor-state en de composer/lijst/editor; voeg de `data-testid`-haken uit `contracts/ui-components.md` toe.
+- [x] T016 [US1] Verwijder `src/components/content/PostEditorDialog.tsx` zodra `IdeaEditorDialog` alle gebruiken heeft overgenomen.
 - [ ] T017 [US1] Draai `npx playwright test tests/e2e/content-ideas.spec.ts` (of de US1-scenario's handmatig via `quickstart.md` stap 2 en 4) en los fouten op.
 
 **Checkpoint**: US1 is volledig bruikbaar en onafhankelijk getest; dit is de MVP.
@@ -85,13 +85,13 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Voeg in `tests/e2e/content-ideas.spec.ts` de US3-tests toe: soort aanmaken, kleur/naam wijzigen, archiveren, niet meer kiesbaar in de composer, wel zichtbaar met "(gearchiveerd)" in de lijst, heractiveren; controleer dat geen weekdag-/tijdvelden bestaan. De overzichtscontrole hoort bij T023 (US2).
+- [x] T018 [P] [US3] Voeg in `tests/e2e/content-ideas.spec.ts` de US3-tests toe: soort aanmaken, kleur/naam wijzigen, archiveren, niet meer kiesbaar in de composer, wel zichtbaar met "(gearchiveerd)" in de lijst, heractiveren; controleer dat geen weekdag-/tijdvelden bestaan. De overzichtscontrole hoort bij T023 (US2).
 
 ### Implementation for User Story 3
 
-- [ ] T019 [P] [US3] Herschrijf `src/components/content/PillarsDialog.tsx`: props `ContentPillar[]`, titel "Contentsoorten", nieuwe soort (naam + kleur), bestaande soort bewerken (naam, doelgroep, beschrijving, kleurkeuze), archiveren/heractiveren; verwijder alle `ContentSlot`-, weekdag-, tijd- en `upsertSlot`/`deleteSlot`-code.
-- [ ] T020 [US3] Werk `src/components/content/ContentView.tsx` bij: "Soorten"-knop en `PillarsDialog` wiring; geef de composer alleen niet-gearchiveerde soorten en de editor de actieve soorten plus de huidige (mogelijk gearchiveerde) soort.
-- [ ] T021 [US3] Controleer en test in `src/actions/content.ts` dat `createPost` en een gewijzigde `pillar_id` in `updatePost` een gearchiveerde of onbekende soort weigeren, terwijl een bestaande gearchiveerde soort bij een ongewijzigde post mag blijven.
+- [x] T019 [P] [US3] Herschrijf `src/components/content/PillarsDialog.tsx`: props `ContentPillar[]`, titel "Contentsoorten", nieuwe soort (naam + kleur), bestaande soort bewerken (naam, doelgroep, beschrijving, kleurkeuze), archiveren/heractiveren; verwijder alle `ContentSlot`-, weekdag-, tijd- en `upsertSlot`/`deleteSlot`-code.
+- [x] T020 [US3] Werk `src/components/content/ContentView.tsx` bij: "Soorten"-knop en `PillarsDialog` wiring; geef de composer alleen niet-gearchiveerde soorten en de editor de actieve soorten plus de huidige (mogelijk gearchiveerde) soort.
+- [x] T021 [US3] Controleer en test in `src/actions/content.ts` dat `createPost` en een gewijzigde `pillar_id` in `updatePost` een gearchiveerde of onbekende soort weigeren, terwijl een bestaande gearchiveerde soort bij een ongewijzigde post mag blijven.
 - [ ] T022 [US3] Draai `npx playwright test tests/e2e/content-ideas.spec.ts` (of `quickstart.md` stap 5) en los fouten op.
 
 **Checkpoint**: Soortenbeheer is volledig, zonder restanten van de kalender.
@@ -106,12 +106,12 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Voeg in `tests/e2e/content-ideas.spec.ts` de US2-tests toe: aantallen per unieke soort, 0-soort zichtbaar, "Geen soort" bij een idee zonder soort, totaal, directe update na toevoegen, een gearchiveerde soort met archiefmarkering en het juiste aantal, en een 375px-viewport zonder horizontaal scrollen — met assertions per `data-testid`/`data-pillar-id`.
+- [x] T023 [P] [US2] Voeg in `tests/e2e/content-ideas.spec.ts` de US2-tests toe: aantallen per unieke soort, 0-soort zichtbaar, "Geen soort" bij een idee zonder soort, totaal, directe update na toevoegen, een gearchiveerde soort met archiefmarkering en het juiste aantal, en een 375px-viewport zonder horizontaal scrollen — met assertions per `data-testid`/`data-pillar-id`.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Maak `src/components/content/ContentOverview.tsx`: rijen uit `counts.rows` (alle soorten, ook 0), "Geen soort" alleen bij `unassigned > 0`, totaalrij, archiefmarkering, optionele relatieve balk met het aantal als primaire tekst, lege staat met verwijzing naar soortenbeheer, en de `data-testid`-haken.
-- [ ] T025 [US2] Werk `src/components/content/ContentView.tsx` bij: bereken `counts` met `useMemo(() => countIdeasByPillar(posts, pillars))` en render `ContentOverview` in het "Overzicht"-tabpaneel.
+- [x] T024 [P] [US2] Maak `src/components/content/ContentOverview.tsx`: rijen uit `counts.rows` (alle soorten, ook 0), "Geen soort" alleen bij `unassigned > 0`, totaalrij, archiefmarkering, optionele relatieve balk met het aantal als primaire tekst, lege staat met verwijzing naar soortenbeheer, en de `data-testid`-haken.
+- [x] T025 [US2] Werk `src/components/content/ContentView.tsx` bij: bereken `counts` met `useMemo(() => countIdeasByPillar(posts, pillars))` en render `ContentOverview` in het "Overzicht"-tabpaneel.
 - [ ] T026 [US2] Draai `npx playwright test tests/e2e/content-ideas.spec.ts` (of `quickstart.md` stap 5) en los fouten op.
 
 **Checkpoint**: US1, US3 en US2 werken samen; het overzicht is direct na mutaties actueel.
@@ -126,12 +126,12 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] Maak `tests/fixtures/legacy-content.sql` met een idempotente insert van één post met een vaste titel, `planned_date`, `planned_time`, `format`, `linkedin_url`, `scheduled_on_linkedin_at` en status `gepland`, plus cleanup-regels; voeg in `tests/e2e/content-ideas.spec.ts` een preservatietest toe die na het toepassen van de fixture de titel in de lijst en het totaal vindt, de vier verboden velden niet ziet, en faalt als de fixture ontbreekt.
+- [x] T027 [P] [US4] Maak `tests/fixtures/legacy-content.sql` met een idempotente insert van één post met een vaste titel, `planned_date`, `planned_time`, `format`, `linkedin_url`, `scheduled_on_linkedin_at` en status `gepland`, plus cleanup-regels; voeg in `tests/e2e/content-ideas.spec.ts` een preservatietest toe die na het toepassen van de fixture de titel in de lijst en het totaal vindt, de vier verboden velden niet ziet, en faalt als de fixture ontbreekt.
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Controleer en harden (verificatie van T006) `src/lib/content/queries.ts`/`src/hooks/useContent.ts`: `fetchPosts` heeft geen datumfilter, haalt alle pagina's op en sorteert stabiel op `created_at DESC` + `id`.
-- [ ] T029 [US4] Controleer en harden (verificatie van T008) `src/actions/content.ts`: `createPost`/`updatePost` gebruiken `buildPostWritePayload` en schrijven nooit naar `format`, `planned_date`, `planned_time`, `linkedin_url` of `scheduled_on_linkedin_at`, ook niet bij een gedeeltelijke patch; voeg een regressietest toe als die nog ontbreekt.
+- [x] T028 [US4] Controleer en harden (verificatie van T006) `src/lib/content/queries.ts`/`src/hooks/useContent.ts`: `fetchPosts` heeft geen datumfilter, haalt alle pagina's op en sorteert stabiel op `created_at DESC` + `id`.
+- [x] T029 [US4] Controleer en harden (verificatie van T008) `src/actions/content.ts`: `createPost`/`updatePost` gebruiken `buildPostWritePayload` en schrijven nooit naar `format`, `planned_date`, `planned_time`, `linkedin_url` of `scheduled_on_linkedin_at`, ook niet bij een gedeeltelijke patch; voeg een regressietest toe als die nog ontbreekt.
 - [ ] T030 [US4] Voer `quickstart.md` stap 6 uit met de fixture en de bestaande data en noteer het resultaat in de commit message of het verificatieblok van `quickstart.md` (lijst = totaal, geen verboden velden, bestaande waarden niet gewijzigd).
 
 **Checkpoint**: Alle vier user stories zijn functioneel en bestaande data is aantoonbaar behouden.
@@ -142,17 +142,17 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 
 **Purpose**: Kalenderresten verwijderen, kwaliteit borgen en de feature afronden.
 
-- [ ] T031 Verwijder `src/components/content/MonthGrid.tsx`, `src/components/content/DayCell.tsx`, `src/components/content/SlotPlaceholder.tsx`, `src/components/content/PostChip.tsx` en `src/components/content/IdeasPanel.tsx`.
-- [ ] T032 Verwijder `src/lib/content/calendar.ts`.
-- [ ] T033 Verwijder `tests/e2e/content-calendar.spec.ts` en `tests/e2e/content-calendar-logic.spec.ts`.
-- [ ] T034 Werk `src/components/layout/AppShell.tsx` bij: het nav-item "Content" blijft direct onder "Uren"; vervang het kalendericoon door een lichtbol-/idee-icoon (FR-002/FR-003: geen kalenderassociatie meer).
-- [ ] T035 [P] Draai `npx tsc --noEmit` en `npm run lint`; los alle fouten en warnings op (ESLint met `--max-warnings 0`).
+- [x] T031 Verwijder `src/components/content/MonthGrid.tsx`, `src/components/content/DayCell.tsx`, `src/components/content/SlotPlaceholder.tsx`, `src/components/content/PostChip.tsx` en `src/components/content/IdeasPanel.tsx`.
+- [x] T032 Verwijder `src/lib/content/calendar.ts`.
+- [x] T033 Verwijder `tests/e2e/content-calendar.spec.ts` en `tests/e2e/content-calendar-logic.spec.ts`.
+- [x] T034 Werk `src/components/layout/AppShell.tsx` bij: het nav-item "Content" blijft direct onder "Uren"; vervang het kalendericoon door een lichtbol-/idee-icoon (FR-002/FR-003: geen kalenderassociatie meer).
+- [x] T035 [P] Draai `npx tsc --noEmit` en `npm run lint`; los alle fouten en warnings op (ESLint met `--max-warnings 0`).
 - [ ] T036 [P] Draai de volledige Playwright-suite `npx playwright test`; los regressies op en bevestig dat de login-gated tests netjes skippen.
-- [ ] T037 Werk `FEATURES.md` bij via de feature-tracker met de nieuwe content-ideeënfeature, verwijderde kalender en migratie 025.
-- [ ] T038 Draai de fitness-check (`scripts/fitness-check.sh`, Supabase MCP F-01 voor RLS, Snyk SAST/SCA) en werk `FITNESS.md` bij.
-- [ ] T039 [P] Doe een laatste grep-controle: geen `calendar`, `planned_date`, `planned_time`, `linkedin_url`, `post.format`, `ContentFormat`, `movePost`, `upsertSlot` of `@dnd-kit`-imports meer in `src/components/content/`, `src/lib/content/` en `src/actions/content.ts`, behalve de gedocumenteerde legacy-types; sluit `formatIdeaDate` uit van de `format`-check.
+- [x] T037 Werk `FEATURES.md` bij via de feature-tracker met de nieuwe content-ideeënfeature, verwijderde kalender en migratie 025.
+- [x] T038 Draai de fitness-check (`scripts/fitness-check.sh`, Supabase MCP F-01 voor RLS, Snyk SAST/SCA) en werk `FITNESS.md` bij.
+- [x] T039 [P] Doe een laatste grep-controle: geen `calendar`, `planned_date`, `planned_time`, `linkedin_url`, `post.format`, `ContentFormat`, `movePost`, `upsertSlot` of `@dnd-kit`-imports meer in `src/components/content/`, `src/lib/content/` en `src/actions/content.ts`, behalve de gedocumenteerde legacy-types; sluit `formatIdeaDate` uit van de `format`-check.
 - [ ] T040 Voer de handmatige `quickstart.md`-checklist uit op desktop en 375 px en bevestig alle FR/SC-punten.
-- [ ] T041 Commit met een conventionele message, bijvoorbeeld `feat(content): ideeënbank met twee views en overzicht per soort`.
+- [x] T041 Commit met een conventionele message, bijvoorbeeld `feat(content): ideeënbank met twee views en overzicht per soort`.
 
 ---
 
