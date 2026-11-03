@@ -8,30 +8,19 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { PILLAR_COLOR_KEYS, pillarColors } from '@/components/content/colors'
 import { useToast } from '@/components/ui/toast'
-import { useCreatePillar, useDeleteSlot, useSetPillarArchived, useUpdatePillar, useUpsertSlot } from '@/hooks/useContent'
-import type { PillarWithSlots } from '@/lib/content/queries'
-import type { ContentSlot, PillarColor } from '@/types/database.types'
-
-const WEEKDAYS: { weekday: number; label: string }[] = [
-  { weekday: 1, label: 'Ma' },
-  { weekday: 2, label: 'Di' },
-  { weekday: 3, label: 'Wo' },
-  { weekday: 4, label: 'Do' },
-  { weekday: 5, label: 'Vr' },
-  { weekday: 6, label: 'Za' },
-  { weekday: 7, label: 'Zo' },
-]
+import { useCreatePillar, useSetPillarArchived, useUpdatePillar } from '@/hooks/useContent'
+import type { ContentPillar, PillarColor } from '@/types/database.types'
 
 interface PillarsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  pillars: PillarWithSlots[]
+  pillars: ContentPillar[]
 }
 
 /**
- * Beheer van contentsoorten en weekslots (US1): naam/doelgroep/beschrijving,
- * kleurkeuze uit 8 vaste kleuren, archiveren (niet verwijderen) en per soort
- * zeven dag-chips (ma t/m zo) met een eigen tijd (standaard 08:00).
+ * Beheer van contentsoorten (US3): naam/doelgroep/beschrijving, kleurkeuze uit
+ * 8 vaste kleuren, archiveren (niet verwijderen) en heractiveren. Weekslots,
+ * weekdagen en tijden horen niet meer bij een soort (FR-018 t/m FR-022).
  */
 export function PillarsDialog({ open, onOpenChange, pillars }: PillarsDialogProps) {
   const [newName, setNewName] = useState('')
@@ -51,6 +40,7 @@ export function PillarsDialog({ open, onOpenChange, pillars }: PillarsDialogProp
         onSuccess: (result) => {
           if (result.success) {
             setNewName('')
+            toast({ title: 'Contentsoort aangemaakt' })
           } else {
             toast({ title: 'Fout', description: result.error, variant: 'destructive' })
           }
@@ -63,29 +53,33 @@ export function PillarsDialog({ open, onOpenChange, pillars }: PillarsDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className="w-full max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Soorten &amp; slots</DialogTitle>
+          <DialogTitle>Contentsoorten</DialogTitle>
           <DialogDescription>
-            Contentsoorten bepalen welke lege slots de kalender toont. Per soort kies je weekdagen met een vast tijdslot.
+            Contentsoorten groeperen je ideeën en bepalen de kleur in de lijst en het overzicht.
           </DialogDescription>
         </DialogHeader>
-        <DialogContent className="space-y-4">
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Nieuwe contentsoort</label>
+        <DialogContent className="space-y-4" data-testid="pillars-dialog">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[12rem] flex-1">
+              <label htmlFor="pillar-new-name" className="mb-1 block text-xs font-medium text-muted-foreground">
+                Nieuwe contentsoort
+              </label>
               <Input
+                id="pillar-new-name"
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
+                onChange={(event) => setNewName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
                     handleAdd()
                   }
                 }}
                 placeholder="Bijv. Praktijk financieel adviseurs"
+                data-testid="pillar-new-name"
               />
             </div>
             <ColorSwatches selected={newColor} onSelect={setNewColor} />
-            <Button type="button" onClick={handleAdd} disabled={createPillar.isPending}>
+            <Button type="button" onClick={handleAdd} disabled={createPillar.isPending} data-testid="pillar-add">
               Toevoegen
             </Button>
           </div>
@@ -122,14 +116,13 @@ function ColorSwatches({ selected, onSelect }: { selected: PillarColor; onSelect
   )
 }
 
-function PillarRow({ pillar }: { pillar: PillarWithSlots }) {
+function PillarRow({ pillar }: { pillar: ContentPillar }) {
   const [name, setName] = useState(pillar.name)
   const [audience, setAudience] = useState(pillar.audience ?? '')
   const [description, setDescription] = useState(pillar.description ?? '')
+  const [color, setColor] = useState<PillarColor>(pillar.color)
   const updatePillar = useUpdatePillar()
   const setArchived = useSetPillarArchived()
-  const upsertSlot = useUpsertSlot()
-  const deleteSlot = useDeleteSlot()
   const { toast } = useToast()
 
   // Resync na serverwijziging (updated_at verandert bij elke opslag)
@@ -137,79 +130,78 @@ function PillarRow({ pillar }: { pillar: PillarWithSlots }) {
     setName(pillar.name)
     setAudience(pillar.audience ?? '')
     setDescription(pillar.description ?? '')
+    setColor(pillar.color)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync alleen bij serverwijziging, niet bij elke render
   }, [pillar.updated_at, pillar.id])
 
-  const dirty = name !== pillar.name || audience !== (pillar.audience ?? '') || description !== (pillar.description ?? '')
-  const slotByWeekday = new Map<number, ContentSlot>(pillar.slots.map((s) => [s.weekday, s]))
+  const dirty =
+    name !== pillar.name ||
+    audience !== (pillar.audience ?? '') ||
+    description !== (pillar.description ?? '') ||
+    color !== pillar.color
 
   const handleSaveDetails = () => {
     updatePillar.mutate(
-      { pillarId: pillar.id, patch: { name, audience: audience || null, description: description || null } },
+      {
+        pillarId: pillar.id,
+        patch: { name, audience: audience || null, description: description || null, color },
+      },
       {
         onSuccess: (result) => {
-          if (!result.success) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+          if (result.success) {
+            toast({ title: 'Opgeslagen' })
+          } else {
+            toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+          }
         },
       },
     )
   }
 
-  const handleDayToggle = (weekday: number) => {
-    const slot = slotByWeekday.get(weekday)
-    upsertSlot.mutate(
-      { pillarId: pillar.id, weekday, time: displaySlotTime(slot?.post_time) ?? '08:00', active: !(slot?.active ?? false) },
+  const handleArchiveToggle = () => {
+    setArchived.mutate(
+      { pillarId: pillar.id, archived: !pillar.archived },
       {
         onSuccess: (result) => {
-          if (!result.success) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+          if (result.success) {
+            toast({ title: result.data.archived ? 'Gearchiveerd' : 'Heractiveerd' })
+          } else {
+            toast({ title: 'Fout', description: result.error, variant: 'destructive' })
+          }
         },
       },
     )
-  }
-
-  const handleTimeChange = (weekday: number, time: string) => {
-    if (!time) return
-    upsertSlot.mutate(
-      { pillarId: pillar.id, weekday, time, active: true },
-      {
-        onSuccess: (result) => {
-          if (!result.success) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-        },
-      },
-    )
-  }
-
-  const handleRemoveDay = (weekday: number) => {
-    const slot = slotByWeekday.get(weekday)
-    if (!slot) return
-    deleteSlot.mutate(slot.id, {
-      onSuccess: (result) => {
-        if (!result.success) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-      },
-    })
   }
 
   return (
     <div
-      className={cn(
-        'rounded-lg border p-3',
-        pillar.archived && 'opacity-60',
-      )}
+      className={cn('rounded-lg border p-3', pillar.archived && 'opacity-60')}
+      data-testid="pillar-row"
+      data-pillar-id={pillar.id}
     >
-      <div className="flex items-end gap-2">
-        <div className="flex-1 space-y-2">
-          <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Naam" />
-          <div className="flex gap-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[12rem] flex-1 space-y-2">
+          <label className="sr-only" htmlFor={`pillar-name-${pillar.id}`}>Naam</label>
+          <Input
+            id={`pillar-name-${pillar.id}`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            aria-label="Naam"
+          />
+          <div className="flex flex-wrap gap-2">
             <Input
               value={audience}
-              onChange={(e) => setAudience(e.target.value)}
+              onChange={(event) => setAudience(event.target.value)}
               placeholder="Doelgroep"
-              className="h-8 text-xs"
+              aria-label="Doelgroep"
+              className="h-8 flex-1 text-xs"
             />
             <Input
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(event) => setDescription(event.target.value)}
               placeholder="Korte beschrijving"
-              className="h-8 text-xs"
+              aria-label="Korte beschrijving"
+              className="h-8 flex-1 text-xs"
             />
           </div>
         </div>
@@ -219,17 +211,9 @@ function PillarRow({ pillar }: { pillar: PillarWithSlots }) {
           </Button>
           <button
             type="button"
-            onClick={() =>
-              setArchived.mutate(
-                { pillarId: pillar.id, archived: !pillar.archived },
-                {
-                  onSuccess: (result) => {
-                    if (!result.success) toast({ title: 'Fout', description: result.error, variant: 'destructive' })
-                  },
-                },
-              )
-            }
+            onClick={handleArchiveToggle}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            data-testid="pillar-archive-toggle"
           >
             {pillar.archived ? <RotateCcw className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
             {pillar.archived ? 'Heractiveren' : 'Archiveren'}
@@ -238,52 +222,10 @@ function PillarRow({ pillar }: { pillar: PillarWithSlots }) {
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {WEEKDAYS.map(({ weekday, label }) => {
-          const slot = slotByWeekday.get(weekday)
-          const active = slot?.active ?? false
-          return (
-            <div key={weekday} className="flex items-center">
-              <button
-                type="button"
-                onClick={() => handleDayToggle(weekday)}
-                className={cn(
-                  'h-7 min-w-8 rounded-md border px-1.5 text-xs',
-                  active
-                    ? cn('border-transparent font-medium', pillarColors[pillar.color].dot, 'text-white')
-                    : 'text-muted-foreground hover:bg-accent',
-                )}
-                title={active ? `${label} uitzetten` : `${label} aanzetten`}
-              >
-                {label}
-              </button>
-              {active && slot && (
-                <>
-                  <input
-                    type="time"
-                    value={displaySlotTime(slot.post_time) ?? '08:00'}
-                    onChange={(e) => handleTimeChange(weekday, e.target.value)}
-                    onBlur={(e) => handleTimeChange(weekday, e.target.value)}
-                    className="h-7 w-[5.5rem] rounded-md border border-input bg-transparent px-1 text-xs"
-                    aria-label={`Tijd ${label}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveDay(weekday)}
-                    className="ml-0.5 text-xs text-muted-foreground hover:text-destructive"
-                    title="Dag verwijderen"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
-            </div>
-          )
-        })}
+        <span className="mr-1 text-[11px] text-muted-foreground">Kleur</span>
+        <ColorSwatches selected={color} onSelect={setColor} />
+        {pillar.archived && <span className="ml-2 text-[11px] text-muted-foreground">(gearchiveerd)</span>}
       </div>
     </div>
   )
-}
-
-function displaySlotTime(time: string | null | undefined): string | null {
-  return time ? time.slice(0, 5) : null
 }

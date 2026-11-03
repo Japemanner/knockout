@@ -2,6 +2,35 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## content-ideeën (2026-11-03)
+
+**Spec**: `specs/026-content-ideas-views/spec.md`
+**Branch**: `026-content-ideas-views`
+
+De content-feature is losgekoppeld van de kalender en omgevormd tot een ideeënbank met twee views op `/content`. "Ideeën" (default) heeft een compact vastlegformulier (titel verplicht; soort, idee-tekst, bron-URL en notities optioneel) met Enter/Ctrl+Cmd+Enter, plus een lijst van alle bewaarde ideeën, nieuwste bovenaan. "Overzicht" toont per contentsoort het aantal ideeën, inclusief 0-soorten, archiefmarkering, "Geen soort" en een totaal. De kalender (maandraster, weekslots, slepen, verlopen-markeringen) is verwijderd; Format, Datum, Tijd en LinkedIn-URL komen niet meer in de UI voor. Bestaande data blijft behouden: migratie `025_content_ideas.sql` dropt alleen de datum/tijd-constraint, verwijdert de DELETE-policy op `kk_content_pillars` (archiveren is de enige weg) en voegt een index toe. De migratie is via Supabase MCP toegepast op project `ythjnatklbnjtvvgpwlr`; constraint en delete-policy zijn weg, de index bestaat en RLS staat aan op alle drie content-tabellen. `buildPostWritePayload` is de whitelist die voorkomt dat insert/update ooit een legacy-kolom raakt. Status blijft een optioneel label; alleen de datum/tijd/URL-eisen vervallen. De preservatietest gebruikt `tests/fixtures/legacy-content.sql`.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/025_content_ideas.sql` — constraint-drop, pillar-DELETE-policy-drop, index `(user_id, created_at DESC)`; idempotent en toegepast
+- `src/lib/content/ideas.ts` — pure logica: tellen per soort, statusregels, whitelist, tekenteller/hook-preview, datumlabel
+- `src/components/content/IdeaComposer.tsx`, `IdeaList.tsx`, `ContentOverview.tsx`, `IdeaEditorDialog.tsx`
+- `tests/e2e/content-ideas-logic.spec.ts` — 21 unit-tests
+- `tests/e2e/content-ideas.spec.ts` — 11 E2E-tests met login-skip-guards
+- `tests/fixtures/legacy-content.sql` — deterministische preservatiefixture
+
+**Aangepaste bestanden**:
+- `src/components/content/ContentView.tsx` — twee toegankelijke tabbladen, composer/lijst/overzicht, dialogs
+- `src/components/content/PillarsDialog.tsx` — soortenbeheer zonder weekdagen/tijden, kleur bewerken, archiveren
+- `src/lib/content/queries.ts` — `fetchPillars`/`fetchPosts` (alle posts, paginering in batches van 1.000, geen datumfilter)
+- `src/hooks/useContent.ts` — usePillars/usePosts + 6 mutaties met cache-update en invalidatie
+- `src/actions/content.ts` — createPost/updatePost via whitelist; server-side archiefcontrole; slot-/move-actions verwijderd
+- `src/app/(dashboard)/content/page.tsx` — SSR-prefetch pillars + posts
+- `src/components/layout/AppShell.tsx` — Content-icoon naar Lightbulb
+- `src/components/ui/select.tsx` — id/aria/data-attributen doorgeven
+- `src/types/database.types.ts` — legacy-kolommen gedocumenteerd
+- Verwijderd: MonthGrid, DayCell, SlotPlaceholder, PostChip, IdeasPanel, PostEditorDialog, `calendar.ts`, oude kalendertests
+
+**Test**: `tests/e2e/content-ideas-logic.spec.ts` 21/21 groen. `tests/e2e/content-ideas.spec.ts` 11 tests geschreven; zonder login-sessie overgeslagen. `npx tsc --noEmit`, `npx eslint src/ --max-warnings 0` en `npm run build` groen. Volledige Playwright-suite: 137 passed / 75 skipped / 0 failed. Fitness-check: FAIL:0 WARN:2 PASS:11 SKIP:5 (F-03 createClient-telling en F-15 historisch commit-formaat zijn pre-existing).
+
 ## crud-categorie-beheer (2026-11-03)
 
 **Spec**: `specs/027-crud-categorie-beheer/spec.md`

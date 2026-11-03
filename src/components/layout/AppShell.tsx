@@ -30,7 +30,7 @@ import {
   Hexagon,
   TrendingUp,
   Clock,
-  CalendarDays,
+  Lightbulb,
   Mail,
   Send,
   Eye
@@ -41,7 +41,7 @@ const navItems = [
   { href: '/boards', label: 'Borden', icon: Columns3, external: false },
   { href: '/crud', label: 'CRUD', icon: Database, external: false },
   { href: '/uren', label: 'Uren', icon: Clock, external: false },
-  { href: '/content', label: 'Content', icon: CalendarDays, external: false },
+  { href: '/content', label: 'Content', icon: Lightbulb, external: false },
   { href: '/db', label: 'Database', icon: Database, external: false, adminOnly: true },
   { href: '/team', label: 'Team', icon: Users, external: false },
   { href: '/settings', label: 'Instellingen', icon: Settings, external: false },

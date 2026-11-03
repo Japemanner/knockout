@@ -304,11 +304,14 @@ export interface ContentPost {
   pillar_id: string | null
   title: string
   body: string
+  // Legacy (feature 023): de content-ideeën-UI leest/schrijft dit veld niet meer.
   format: ContentFormat
   status: ContentStatus
-  planned_date: string | null // 'YYYY-MM-DD'; null = ideeënbak
+  // Legacy: datum/tijd horen niet meer bij een idee.
+  planned_date: string | null // 'YYYY-MM-DD'; null = geen planning
   planned_time: string | null // 'HH:mm:ss' uit PostgreSQL time
   source_url: string | null
+  // Legacy: LinkedIn-URL en inplanmoment worden niet meer getoond of bewerkt.
   linkedin_url: string | null
   notes: string | null
   scheduled_on_linkedin_at: string | null

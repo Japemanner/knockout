@@ -1,3 +1,58 @@
+# Fitness Check — 026-content-ideas-views
+
+**Feature**: 026-content-ideas-views
+**Datum**: 2026-11-03
+**Status**: SHIP — migratie 025 is via Supabase MCP toegepast; constraint en pillar-DELETE-policy weg, index bestaat, RLS aan. E2E met login nog uitvoeren; logicatests, tsc, eslint en build zijn groen.
+
+---
+
+## Uitgevoerde checks
+
+| Check | Resultaat | Observatie |
+|-------|-----------|------------|
+| F-01 RLS (Supabase MCP) | PASS | `pg_class.relrowsecurity = true` op `kk_content_posts`, `kk_content_pillars` en `kk_content_slots`; `kk_content_posts_datetime_required` en de pillar-DELETE-policy bestaan niet meer; `idx_kk_content_posts_user_created` bestaat. |
+| F-02 Geen secrets in client | PASS | Geen nieuwe env-waarden; actions gebruiken `getAuthenticatedClient()`. |
+| F-03 Supabase client instances | WARN | Heuristiek telt 25× createClient (pre-existing). Nieuwe code hergebruikt de bestaande browser/server-clients. |
+| F-04 PKCE flow | PASS | Onveranderd. |
+| F-05 Netlify config | PASS | Onveranderd. |
+| F-06 TypeScript strict | PASS | Onveranderd. |
+| F-07 TypeScript compileert | PASS | `npx tsc --noEmit` — 0 errors. |
+| F-08 Geen unjustified `any` | PASS | Geen nieuwe `any`; bestaande `UntypedClient`-annotatie in `queries.ts` blijft geannoteerd. |
+| F-09 Geen admin client | PASS | Alleen user-scoped acties onder RLS. |
+| F-10 Storage buckets | SKIP | Geen storage in deze feature. |
+| F-11 Geen waitForTimeout in tests | PASS | Nieuwe tests gebruiken geen waitForTimeout. |
+| F-12 .env.local in .gitignore | PASS | Onveranderd. |
+| F-13 .env.example bestaat | PASS | Onveranderd. |
+| F-14 Geen DOM-manipulatie | PASS | Tabfocus via React-refs; geen directe DOM-calls. |
+| F-15 Conventional commits | WARN | Feature-commit `feat(content): …` is conventioneel; 1 historische commit in de laatste 5 wijkt af (pre-existing). |
+| F-16 Snyk SAST | SKIP | Snyk MCP niet beschikbaar in deze sessie. |
+| F-17 Snyk SCA | SKIP | Geen nieuwe dependencies; package.json ongewijzigd. |
+| F-18 Commit-msg hook | PASS | `feat(content): ideeënbank met twee views en overzicht per soort` geaccepteerd. |
+
+**Lokale fitness-run** (2026-11-03): FAIL:0 WARN:2 PASS:11 SKIP:5 — 0 blocking. Warns zijn pre-existing (F-03 createClient-telling, F-15 historisch commit-formaat).
+
+## Architectuur-conformiteit
+
+- [x] Geen nieuwe dependencies — hergebruik bestaande shadcn/ui, lucide-react, React Query en `getAuthenticatedClient`
+- [x] Niet-destructieve migratie: alleen constraint/policy/index; geen kolommen of rijen verwijderd
+- [x] RLS op alle content-tabellen; pillar-DELETE-policy verwijderd zodat archiveren de enige weg is
+- [x] `buildPostWritePayload` whitelist voorkomt schrijfacties op legacy-kolommen
+- [x] SSR-prefetch + browser-reads + React Query-invalidatie; geen `revalidatePath`
+- [x] Supabase-paginering in batches van 1.000 voor lijst en tellingen
+- [x] Datumlabel met vaste `Europe/Amsterdam`-tijdzone tegen hydration-mismatch
+- [x] Regressietests: 21 logicatests groen; 11 E2E-tests login-gated
+
+## Tests
+
+- `tests/e2e/content-ideas-logic.spec.ts` (nieuw): 21/21 groen — tellingen, statusregels, whitelist, tekst en datumlabel.
+- `tests/e2e/content-ideas.spec.ts` (nieuw): 11 tests geschreven; zonder login-sessie overgeslagen (bestaand skip-patroon).
+- `npx tsc --noEmit`: 0 errors.
+- `npx eslint src/ --max-warnings 0`: 0 warnings.
+- `npm run build`: geslaagd (content-route 10.8 kB, 19/19 statische pagina's).
+- Volledige Playwright-suite (2026-11-03): 137 passed / 75 skipped (login-gated) / 0 failed. De nieuwe content-E2E dekt opslaan+reload, tellingen, soortenbeheer, status zonder datum/tijd, bevestigingen, retry, mobiel 375 px en de legacy-fixture; met een login-sessie worden die 11 tests uitgevoerd in plaats van overgeslagen.
+
+---
+
 # Fitness Check — 025-crud-categorie-sync
 
 **Feature**: 025-crud-categorie-sync
