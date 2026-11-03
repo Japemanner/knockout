@@ -2,6 +2,7 @@ import { createClient, getUserId } from '@/lib/supabase/server'
 import { CreateCrudButton } from '@/components/crud/CreateCrudButton'
 import { CrudOverviewCard } from '@/components/crud/CrudOverviewCard'
 import { CategoryTabs } from '@/components/crud/CategoryTabs'
+import { CategoryManagerDialog } from '@/components/crud/CategoryManagerDialog'
 import type { CRUDOverview } from '@/types/database.types'
 
 export default async function CrudPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
@@ -31,14 +32,31 @@ export default async function CrudPage({ searchParams }: { searchParams: Promise
     ? allOverviews.filter((o) => o.category_id === activeCategory)
     : allOverviews
 
+  const overviewCountByCategory = new Map<string, number>()
+  for (const overview of allOverviews) {
+    if (overview.category_id) {
+      overviewCountByCategory.set(
+        overview.category_id,
+        (overviewCountByCategory.get(overview.category_id) ?? 0) + 1
+      )
+    }
+  }
+  const categoriesWithCounts = categories.map((category) => ({
+    ...category,
+    overviewCount: overviewCountByCategory.get(category.id) ?? 0,
+  }))
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">CRUD</h1>
           <p className="text-muted-foreground">Je database overzichten</p>
         </div>
-        <CreateCrudButton categories={categories} defaultCategoryId={activeCategory} />
+        <div className="flex flex-wrap items-center gap-2">
+          <CategoryManagerDialog categories={categoriesWithCounts} activeCategoryId={activeCategory} />
+          <CreateCrudButton categories={categories} defaultCategoryId={activeCategory} />
+        </div>
       </div>
 
       <div className="mb-8">
