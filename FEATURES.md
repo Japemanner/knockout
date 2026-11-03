@@ -2,6 +2,25 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## crud-categorie-beheer (2026-11-03)
+
+**Spec**: `specs/027-crud-categorie-beheer/spec.md`
+**Branch**: `027-crud-categorie-beheer`
+
+Categorieën op het CRUD-tabblad worden centraal beheerd in plaats van per tab. In de paginakop staat naast "Nieuwe CRUD" een knop "Categorieën beheren" (altijd zichtbaar, geen hover) die een beheerpaneel opent met alle categorieën in aanmaakvolgorde, elk met naam en het aantal overzichten. In dat paneel maak je categorieën aan, hernoem je ze inline (Enter/Escape, validatie op lege/whitespace-namen) en verwijder je ze via een bevestigingsweergave **binnen hetzelfde paneel** die de categorienaam en het gevolg noemt; overzichten blijven bestaan onder "Alle" (`ON DELETE SET NULL`). Verwijder je de actieve categorie, dan valt de pagina terug op "Alle". De tabrij is daarna puur navigatie (geen `+`, potlood- of prullenbakiconen meer) en blijft één horizontale, scrollbare rij met "Alle" vooraan; het `?category=<id>`-filter en de voorinvulling bij "Nieuwe CRUD" zijn ongewijzigd. Het paneel is volledig touch-bedienbaar (375 px getest), scrollt intern bij veel categorieën en toont lange namen zonder de acties te verbergen. Geen migratie en geen nieuwe packages: de bestaande tabellen/RLS en server actions (`createCrudCategory`, `renameCrudCategory`, `deleteCrudCategory`) worden hergebruikt; tellingen worden server-side afgeleid uit de al geladen overzichten (geen extra query). De gedeelde `Dialog` kreeg `role="dialog"` + `aria-modal="true"` voor correcte modal-semantiek en betrouwbare testselectors.
+
+**Nieuwe bestanden**:
+- `src/components/crud/CategoryManagerDialog.tsx` — trigger-knop + beheerpaneel (lijst met tellingen, aanmaken, inline hernoemen, bevestigde verwijdering, toast + router.refresh)
+- `specs/027-crud-categorie-beheer/` — spec, plan, research, data-model, contracts, quickstart, tasks
+
+**Aangepaste bestanden**:
+- `src/app/(dashboard)/crud/page.tsx` — `overviewCount` per categorie via één Map-pass; responsive kop met actiegroep (Beheren + Nieuwe CRUD)
+- `src/components/crud/CategoryTabs.tsx` — server component, alleen navigatie; `+`-knop en hover-beheeracties verwijderd
+- `src/components/ui/dialog.tsx` — `role="dialog"` + `aria-modal="true"`
+- `tests/e2e/crud-categorieen.spec.ts` — herschreven zonder hover-helpers; 9 tests incl. 375 px-viewport en tellingstest
+
+**Test**: `tests/e2e/crud-categorieen.spec.ts` (9 e2e, login-gated; in deze omgeving 9 skipped wegens geen sessie). `npx tsc --noEmit`, `npx eslint … --max-warnings 0` en `npm run build` groen. RLS-basis geverifieerd via Supabase MCP: RLS aan op `kk_crud_categories` + `kk_crud_overviews`, 4 user-scoped policies, FK `ON DELETE SET NULL`. Handmatige 375 px-check en commit volgen nog.
+
 ## crud-categorie-sync (2026-10-29)
 
 **Spec**: `specs/025-crud-categorie-sync/spec.md`
