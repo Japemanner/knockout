@@ -29,7 +29,7 @@ De content-feature is losgekoppeld van de kalender en omgevormd tot een ideeënb
 - `src/types/database.types.ts` — legacy-kolommen gedocumenteerd
 - Verwijderd: MonthGrid, DayCell, SlotPlaceholder, PostChip, IdeasPanel, PostEditorDialog, `calendar.ts`, oude kalendertests
 
-**Test**: `tests/e2e/content-ideas-logic.spec.ts` 21/21 groen. `tests/e2e/content-ideas.spec.ts` 11 tests geschreven; zonder login-sessie overgeslagen. `npx tsc --noEmit`, `npx eslint src/ --max-warnings 0` en `npm run build` groen. Fitness-check: FAIL:0 WARN:2 PASS:11 SKIP:5 (F-03 createClient-telling en F-15 historisch commit-formaat zijn pre-existing).
+**Test**: `tests/e2e/content-ideas-logic.spec.ts` 21/21 groen. `tests/e2e/content-ideas.spec.ts` 11 tests geschreven; zonder login-sessie overgeslagen. `npx tsc --noEmit`, `npx eslint src/ --max-warnings 0` en `npm run build` groen. Volledige Playwright-suite: 137 passed / 75 skipped / 0 failed. Fitness-check: FAIL:0 WARN:2 PASS:11 SKIP:5 (F-03 createClient-telling en F-15 historisch commit-formaat zijn pre-existing).
 
 ## crud-categorie-sync (2026-10-29)
 

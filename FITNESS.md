@@ -49,7 +49,7 @@
 - `npx tsc --noEmit`: 0 errors.
 - `npx eslint src/ --max-warnings 0`: 0 warnings.
 - `npm run build`: geslaagd (content-route 10.8 kB, 19/19 statische pagina's).
-- Volledige Playwright-suite met login: nog uit te voeren; de nieuwe E2E dekt opslaan+reload, tellingen, soortenbeheer, status zonder datum/tijd, bevestigingen, retry, mobiel 375 px en de legacy-fixture.
+- Volledige Playwright-suite (2026-11-03): 137 passed / 75 skipped (login-gated) / 0 failed. De nieuwe content-E2E dekt opslaan+reload, tellingen, soortenbeheer, status zonder datum/tijd, bevestigingen, retry, mobiel 375 px en de legacy-fixture; met een login-sessie worden die 11 tests uitgevoerd in plaats van overgeslagen.
 
 ---
 

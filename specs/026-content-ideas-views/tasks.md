@@ -147,7 +147,7 @@ Single-project Next.js-app: `src/`, `supabase/`, `tests/` in de repository-root.
 - [x] T033 Verwijder `tests/e2e/content-calendar.spec.ts` en `tests/e2e/content-calendar-logic.spec.ts`.
 - [x] T034 Werk `src/components/layout/AppShell.tsx` bij: het nav-item "Content" blijft direct onder "Uren"; vervang het kalendericoon door een lichtbol-/idee-icoon (FR-002/FR-003: geen kalenderassociatie meer).
 - [x] T035 [P] Draai `npx tsc --noEmit` en `npm run lint`; los alle fouten en warnings op (ESLint met `--max-warnings 0`).
-- [ ] T036 [P] Draai de volledige Playwright-suite `npx playwright test`; los regressies op en bevestig dat de login-gated tests netjes skippen.
+- [x] T036 [P] Draai de volledige Playwright-suite `npx playwright test`; los regressies op en bevestig dat de login-gated tests netjes skippen.
 - [x] T037 Werk `FEATURES.md` bij via de feature-tracker met de nieuwe content-ideeënfeature, verwijderde kalender en migratie 025.
 - [x] T038 Draai de fitness-check (`scripts/fitness-check.sh`, Supabase MCP F-01 voor RLS, Snyk SAST/SCA) en werk `FITNESS.md` bij.
 - [x] T039 [P] Doe een laatste grep-controle: geen `calendar`, `planned_date`, `planned_time`, `linkedin_url`, `post.format`, `ContentFormat`, `movePost`, `upsertSlot` of `@dnd-kit`-imports meer in `src/components/content/`, `src/lib/content/` en `src/actions/content.ts`, behalve de gedocumenteerde legacy-types; sluit `formatIdeaDate` uit van de `format`-check.
