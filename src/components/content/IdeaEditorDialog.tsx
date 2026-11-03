@@ -8,37 +8,25 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import {
-  MAX_BODY_LENGTH,
-  charCount,
-  displayTime,
-  formatLabel,
-  hookPreview,
-  statusLabel,
-  validateStatusChange,
-} from '@/lib/content/calendar'
+import { MAX_BODY_LENGTH, charCount, hookPreview, statusLabel, validateStatusChange } from '@/lib/content/ideas'
 import { useDeletePost, useUpdatePost } from '@/hooks/useContent'
 import { useToast } from '@/components/ui/toast'
-import type { ContentFormat, ContentPost, ContentStatus } from '@/types/database.types'
+import type { ContentPost, ContentStatus } from '@/types/database.types'
 
-interface PostEditorDialogProps {
+interface IdeaEditorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   post: ContentPost
-  /** Actieve (niet-gearchiveerde) soorten + de soort van deze post */
+  /** Actieve soorten + de huidige (mogelijk gearchiveerde) soort */
   pillarOptions: { value: string; label: string }[]
 }
 
 interface FormState {
   title: string
   pillar_id: string
-  format: ContentFormat
   status: ContentStatus
-  planned_date: string
-  planned_time: string
   body: string
   source_url: string
-  linkedin_url: string
   notes: string
 }
 
@@ -46,13 +34,9 @@ function toFormState(post: ContentPost): FormState {
   return {
     title: post.title,
     pillar_id: post.pillar_id ?? '',
-    format: post.format,
     status: post.status,
-    planned_date: post.planned_date ?? '',
-    planned_time: displayTime(post.planned_time) ?? '',
     body: post.body,
     source_url: post.source_url ?? '',
-    linkedin_url: post.linkedin_url ?? '',
     notes: post.notes ?? '',
   }
 }
@@ -60,14 +44,13 @@ function toFormState(post: ContentPost): FormState {
 const nlNumber = new Intl.NumberFormat('nl-NL')
 
 /**
- * Post-editor (US3): titel, contentsoort, format, status, datum, tijd,
- * posttekst (tekenteller + hook-preview + kopieerknop), bron-URL,
- * LinkedIn-URL en notities. Statusovergangen bewaakt door dezelfde
- * validateStatusChange als server-side. Opslaan expliciet (knop en
- * Ctrl/Cmd+S); sluiten met wijzigingen en verwijderen vragen om
- * bevestiging in een in-app dialoog — geen browserdialogen.
+ * Detail-editor voor een idee (US1/FR-011/FR-012): titel, soort, status,
+ * idee-tekst, bron-URL en notities. Format, Datum, Tijd en LinkedIn-URL
+ * bestaan hier bewust niet meer. Tekenteller, hook-preview en "Kopieer tekst"
+ * blijven behouden. Opslaan via knop of Ctrl/Cmd+S; sluiten met wijzigingen en
+ * verwijderen vragen om een in-app bevestiging.
  */
-export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: PostEditorDialogProps) {
+export function IdeaEditorDialog({ open, onOpenChange, post, pillarOptions }: IdeaEditorDialogProps) {
   const [form, setForm] = useState<FormState>(() => toFormState(post))
   const [confirmClose, setConfirmClose] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -99,69 +82,53 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
     }
   }
 
-  const buildPatch = (): Parameters<typeof updatePost.mutate>[0]['patch'] => ({
-    title: form.title,
-    pillar_id: form.pillar_id || null,
-    format: form.format,
-    status: form.status,
-    planned_date: form.planned_date || null,
-    planned_time: form.planned_time || null,
-    body: form.body,
-    source_url: form.source_url || null,
-    linkedin_url: form.linkedin_url || null,
-    notes: form.notes,
-  })
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) {
       toast({ title: 'De titel is verplicht.' })
       return
     }
-    const check = validateStatusChange(
-      {
-        body: form.body,
-        planned_date: form.planned_date || null,
-        planned_time: form.planned_time || null,
-        linkedin_url: form.linkedin_url || null,
-        status: form.status,
-      },
-      form.status,
-    )
+    const check = validateStatusChange({ body: form.body, status: form.status }, form.status)
     if (!check.ok) {
       toast({ title: 'Status niet geldig', description: check.reason, variant: 'destructive' })
       return
     }
 
-    updatePost.mutate(
-      { postId: post.id, patch: buildPatch() },
-      {
-        onSuccess: (result) => {
-          if (!result.success) {
-            toast({ title: 'Opslaan mislukt', description: result.error, variant: 'destructive' })
-            return
-          }
-          // Direct resyncen op het opgeslagen resultaat: niet-opgeslagen-wijzigingen-
-          // detectie staat daarna weer op schoon en de editor sluit zonder bevestiging
-          setForm(toFormState(result.data))
-          toast({ title: 'Opgeslagen' })
-          // LinkedIn-melding bij datum- of tijdwijziging van een geplande post (FR-031)
-          const dateChanged = form.planned_date !== (post.planned_date ?? '')
-          const timeChanged = form.planned_time !== (displayTime(post.planned_time) ?? '')
-          if (post.status === 'gepland' && (dateChanged || timeChanged)) {
-            toast({ title: 'Pas de datum ook aan in LinkedIn', variant: 'default' })
-          }
+    try {
+      const result = await updatePost.mutateAsync({
+        postId: post.id,
+        patch: {
+          title: form.title,
+          pillar_id: form.pillar_id || null,
+          status: form.status,
+          body: form.body,
+          source_url: form.source_url || null,
+          notes: form.notes || null,
         },
-      },
-    )
+      })
+
+      if (!result.success) {
+        toast({ title: 'Opslaan mislukt', description: result.error, variant: 'destructive' })
+        return
+      }
+
+      setForm(toFormState(result.data))
+      toast({ title: 'Opgeslagen' })
+    } catch (err) {
+      toast({
+        title: 'Opslaan mislukt',
+        description: err instanceof Error ? err.message : 'Onbekende fout',
+        variant: 'destructive',
+      })
+    }
   }
 
-  // Ctrl/Cmd+S opent opslaan (FR-026)
+  // Ctrl/Cmd+S opent opslaan (FR-011)
   useEffect(() => {
     if (!open) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        handleSave()
+        void handleSave()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -171,118 +138,102 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
 
   const handleStatusChange = (next: string) => {
     const nextStatus = next as ContentStatus
-    const check = validateStatusChange(
-      {
-        body: form.body,
-        planned_date: form.planned_date || null,
-        planned_time: form.planned_time || null,
-        linkedin_url: form.linkedin_url || null,
-        status: form.status,
-      },
-      nextStatus,
-    )
+    const check = validateStatusChange({ body: form.body, status: form.status }, nextStatus)
     if (!check.ok) {
       toast({ title: 'Status niet gewijzigd', description: check.reason })
       return
     }
-    setForm((f) => ({ ...f, status: nextStatus }))
+    setForm((current) => ({ ...current, status: nextStatus }))
   }
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(form.body)
-      toast({ title: 'Posttekst gekopieerd', description: 'De volledige tekst staat op het klembord.' })
+      toast({ title: 'Idee-tekst gekopieerd', description: 'De volledige tekst staat op het klembord.' })
     } catch {
       toast({ title: 'Kopiëren mislukt', description: 'Kon het klembord niet gebruiken.', variant: 'destructive' })
     }
   }
 
-  const handleDelete = () => {
-    deletePost.mutate(post.id, {
-      onSuccess: (result) => {
-        setConfirmDelete(false)
-        if (!result.success) {
-          toast({ title: 'Verwijderen mislukt', description: result.error, variant: 'destructive' })
-          return
-        }
-        toast({ title: 'Post verwijderd' })
-        onOpenChange(false)
-      },
-    })
+  const handleDelete = async () => {
+    try {
+      const result = await deletePost.mutateAsync(post.id)
+      setConfirmDelete(false)
+      if (!result.success) {
+        toast({ title: 'Verwijderen mislukt', description: result.error, variant: 'destructive' })
+        return
+      }
+      toast({ title: 'Idee verwijderd' })
+      onOpenChange(false)
+    } catch (err) {
+      setConfirmDelete(false)
+      toast({
+        title: 'Verwijderen mislukt',
+        description: err instanceof Error ? err.message : 'Onbekende fout',
+        variant: 'destructive',
+      })
+    }
   }
-
-  const formatOptions: { value: string; label: string }[] = (
-    ['tekst', 'afbeelding', 'carrousel', 'video', 'poll'] as ContentFormat[]
-  ).map((f) => ({ value: f, label: formatLabel(f) }))
 
   const statusOptions: { value: string; label: string }[] = (
     ['idee', 'concept', 'klaar', 'gepland', 'live'] as ContentStatus[]
-  ).map((s) => ({ value: s, label: statusLabel(s) }))
+  ).map((status) => ({ value: status, label: statusLabel(status) }))
 
   return (
     <>
       <Dialog open={open} onOpenChange={(next) => { if (!next) requestClose() }}>
         <div className="w-full max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Post bewerken</DialogTitle>
+            <DialogTitle>Idee bewerken</DialogTitle>
             <DialogDescription>
-              {post.status === 'gepland' && post.scheduled_on_linkedin_at
-                ? `Ingepland in LinkedIn op ${new Date(post.scheduled_on_linkedin_at).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' })}.`
-                : 'Publiceren doe je zelf in LinkedIn; hier plan, schrijf en houd je bij.'}
+              Werk je idee uit. Publiceren of inplannen doe je zelf in LinkedIn; hier bewaar je alleen het idee.
             </DialogDescription>
           </DialogHeader>
-          <DialogContent className="space-y-3">
+          <DialogContent className="space-y-3" data-testid="idea-editor">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-xs font-medium text-muted-foreground">Titel (intern, verplicht)</label>
-                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+                <label htmlFor="idea-editor-title" className="text-xs font-medium text-muted-foreground">
+                  Titel (verplicht)
+                </label>
+                <Input
+                  id="idea-editor-title"
+                  value={form.title}
+                  onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                  data-testid="idea-editor-title"
+                />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Contentsoort</label>
+                <label htmlFor="idea-editor-pillar" className="text-xs font-medium text-muted-foreground">
+                  Contentsoort
+                </label>
                 <Select
+                  id="idea-editor-pillar"
                   value={form.pillar_id}
-                  onValueChange={(v) => setForm((f) => ({ ...f, pillar_id: v }))}
+                  onValueChange={(value) => setForm((current) => ({ ...current, pillar_id: value }))}
                   options={[{ value: '', label: 'Geen soort' }, ...pillarOptions]}
+                  data-testid="idea-editor-pillar"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Format</label>
+                <label htmlFor="idea-editor-status" className="text-xs font-medium text-muted-foreground">
+                  Status
+                </label>
                 <Select
-                  value={form.format}
-                  onValueChange={(v) => setForm((f) => ({ ...f, format: v as ContentFormat }))}
-                  options={formatOptions}
+                  id="idea-editor-status"
+                  value={form.status}
+                  onValueChange={handleStatusChange}
+                  options={statusOptions}
+                  data-testid="idea-editor-status"
                 />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Status</label>
-                <Select value={form.status} onValueChange={handleStatusChange} options={statusOptions} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Datum</label>
-                  <Input
-                    type="date"
-                    value={form.planned_date}
-                    onChange={(e) => setForm((f) => ({ ...f, planned_date: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Tijd</label>
-                  <Input
-                    type="time"
-                    value={form.planned_time}
-                    onChange={(e) => setForm((f) => ({ ...f, planned_time: e.target.value }))}
-                  />
-                </div>
               </div>
 
               <div className="space-y-1 sm:col-span-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground">Posttekst</label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="idea-editor-body" className="text-xs font-medium text-muted-foreground">
+                    Idee-tekst
+                  </label>
                   <div className="flex items-center gap-2">
                     <span className={cn('text-xs tabular-nums text-muted-foreground', count > MAX_BODY_LENGTH && 'font-medium text-red-600 dark:text-red-400')}>
                       {nlNumber.format(count)} / 3.000
@@ -298,10 +249,12 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
                   </div>
                 </div>
                 <Textarea
+                  id="idea-editor-body"
                   value={form.body}
-                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
                   className="min-h-[180px]"
-                  placeholder="De volledige LinkedIn-tekst…"
+                  placeholder="Werk je idee uit…"
+                  data-testid="idea-editor-body"
                 />
                 {(preview || truncated) && (
                   <div className="rounded-md border border-dashed bg-muted/40 p-2">
@@ -317,39 +270,37 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Bron-URL</label>
+                <label htmlFor="idea-editor-source" className="text-xs font-medium text-muted-foreground">
+                  Bron-URL
+                </label>
                 <Input
+                  id="idea-editor-source"
                   type="url"
                   value={form.source_url}
-                  onChange={(e) => setForm((f) => ({ ...f, source_url: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, source_url: event.target.value }))}
                   placeholder="https://…"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">LinkedIn-URL</label>
-                <Input
-                  type="url"
-                  value={form.linkedin_url}
-                  onChange={(e) => setForm((f) => ({ ...f, linkedin_url: e.target.value }))}
-                  placeholder="https://www.linkedin.com/…"
                 />
               </div>
 
               <div className="space-y-1 sm:col-span-2">
-                <label className="text-xs font-medium text-muted-foreground">Notities</label>
+                <label htmlFor="idea-editor-notes" className="text-xs font-medium text-muted-foreground">
+                  Notities
+                </label>
                 <Textarea
+                  id="idea-editor-notes"
                   value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                   className="min-h-[60px]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                data-testid="idea-editor-delete"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Verwijderen
@@ -358,7 +309,7 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
                 <Button type="button" variant="outline" onClick={requestClose}>
                   Sluiten
                 </Button>
-                <Button type="button" onClick={handleSave} disabled={updatePost.isPending}>
+                <Button type="button" onClick={() => void handleSave()} disabled={updatePost.isPending} data-testid="idea-editor-save">
                   Opslaan
                 </Button>
               </div>
@@ -391,7 +342,7 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <div className="w-full max-w-sm">
           <DialogHeader>
-            <DialogTitle>Post verwijderen?</DialogTitle>
+            <DialogTitle>Idee verwijderen?</DialogTitle>
           </DialogHeader>
           <DialogContent>
             <p className="text-sm text-muted-foreground">
@@ -401,7 +352,7 @@ export function PostEditorDialog({ open, onOpenChange, post, pillarOptions }: Po
               <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>
                 Annuleren
               </Button>
-              <Button type="button" variant="destructive" onClick={handleDelete} disabled={deletePost.isPending}>
+              <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={deletePost.isPending}>
                 Verwijderen
               </Button>
             </div>

@@ -1,14 +1,14 @@
+import type { SelectHTMLAttributes } from "react"
 import { cn } from "@/lib/utils"
 
-interface SelectProps {
+interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> {
   value: string
   onValueChange: (value: string) => void
   options: { value: string; label: string }[]
   placeholder?: string
-  className?: string
 }
 
-function Select({ value, onValueChange, options, placeholder, className }: SelectProps) {
+function Select({ value, onValueChange, options, placeholder, className, ...props }: SelectProps) {
   return (
     <select
       value={value}
@@ -17,6 +17,7 @@ function Select({ value, onValueChange, options, placeholder, className }: Selec
         "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className
       )}
+      {...props}
     >
       {placeholder && <option value="" disabled style={{ color: '#6b7280', backgroundColor: 'white' }}>{placeholder}</option>}
       {options.map((opt) => (
