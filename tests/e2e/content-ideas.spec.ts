@@ -35,6 +35,12 @@ async function createPillar(page: Page, name: string) {
   await expect(page.getByTestId('idea-pillar-select').locator('option', { hasText: name })).toHaveCount(1)
 }
 
+async function expectPipelineCountMatchesRows(page: Page) {
+  const raw = await page.getByTestId('pipeline-count').textContent()
+  const count = Number(raw?.trim() ?? '0')
+  await expect(page.getByTestId('pipeline-row')).toHaveCount(count)
+}
+
 test.describe('content-ideeën', () => {
   test('twee views, standaard Ideeën en geen kalender', async ({ page }) => {
     if (!(await openContent(page))) return
@@ -285,5 +291,236 @@ test.describe('content-ideeën', () => {
 
     await page.getByTestId('content-tab-overzicht').click()
     await expect(page.getByTestId('overview-total')).toHaveText(/[1-9]/)
+  })
+})
+
+test.describe('content-pijplijn', () => {
+  test('blok staat tussen composer en lijst, toont niet-live ideeën en opent de editor', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const pipeline = page.getByTestId('content-pipeline')
+    const composer = page.getByTestId('idea-composer')
+    const list = page.getByTestId('idea-list')
+
+    await expect(pipeline).toBeVisible()
+    await expect(page.getByTestId('pipeline-heading')).toHaveText('Pijplijn')
+    await expect(composer).toBeVisible()
+    await expect(list).toBeVisible()
+
+    const pipelineBox = await pipeline.boundingBox()
+    const composerBox = await composer.boundingBox()
+    const listBox = await list.boundingBox()
+    expect(pipelineBox).not.toBeNull()
+    expect(composerBox).not.toBeNull()
+    expect(listBox).not.toBeNull()
+    expect(pipelineBox!.y).toBeGreaterThan(composerBox!.y)
+    expect(pipelineBox!.y).toBeLessThan(listBox!.y)
+
+    const statuses = await page.getByTestId('pipeline-row-status').allTextContents()
+    expect(statuses.every((status) => status.trim() !== 'Live')).toBe(true)
+    await expectPipelineCountMatchesRows(page)
+
+    const title = `Pijplijn ${Date.now()}`
+    await page.getByTestId('idea-title-input').fill(title)
+    await page.getByTestId('idea-save-button').click()
+
+    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
+    await expect(pipelineRow).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
+    await expectPipelineCountMatchesRows(page)
+
+    await pipelineRow.click()
+    await expect(page.getByTestId('idea-editor')).toBeVisible()
+    await expect(page.getByTestId('idea-editor-title')).toHaveValue(title)
+    await page.keyboard.press('Escape')
+  })
+})
+
+test.describe('content-pijplijn actualiteit', () => {
+  test('Live haalt uit de pijplijn, Gepland brengt terug en verwijderen haalt uit beide', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const title = `Pijplijn live ${Date.now()}`
+    await page.getByTestId('idea-title-input').fill(title)
+    await page.getByTestId('idea-save-button').click()
+
+    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
+    const ideaRow = page.getByTestId('idea-row').filter({ hasText: title })
+    await expect(pipelineRow).toBeVisible()
+    await expect(ideaRow).toBeVisible()
+    await expectPipelineCountMatchesRows(page)
+
+    // Live: uit de pijplijn, maar niet uit de volledige lijst.
+    await pipelineRow.click()
+    await expect(page.getByTestId('idea-editor')).toBeVisible()
+    await page.getByTestId('idea-editor-body').fill('Klaar om te publiceren.')
+    await page.getByTestId('idea-editor-status').selectOption('live')
+    await page.getByTestId('idea-editor-save').click()
+    await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await expect(pipelineRow).toHaveCount(0)
+    await expect(ideaRow).toBeVisible()
+    await expectPipelineCountMatchesRows(page)
+
+    // Terug naar Gepland: weer in de pijplijn.
+    await ideaRow.click()
+    await expect(page.getByTestId('idea-editor')).toBeVisible()
+    await page.getByTestId('idea-editor-status').selectOption('gepland')
+    await page.getByTestId('idea-editor-save').click()
+    await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await expect(pipelineRow).toBeVisible()
+    await expect(ideaRow).toBeVisible()
+    await expectPipelineCountMatchesRows(page)
+
+    // Verwijderen: uit beide lijsten.
+    await pipelineRow.click()
+    await page.getByTestId('idea-editor-delete').click()
+    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
+    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
+    await expect(pipelineRow).toHaveCount(0)
+    await expect(ideaRow).toHaveCount(0)
+    await expectPipelineCountMatchesRows(page)
+  })
+
+  test('soort hernoemen, kleur wijzigen en archiveren werkt direct door in de pijplijn', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeName = `Pijplijnsoort ${stamp}`
+    const renamed = `${typeName} gewijzigd`
+
+    await createPillar(page, typeName)
+
+    const title = `Pijplijn soort ${stamp}`
+    await page.getByTestId('idea-title-input').fill(title)
+    await page.getByTestId('idea-pillar-select').selectOption({ label: typeName })
+    await page.getByTestId('idea-save-button').click()
+
+    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
+    await expect(pipelineRow).toBeVisible()
+    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toHaveText(typeName)
+
+    // Hernoemen: open het beheer en maak een stabiele rij-locator op basis van het pillar-id.
+    await page.getByRole('button', { name: 'Soorten' }).click()
+    const createdRow = page.getByTestId('pillar-row').last()
+    await expect(createdRow.getByLabel('Naam')).toHaveValue(typeName)
+    const pillarId = await createdRow.getAttribute('data-pillar-id')
+    expect(pillarId).not.toBeNull()
+    const row = page.locator(`[data-testid="pillar-row"][data-pillar-id="${pillarId}"]`)
+
+    await expect(row.getByLabel('Naam')).toHaveValue(typeName)
+    await row.getByLabel('Naam').fill(renamed)
+    await row.getByRole('button', { name: 'Opslaan' }).click()
+    await expect(row.getByLabel('Naam')).toHaveValue(renamed)
+    await page.keyboard.press('Escape')
+    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toHaveText(renamed)
+
+    // Kleur wijzigen
+    await page.getByRole('button', { name: 'Soorten' }).click()
+    await row.getByRole('button', { name: 'Kleur green' }).click()
+    await row.getByRole('button', { name: 'Opslaan' }).click()
+    await page.keyboard.press('Escape')
+    await expect(pipelineRow.locator('[aria-hidden]').first()).toHaveClass(/bg-green-500/)
+
+    // Archiveren
+    await page.getByRole('button', { name: 'Soorten' }).click()
+    await row.getByTestId('pillar-archive-toggle').click()
+    await expect(row.getByRole('button', { name: 'Heractiveren' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toContainText('(gearchiveerd)')
+
+    // Opruimen: het testidee verwijderen; de soort blijft gearchiveerd bestaan.
+    await pipelineRow.click()
+    await page.getByTestId('idea-editor-delete').click()
+    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
+    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
+    await expect(pipelineRow).toHaveCount(0)
+    await expectPipelineCountMatchesRows(page)
+  })
+})
+
+test.describe('content-pijplijn staten', () => {
+  test('toont een eerlijke lege staat en een foutbanner met retry', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    await expect(page.getByTestId('pipeline-loading')).toHaveCount(0)
+    const rows = await page.getByTestId('pipeline-row').count()
+    await expectPipelineCountMatchesRows(page)
+
+    if (rows === 0) {
+      await expect(page.getByTestId('pipeline-empty')).toBeVisible()
+      await expect(page.getByTestId('pipeline-error')).toHaveCount(0)
+    } else {
+      await expect(page.getByTestId('pipeline-empty')).toHaveCount(0)
+      await expect(page.getByTestId('pipeline-error')).toHaveCount(0)
+    }
+
+    // Mislukte refetch met bestaande data: foutbanner + bestaande rijen.
+    const title = `Pijplijn fout ${Date.now()}`
+    await page.route('**/rest/v1/kk_content_posts*', (route) => route.abort())
+    await page.getByTestId('idea-title-input').fill(title)
+    await page.getByTestId('idea-save-button').click()
+
+    const error = page.getByTestId('pipeline-error')
+    await expect(error).toBeVisible({ timeout: 20_000 })
+    await expect(error).toContainText('Kon de pijplijn niet verversen.')
+    await expect(page.getByTestId('pipeline-row').filter({ hasText: title })).toBeVisible()
+    await expect(page.getByTestId('pipeline-retry')).toBeVisible()
+
+    await page.unroute('**/rest/v1/kk_content_posts*')
+    await page.getByTestId('pipeline-retry').click()
+    await expect(error).toHaveCount(0, { timeout: 20_000 })
+
+    // Opruimen
+    const row = page.getByTestId('pipeline-row').filter({ hasText: title })
+    await row.click()
+    await page.getByTestId('idea-editor-delete').click()
+    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
+    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
+    await expect(row).toHaveCount(0)
+  })
+
+  test('blijft bruikbaar op 375 px en met het toetsenbord', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 })
+    if (!(await openContent(page))) return
+
+    await expect(page.getByTestId('content-pipeline')).toBeVisible()
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    )
+    expect(overflow).toBeLessThanOrEqual(1)
+
+    const firstRow = page.getByTestId('pipeline-row').first()
+    if ((await firstRow.count()) > 0) {
+      await firstRow.focus()
+      await page.keyboard.press('Enter')
+      await expect(page.getByTestId('idea-editor')).toBeVisible()
+      await page.keyboard.press('Escape')
+    }
+  })
+
+  test('kapt een lange titel af en toont de volledige titel in de editor', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const longTitle = `Lange pijplijntitel ${Date.now()} ${'x'.repeat(180)}`
+    await page.getByTestId('idea-title-input').fill(longTitle)
+    await page.getByTestId('idea-save-button').click()
+
+    const row = page.getByTestId('pipeline-row').filter({ hasText: longTitle })
+    await expect(row).toBeVisible()
+    await expect(row.getByTestId('pipeline-row-title')).toHaveClass(/truncate/)
+
+    await row.click()
+    await expect(page.getByTestId('idea-editor-title')).toHaveValue(longTitle)
+    await page.keyboard.press('Escape')
+
+    await row.click()
+    await page.getByTestId('idea-editor-delete').click()
+    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
+    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
+    await expect(row).toHaveCount(0)
   })
 })

@@ -2,6 +2,25 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## content-pijplijn (2026-11-04)
+
+**Spec**: `specs/028-content-ideas-pipeline/spec.md`
+**Branch**: `028-content-ideas-pipeline`
+
+De weergave "Ideeën" op `/content` heeft nu tussen het invoerformulier en de volledige ideeënlijst een blok **"Pijplijn"**. Het blok toont alle ideeën met status Idee, Concept, Klaar of Gepland (alles behalve Live), met een count en compacte rijen (titel, statusbadge, pillarkleur/soort of "Geen soort"; gearchiveerde soorten met markering). Een klik op een rij opent de bestaande `IdeaEditorDialog`. Live-ideeën blijven buiten het blok, maar staan ongewijzigd in de volledige lijst en tellen mee in het overzicht. De pijplijn is een afgeleide view op de bestaande `usePosts()`-data: geen nieuwe query, serveractie, migratie of schema; de bestaande React Query-cache-updates zorgen dat het blok direct meeverandert. De selectie en staatmatrix zijn pure helpers (`isPipelineStatus`, `selectPipelinePosts`, `pipelineViewState`). Het blok heeft laad-, fout- (met retry), lege en fout-met-data-staten, scrollt intern bij veel items en is toetsenbordbedienbaar en bruikbaar op 375 px.
+
+**Nieuwe bestanden**:
+- `src/components/content/PipelineBlock.tsx` — pijplijnblok met kop/count, compacte rijen, staten, retry, interne scroll en testids
+- `specs/028-content-ideas-pipeline/` — spec, plan, research, data-model, contracts, quickstart, tasks
+
+**Aangepaste bestanden**:
+- `src/components/content/ContentView.tsx` — `pipelinePosts` via `selectPipelinePosts`; `PipelineBlock` tussen composer en lijst
+- `src/lib/content/ideas.ts` — `isPipelineStatus`, `selectPipelinePosts`, `pipelineViewState`
+- `tests/e2e/content-ideas-logic.spec.ts` — 9 extra unit-tests (selectie + staatmatrix); totaal 30/30
+- `tests/e2e/content-ideas.spec.ts` — 6 extra E2E-tests (blok, live/gepland/verwijderen, soort wijzigen, staten, mobiel/toetsenbord, lange titel); totaal 17 tests, login-gated
+
+**Test**: `tests/e2e/content-ideas-logic.spec.ts` 30/30 groen. `npx tsc --noEmit`, `npm run lint` en `npm run build` groen (content-route 11.5 kB). Volledige Playwright-suite: 146 passed / 84 skipped (login-gated) / 0 failed. De 17 content-E2E-tests zijn login-gated en in deze omgeving overgeslagen. Fitness-check: FAIL:0 WARN:2 PASS:11 SKIP:5; de warns zijn pre-existing (F-03 createClient-telling, F-15 historisch commitformaat) en de skips zijn MCP-afhankelijk (F-01/F-10/F-16/F-17) of hook-afhankelijk (F-18).
+
 ## content-ideeën (2026-11-03)
 
 **Spec**: `specs/026-content-ideas-views/spec.md`

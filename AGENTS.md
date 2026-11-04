@@ -305,5 +305,5 @@ A feature is **Done** when:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/026-content-ideas-views/plan.md
+specs/028-content-ideas-pipeline/plan.md
 <!-- SPECKIT END -->

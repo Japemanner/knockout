@@ -9,6 +9,9 @@ import {
   countIdeasByPillar,
   formatIdeaDate,
   hookPreview,
+  isPipelineStatus,
+  pipelineViewState,
+  selectPipelinePosts,
   validateStatusChange,
   type PostWritePatch,
 } from '@/lib/content/ideas'
@@ -107,6 +110,72 @@ test.describe('countIdeasByPillar', () => {
     expect(counts.rows).toEqual([
       { pillarId: 'a', name: 'A', color: 'blue', archived: false, count: 0 },
     ])
+  })
+})
+
+// ---------------------------------------------------------------- pijplijn
+
+test.describe('pijplijnselectie', () => {
+  test('isPipelineStatus is waar voor alles behalve live', () => {
+    expect(isPipelineStatus('idee')).toBe(true)
+    expect(isPipelineStatus('concept')).toBe(true)
+    expect(isPipelineStatus('klaar')).toBe(true)
+    expect(isPipelineStatus('gepland')).toBe(true)
+    expect(isPipelineStatus('live')).toBe(false)
+  })
+
+  test('selectPipelinePosts laat live weg en behoudt de volgorde', () => {
+    const posts = [
+      makePost({ id: 'p1', status: 'idee' }),
+      makePost({ id: 'p2', status: 'live' }),
+      makePost({ id: 'p3', status: 'gepland' }),
+      makePost({ id: 'p4', status: 'live' }),
+      makePost({ id: 'p5', status: 'concept' }),
+    ]
+
+    const selected = selectPipelinePosts(posts)
+
+    expect(selected.map((post) => post.id)).toEqual(['p1', 'p3', 'p5'])
+    expect(selected.every((post) => post.status !== 'live')).toBe(true)
+  })
+
+  test('een lege lijst geeft een lege pijplijn', () => {
+    expect(selectPipelinePosts([])).toEqual([])
+  })
+
+  test('selectPipelinePosts muteert de invoerarray niet', () => {
+    const posts = [
+      makePost({ id: 'p1', status: 'idee' }),
+      makePost({ id: 'p2', status: 'live' }),
+    ]
+    const copy = [...posts]
+
+    selectPipelinePosts(posts)
+
+    expect(posts).toEqual(copy)
+    expect(posts).toHaveLength(2)
+  })
+})
+
+test.describe('pipelineViewState', () => {
+  test('loading bij geen data en geen fout', () => {
+    expect(pipelineViewState({ count: 0, isLoading: true, isError: false })).toBe('loading')
+  })
+
+  test('error-empty gaat vóór loading', () => {
+    expect(pipelineViewState({ count: 0, isLoading: true, isError: true })).toBe('error-empty')
+  })
+
+  test('empty bij geen data, niet laden en geen fout', () => {
+    expect(pipelineViewState({ count: 0, isLoading: false, isError: false })).toBe('empty')
+  })
+
+  test('error-with-data bij een mislukte refetch met bestaande rijen', () => {
+    expect(pipelineViewState({ count: 2, isLoading: false, isError: true })).toBe('error-with-data')
+  })
+
+  test('ready bij rijen zonder fout, ook tijdens een achtergrondrefetch', () => {
+    expect(pipelineViewState({ count: 2, isLoading: true, isError: false })).toBe('ready')
   })
 })
 

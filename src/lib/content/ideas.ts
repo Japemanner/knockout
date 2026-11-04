@@ -174,6 +174,45 @@ export function countIdeasByPillar(
 }
 
 // ============================================================
+// PIJPLIJN
+// ============================================================
+
+/**
+ * De pijplijn bevat elk idee dat nog niet live is. Live is de enige
+ * uitsluiting; een toekomstige niet-live status hoort automatisch mee.
+ */
+export function isPipelineStatus(status: ContentStatus): boolean {
+  return status !== 'live'
+}
+
+/**
+ * Filtert de posts op de pijplijnregel en behoudt de bestaande volgorde.
+ * De invoerarray wordt niet gemuteerd.
+ */
+export function selectPipelinePosts<T extends Pick<ContentPost, 'status'>>(posts: T[]): T[] {
+  return posts.filter((post) => isPipelineStatus(post.status))
+}
+
+export type PipelineViewState = 'loading' | 'error-empty' | 'empty' | 'error-with-data' | 'ready'
+
+/**
+ * Bepaalt de staat van het pijplijnblok. De volgorde is bewust: een fout
+ * zonder data gaat vóór laden, een fout met data houdt de rijen zichtbaar,
+ * en pas daarna volgt de lege staat.
+ */
+export function pipelineViewState(params: {
+  count: number
+  isLoading: boolean
+  isError: boolean
+}): PipelineViewState {
+  if (params.isError && params.count === 0) return 'error-empty'
+  if (params.isLoading && params.count === 0) return 'loading'
+  if (params.count === 0) return 'empty'
+  if (params.isError) return 'error-with-data'
+  return 'ready'
+}
+
+// ============================================================
 // DATUM
 // ============================================================
 

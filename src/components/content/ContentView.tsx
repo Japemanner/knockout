@@ -4,9 +4,10 @@ import { useMemo, useRef, useState } from 'react'
 import { Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { countIdeasByPillar } from '@/lib/content/ideas'
+import { countIdeasByPillar, selectPipelinePosts } from '@/lib/content/ideas'
 import { useCreatePost, usePillars, usePosts } from '@/hooks/useContent'
 import { IdeaComposer } from '@/components/content/IdeaComposer'
+import { PipelineBlock } from '@/components/content/PipelineBlock'
 import { IdeaList } from '@/components/content/IdeaList'
 import { ContentOverview } from '@/components/content/ContentOverview'
 import { IdeaEditorDialog } from '@/components/content/IdeaEditorDialog'
@@ -40,6 +41,7 @@ export function ContentView() {
 
   const pillarById = useMemo(() => new Map(pillars.map((pillar) => [pillar.id, pillar])), [pillars])
   const counts = useMemo(() => countIdeasByPillar(posts, pillars), [posts, pillars])
+  const pipelinePosts = useMemo(() => selectPipelinePosts(posts), [posts])
   const activePillars = useMemo(() => pillars.filter((pillar) => !pillar.archived), [pillars])
 
   const editorPost = useMemo(
@@ -119,6 +121,17 @@ export function ContentView() {
             pillars={activePillars}
             onCreate={handleCreate}
             isPending={createPost.isPending}
+          />
+          <PipelineBlock
+            posts={pipelinePosts}
+            hasAnyPosts={posts.length > 0}
+            pillarById={pillarById}
+            onOpen={(post: ContentPost) => setEditorPostId(post.id)}
+            isLoading={postsQuery.isLoading}
+            isError={postsQuery.isError}
+            onRetry={() => {
+              void postsQuery.refetch()
+            }}
           />
           <IdeaList
             posts={posts}

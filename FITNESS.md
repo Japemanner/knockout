@@ -1,3 +1,58 @@
+# Fitness Check — 028-content-ideas-pipeline
+
+**Feature**: 028-content-ideas-pipeline
+**Datum**: 2026-11-04
+**Status**: SHIP mits de login-gated E2E en de Supabase/Snyk MCP-checks nog worden uitgevoerd; logicatests, tsc, lint, build en de volledige suite zijn groen. Geen migratie.
+
+---
+
+## Uitgevoerde checks
+
+| Check | Resultaat | Observatie |
+|-------|-----------|------------|
+| F-01 RLS (Supabase MCP) | SKIP | Supabase MCP niet beschikbaar in deze sessie. Geen nieuwe tabel, kolom of policy; bestaande RLS op `kk_content_posts`/`kk_content_pillars` blijft ongewijzigd. |
+| F-02 Geen secrets in client | PASS | Geen nieuwe env-waarden; geen service-role in clientcode. |
+| F-03 Supabase client instances | WARN | Heuristiek telt 25× createClient (pre-existing). Nieuwe code hergebruikt `usePosts()`; geen nieuwe client. |
+| F-04 PKCE flow | PASS | Onveranderd. |
+| F-05 Netlify config | PASS | Onveranderd. |
+| F-06 TypeScript strict | PASS | Onveranderd. |
+| F-07 TypeScript compileert | PASS | `npx tsc --noEmit` — 0 errors. |
+| F-08 Geen unjustified `any` | PASS | Geen nieuwe `any`; `PipelineBlock` en de helpers zijn volledig getypeerd. |
+| F-09 Geen admin client | PASS | Alleen bestaande user-scoped data onder RLS. |
+| F-10 Storage buckets | SKIP | Geen Storage in deze feature; MCP niet beschikbaar. |
+| F-11 Geen waitForTimeout in tests | PASS | Nieuwe tests gebruiken geen `waitForTimeout`. |
+| F-12 .env.local in .gitignore | PASS | Onveranderd. |
+| F-13 .env.example bestaat | PASS | Onveranderd. |
+| F-14 Geen DOM-manipulatie | PASS | Alleen React-state/props; geen directe DOM-calls. |
+| F-15 Conventional commits | WARN | 2 van de laatste 5 commits wijken af (pre-existing). De feature-commit is conventioneel. |
+| F-16 Snyk SAST | SKIP | Snyk MCP niet beschikbaar in deze sessie; geen nieuwe dependencies of auth-code. |
+| F-17 Snyk SCA | SKIP | Geen nieuwe dependencies; `package.json` ongewijzigd. Snyk MCP niet beschikbaar. |
+| F-18 Commit-msg hook | PASS | Feature-commit `feat(content): pijplijnblok met niet-live ideeën` volgt de conventie; hook wordt bij commit afgedwongen. |
+
+**Lokale fitness-run** (2026-11-04): FAIL:0 WARN:2 PASS:11 SKIP:5 — 0 blocking. Warns zijn pre-existing (F-03 createClient-telling, F-15 historisch commitformaat). Skips zijn MCP- of hook-afhankelijk.
+
+## Architectuur-conformiteit
+
+- [x] Geen nieuwe dependencies — hergebruik bestaande shadcn/ui, lucide-react en React Query
+- [x] Geen nieuwe query, serveractie, RPC, migratie of schemawijziging
+- [x] Pijplijn is een afgeleide view op de bestaande `usePosts()`-data; geen tweede bron van waarheid
+- [x] Bestaande React Query-cache-updates (`setQueryData` + invalidatie) zorgen voor directe actualiteit
+- [x] Live-ideeën uitgesloten; volledige lijst en overzicht ongewijzigd
+- [x] Pure selectie en staatmatrix (`isPipelineStatus`, `selectPipelinePosts`, `pipelineViewState`) delen de regel met de UI
+- [x] Regressietests: 30 logicatests groen; 17 content-E2E-tests login-gated
+- [x] RLS en bestaande data ongemoeid; geen destructieve operatie
+
+## Tests
+
+- `tests/e2e/content-ideas-logic.spec.ts`: 30/30 groen — bestaande 21 + 9 nieuwe tests voor selectie en staatmatrix.
+- `tests/e2e/content-ideas.spec.ts`: 17 tests geschreven; in deze omgeving 17 skipped wegens geen login-sessie (bestaand skip-patroon). Met een sessie worden het blok, de live-uitsluiting, de directe updates, de staten, mobiel/toetsenbord en de lange titel uitgevoerd.
+- `npx tsc --noEmit`: 0 errors.
+- `npm run lint`: 0 warnings/errors.
+- `npm run build`: geslaagd; `/content` 11.5 kB.
+- Volledige Playwright-suite (2026-11-04): 146 passed / 84 skipped (login-gated) / 0 failed.
+
+---
+
 # Fitness Check — 026-content-ideas-views
 
 **Feature**: 026-content-ideas-views
