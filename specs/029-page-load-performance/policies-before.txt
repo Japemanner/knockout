@@ -1,0 +1,1012 @@
+[
+  {
+    "schemaname": "public",
+    "tablename": "Playbooks",
+    "policyname": "anon can delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{anon}",
+    "cmd": "DELETE",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "Playbooks",
+    "policyname": "anon can insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{anon}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "Playbooks",
+    "policyname": "anon can select",
+    "permissive": "PERMISSIVE",
+    "roles": "{anon}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "Playbooks",
+    "policyname": "anon can update",
+    "permissive": "PERMISSIVE",
+    "roles": "{anon}",
+    "cmd": "UPDATE",
+    "qual": "true",
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "eekhoorn_fotos",
+    "policyname": "Anon delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "eekhoorn_fotos",
+    "policyname": "Anon insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "eekhoorn_fotos",
+    "policyname": "Anon select",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "foto_exif",
+    "policyname": "anon all",
+    "permissive": "PERMISSIVE",
+    "roles": "{anon}",
+    "cmd": "ALL",
+    "qual": "true",
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "herinneringen",
+    "policyname": "Anon delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "herinneringen",
+    "policyname": "Anon insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "herinneringen",
+    "policyname": "Anon select",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_ai_assistants",
+    "policyname": "Users can create assistants in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(organization_id = get_user_org_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_ai_assistants",
+    "policyname": "Users can delete assistants in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_ai_assistants",
+    "policyname": "Users can update assistants in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_ai_assistants",
+    "policyname": "Users can view assistants in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_assistant_knowledge_bases",
+    "policyname": "Users can create links in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM kk_ai_assistants\n  WHERE ((kk_ai_assistants.id = kk_assistant_knowledge_bases.assistant_id) AND (kk_ai_assistants.organization_id = get_user_org_id()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_assistant_knowledge_bases",
+    "policyname": "Users can delete links in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_ai_assistants\n  WHERE ((kk_ai_assistants.id = kk_assistant_knowledge_bases.assistant_id) AND (kk_ai_assistants.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_assistant_knowledge_bases",
+    "policyname": "Users can view links in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_ai_assistants\n  WHERE ((kk_ai_assistants.id = kk_assistant_knowledge_bases.assistant_id) AND (kk_ai_assistants.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_boards",
+    "policyname": "Users can create own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_boards",
+    "policyname": "Users can delete own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_boards",
+    "policyname": "Users can update own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_boards",
+    "policyname": "Users can view own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_cards",
+    "policyname": "Users can create cards in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM (kk_columns\n     JOIN kk_boards ON ((kk_boards.id = kk_columns.board_id)))\n  WHERE ((kk_columns.id = kk_cards.column_id) AND (kk_boards.user_id = auth.uid()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_cards",
+    "policyname": "Users can delete cards in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (kk_columns\n     JOIN kk_boards ON ((kk_boards.id = kk_columns.board_id)))\n  WHERE ((kk_columns.id = kk_cards.column_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_cards",
+    "policyname": "Users can update cards in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (kk_columns\n     JOIN kk_boards ON ((kk_boards.id = kk_columns.board_id)))\n  WHERE ((kk_columns.id = kk_cards.column_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_cards",
+    "policyname": "Users can view cards in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (kk_columns\n     JOIN kk_boards ON ((kk_boards.id = kk_columns.board_id)))\n  WHERE ((kk_columns.id = kk_cards.column_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_clients",
+    "policyname": "Users can create own clients",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_clients",
+    "policyname": "Users can delete own clients",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_clients",
+    "policyname": "Users can update own clients",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_clients",
+    "policyname": "Users can view own clients",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_columns",
+    "policyname": "Users can create columns in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM kk_boards\n  WHERE ((kk_boards.id = kk_columns.board_id) AND (kk_boards.user_id = auth.uid()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_columns",
+    "policyname": "Users can delete columns in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_boards\n  WHERE ((kk_boards.id = kk_columns.board_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_columns",
+    "policyname": "Users can update columns in own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_boards\n  WHERE ((kk_boards.id = kk_columns.board_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_columns",
+    "policyname": "Users can view columns of own boards",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_boards\n  WHERE ((kk_boards.id = kk_columns.board_id) AND (kk_boards.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_pillars",
+    "policyname": "Users can create own content pillars",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_pillars",
+    "policyname": "Users can update own content pillars",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_pillars",
+    "policyname": "Users can view own content pillars",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_posts",
+    "policyname": "Users can create own content posts",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_posts",
+    "policyname": "Users can delete own content posts",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_posts",
+    "policyname": "Users can update own content posts",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_posts",
+    "policyname": "Users can view own content posts",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_slots",
+    "policyname": "Users can create own content slots",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_slots",
+    "policyname": "Users can delete own content slots",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_slots",
+    "policyname": "Users can update own content slots",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_content_slots",
+    "policyname": "Users can view own content slots",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_conversations",
+    "policyname": "Users can create conversations",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_conversations",
+    "policyname": "Users can update their own conversations",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_conversations",
+    "policyname": "Users can view their own conversations",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_categories",
+    "policyname": "Users can create their own CRUD categories",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_categories",
+    "policyname": "Users can delete their own CRUD categories",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_categories",
+    "policyname": "Users can update their own CRUD categories",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_categories",
+    "policyname": "Users can view their own CRUD categories",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_overviews",
+    "policyname": "Users can create their own CRUD overviews",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_overviews",
+    "policyname": "Users can delete their own CRUD overviews",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_overviews",
+    "policyname": "Users can update their own CRUD overviews",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_crud_overviews",
+    "policyname": "Users can view their own CRUD overviews",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_db_connections",
+    "policyname": "Users can create own db connections",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_db_connections",
+    "policyname": "Users can delete own db connections",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_db_connections",
+    "policyname": "Users can update own db connections",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_db_connections",
+    "policyname": "Users can view own db connections",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_flow_configs",
+    "policyname": "Admins can delete flow configs",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_flow_configs",
+    "policyname": "Admins can insert flow configs",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_flow_configs",
+    "policyname": "Admins can update flow configs",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_flow_configs",
+    "policyname": "Anyone in org can view flow configs",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_focus_notes",
+    "policyname": "Users can create own focus notes",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_focus_notes",
+    "policyname": "Users can update own focus notes",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_focus_notes",
+    "policyname": "Users can view own focus notes",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_hour_entries",
+    "policyname": "Users can create own hour entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_hour_entries",
+    "policyname": "Users can delete own hour entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_hour_entries",
+    "policyname": "Users can update own hour entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_hour_entries",
+    "policyname": "Users can view own hour entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_invitations",
+    "policyname": "Admins can insert invitations in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_invitations",
+    "policyname": "Admins can update invitations in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_invitations",
+    "policyname": "Admins can view invitations in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "((organization_id = get_user_org_id()) AND (EXISTS ( SELECT 1\n   FROM kk_profiles\n  WHERE ((kk_profiles.id = auth.uid()) AND (kk_profiles.role = 'admin'::text)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_base_documents",
+    "policyname": "Users can delete documents in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_base_documents.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_base_documents",
+    "policyname": "Users can insert documents in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_base_documents.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_base_documents",
+    "policyname": "Users can view documents in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_base_documents.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_bases",
+    "policyname": "Users can create knowledge bases in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(organization_id = get_user_org_id())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_bases",
+    "policyname": "Users can delete knowledge bases in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_bases",
+    "policyname": "Users can update knowledge bases in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_bases",
+    "policyname": "Users can view knowledge bases in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_items",
+    "policyname": "Users can delete knowledge items in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_items.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_items",
+    "policyname": "Users can insert knowledge items in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_items.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_knowledge_items",
+    "policyname": "Users can view knowledge items in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_knowledge_bases\n  WHERE ((kk_knowledge_bases.id = kk_knowledge_items.knowledge_base_id) AND (kk_knowledge_bases.organization_id = get_user_org_id()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_messages",
+    "policyname": "Users can insert messages in their conversations",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM kk_conversations\n  WHERE ((kk_conversations.id = kk_messages.conversation_id) AND (kk_conversations.user_id = auth.uid()))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_messages",
+    "policyname": "Users can view messages in their conversations",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM kk_conversations\n  WHERE ((kk_conversations.id = kk_messages.conversation_id) AND (kk_conversations.user_id = auth.uid()))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_organizations",
+    "policyname": "Users can view their own organization",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_priorities",
+    "policyname": "Users can delete own priorities",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_priorities",
+    "policyname": "Users can update own priorities",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(user_id = auth.uid())",
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_priorities",
+    "policyname": "Users can upsert own priorities",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(user_id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_priorities",
+    "policyname": "Users can view own priorities",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(user_id = auth.uid())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_profiles",
+    "policyname": "Users can update their own profile",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(id = auth.uid())",
+    "with_check": "(id = auth.uid())"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_profiles",
+    "policyname": "Users can view profiles in their org",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(organization_id = get_user_org_id())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_rss_feeds",
+    "policyname": "Users can create own rss feeds",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_rss_feeds",
+    "policyname": "Users can delete own rss feeds",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_rss_feeds",
+    "policyname": "Users can update own rss feeds",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_rss_feeds",
+    "policyname": "Users can view own rss feeds",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_time_entries",
+    "policyname": "Users can create own time entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(auth.uid() = user_id)"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_time_entries",
+    "policyname": "Users can delete own time entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_time_entries",
+    "policyname": "Users can update own time entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "kk_time_entries",
+    "policyname": "Users can view own time entries",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(auth.uid() = user_id)",
+    "with_check": null
+  }
+]

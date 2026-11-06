@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       '@dnd-kit/sortable',
       'react-markdown',
     ],
+    staleTimes: {
+      dynamic: 30,
+    },
   },
   images: {
     remotePatterns: [

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
@@ -65,7 +65,6 @@ const externalLinks = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { profile } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -81,9 +80,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase()
     await supabase.auth.signOut()
     useAuthStore.getState().signOut()
-    router.push('/login')
-    router.refresh()
-  }, [getSupabase, router])
+    // Use a full navigation so the Next.js client router cache is cleared.
+    window.location.assign('/login')
+  }, [getSupabase])
 
   const sidebarContent = (
     <>
