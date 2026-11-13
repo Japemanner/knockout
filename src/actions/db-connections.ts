@@ -2,6 +2,7 @@
 
 import { createClient, getUserId } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/supabase/actions'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { encrypt, decrypt } from '@/lib/db/encrypt'
 import { destroyPool, testConnection } from '@/lib/db/pool'
@@ -43,6 +44,8 @@ export async function createConnection(data: { name: string; connectionString: s
 
 export async function updateConnection(data: { connectionId: string; name?: string; connectionString?: string }) {
   try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: 'Niet ingelogd' }
     const supabase = await getSupabase()
     const update: Record<string, unknown> = {}
     if (data.name !== undefined) update.name = data.name
@@ -58,6 +61,8 @@ export async function updateConnection(data: { connectionId: string; name?: stri
 
 export async function deleteConnection(data: { connectionId: string }) {
   try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: 'Niet ingelogd' }
     const supabase = await getSupabase()
     const { error } = await supabase.from('kk_db_connections').delete().eq('id', data.connectionId)
     if (error) return { success: false, error: error.message }
@@ -71,8 +76,9 @@ export async function deleteConnection(data: { connectionId: string }) {
 
 export async function testConnectionAction(data: { connectionId: string }) {
   try {
+    const { userId } = await requireAdmin()
     const supabase = await getServiceDb()
-    const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', data.connectionId).single()
+    const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', data.connectionId).eq('user_id', userId).single()
     if (!conn) return { success: false, error: 'Connectie niet gevonden' }
 
     const connStr = await decrypt(conn.encrypted_conn_str)
@@ -84,8 +90,9 @@ export async function testConnectionAction(data: { connectionId: string }) {
 }
 
 export const getConnectionString = cache(async function getConnectionStringInner(connectionId: string): Promise<string> {
+  const { userId } = await requireAdmin()
   const supabase = await getServiceDb()
-  const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', connectionId).single()
+  const { data: conn } = await supabase.from('kk_db_connections').select('encrypted_conn_str').eq('id', connectionId).eq('user_id', userId).single()
   if (!conn) throw new Error('Connectie niet gevonden')
 
   return decrypt(conn.encrypted_conn_str)

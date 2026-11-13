@@ -1,6 +1,7 @@
 'use server'
 
 import { getAuthenticatedClient, getServiceClient } from '@/lib/supabase/actions'
+import { assertIdent, assertIdents } from '@/lib/db/identifiers'
 import { pruneStaleFilters, isFilterComplete, filterKindForColumn } from '@/lib/column-filters'
 import type { ColumnFilters } from '@/lib/column-filters'
 import type { ColumnInfo, ForeignKeyInfo, TableInfo, TableMeta } from '@/lib/db/introspect'
@@ -62,6 +63,20 @@ function mapFk(r: RpcFkRow): ForeignKeyInfo {
     referencedTable: r.referenced_table_name,
     referencedColumn: r.referenced_column_name,
   }
+}
+
+// Tabelnaam moet syntactisch geldig én daadwerkelijk bestaan (list_tables,
+// migration 005). Zo kan een client geen willekeurige PostgREST-tabel aanspreken.
+async function assertAllowedTable(tableName: unknown): Promise<string> {
+  const safeName = assertIdent(tableName)
+  const { supabase } = await getAuthenticatedClient()
+  const { data, error } = await supabase.rpc('list_tables')
+  if (error) throw new Error(error.message)
+  const tables = (data as { table_name: string }[] | null) ?? []
+  if (!tables.some((t) => t.table_name === safeName)) {
+    throw new Error('Tabel niet toegestaan')
+  }
+  return safeName
 }
 
 export async function getLocalTableMeta(tableName: string): Promise<{ meta: TableMeta | null; error: string | null }> {
@@ -138,7 +153,8 @@ function applyPostgrestFilters(query: UntypedClient, filters: ColumnFilters, col
   const columnMap = new Map(columns.map((c) => [c.name, c]))
   for (const [columnName, f] of Object.entries(filters)) {
     if (!isFilterComplete(f)) continue
-    const kind = columnMap.has(columnName) ? filterKindForColumn(columnMap.get(columnName)!) : 'text'
+    if (!columnMap.has(columnName)) continue
+    const kind = filterKindForColumn(columnMap.get(columnName)!)
     if (f.op === 'between') {
       const lo = normalizeFilterValue(f.value, kind)
       const hi = normalizeFilterValue(f.value2, kind)
@@ -178,10 +194,11 @@ export async function getLocalTableRecords(data: {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
   try {
+    const tableName = await assertAllowedTable(data.tableName)
     const { supabase } = await getServiceClient() as { supabase: UntypedClient }
-    let query = supabase.from(data.tableName).select('*', { count: 'exact' })
+    let query = supabase.from(tableName).select('*', { count: 'exact' })
     if (data.orderBy) {
-      query = query.order(data.orderBy, { ascending: data.orderDir !== 'desc' })
+      query = query.order(assertIdent(data.orderBy), { ascending: data.orderDir !== 'desc' })
     }
     if (data.filters && data.columns) {
       const valid = pruneStaleFilters(data.filters, data.columns.map((c) => c.name))
@@ -202,9 +219,11 @@ export async function getLocalTableRecords(data: {
 
 export async function createLocalRecord(data: { tableName: string; values: Record<string, unknown> }): Promise<{ record?: Record<string, unknown>; error?: string }> {
   try {
+    const tableName = await assertAllowedTable(data.tableName)
+    assertIdents(Object.keys(data.values))
     const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { data: record, error } = await supabase
-      .from(data.tableName)
+      .from(tableName)
       .insert(data.values)
       .select()
       .single()
@@ -220,12 +239,15 @@ export async function updateLocalRecord(data: {
   values: Record<string, unknown>
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const tableName = await assertAllowedTable(data.tableName)
+    assertIdents(Object.keys(data.values))
+    const primaryKeyColumn = assertIdent(data.primaryKey.column)
     const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     if (Object.keys(data.values).length === 0) return { success: true }
     const { error } = await supabase
-      .from(data.tableName)
+      .from(tableName)
       .update(data.values)
-      .eq(data.primaryKey.column, data.primaryKey.value)
+      .eq(primaryKeyColumn, data.primaryKey.value)
       .select()
     if (error) throw new Error(error.message)
     return { success: true }
@@ -238,11 +260,13 @@ export async function deleteLocalRecord(data: {
   tableName: string; primaryKey: { column: string; value: unknown }
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const tableName = await assertAllowedTable(data.tableName)
+    const primaryKeyColumn = assertIdent(data.primaryKey.column)
     const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { error } = await supabase
-      .from(data.tableName)
+      .from(tableName)
       .delete()
-      .eq(data.primaryKey.column, data.primaryKey.value)
+      .eq(primaryKeyColumn, data.primaryKey.value)
     if (error) throw new Error(error.message)
     return { success: true }
   } catch (err) {
@@ -254,16 +278,18 @@ export async function getLocalForeignKeyOptions(data: {
   referencedTable: string; referencedColumn: string
 }): Promise<{ options: { value: unknown; label: string }[]; error?: string }> {
   try {
+    const referencedTable = await assertAllowedTable(data.referencedTable)
+    const referencedColumn = assertIdent(data.referencedColumn)
     const { supabase } = await getServiceClient() as { supabase: UntypedClient }
     const { data: rows, error } = await supabase
-      .from(data.referencedTable)
-      .select(data.referencedColumn)
-      .order(data.referencedColumn, { ascending: true })
+      .from(referencedTable)
+      .select(referencedColumn)
+      .order(referencedColumn, { ascending: true })
       .limit(200)
     if (error) throw new Error(error.message)
     const options = (rows ?? []).map((r: Record<string, unknown>) => ({
-      value: r[data.referencedColumn],
-      label: String(r[data.referencedColumn]),
+      value: r[referencedColumn],
+      label: String(r[referencedColumn]),
     }))
     return { options }
   } catch (err) {

@@ -1,7 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+// `.js`-extensie is nodig zodat Playwright (ESM) dit bestand kan laden; de
+// Next.js-bundler resolvet hetzelfde bestand als 'next/server'.
+import { NextResponse, type NextRequest } from 'next/server.js'
 
 export async function updateSession(request: NextRequest) {
+  request.headers.delete('x-user-id')
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
