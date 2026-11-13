@@ -1,3 +1,58 @@
+# Fitness Check — 030-content-ideas-type-filter
+
+**Feature**: 030-content-ideas-type-filter
+**Datum**: 2026-11-13
+**Status**: SHIP mits de login-gated E2E en de Snyk-checks nog worden uitgevoerd; logicatests, tsc, eslint, build, de volledige suite en de F-01 RLS-controle zijn groen. Geen migratie.
+
+---
+
+## Uitgevoerde checks
+
+| Check | Resultaat | Observatie |
+|-------|-----------|------------|
+| F-01 RLS (Supabase MCP) | PASS | `pg_tables.rowsecurity = true` op `kk_content_posts` en `kk_content_pillars` (project `ythjnatklbnjtvvgpwlr`). Geen nieuwe tabel, kolom of policy. |
+| F-02 Geen secrets in client | PASS | Geen nieuwe env-waarden; geen service-role in clientcode. |
+| F-03 Supabase client instances | WARN | Heuristiek telt 26× createClient (pre-existing). Nieuwe code hergebruikt `usePosts()`/`usePillars()`; geen nieuwe client. |
+| F-04 PKCE flow | PASS | Onveranderd. |
+| F-05 Netlify config | PASS | Onveranderd. |
+| F-06 TypeScript strict | PASS | Onveranderd. |
+| F-07 TypeScript compileert | PASS | `npx tsc --noEmit` — 0 errors. |
+| F-08 Geen unjustified `any` | PASS | Geen nieuwe `any`; `IdeaFilterBar` en de helpers zijn volledig getypeerd. |
+| F-09 Geen admin client | PASS | Alleen bestaande user-scoped data onder RLS. |
+| F-10 Storage buckets | SKIP | Geen Storage in deze feature; MCP niet beschikbaar. |
+| F-11 Geen waitForTimeout in tests | PASS | Nieuwe tests gebruiken geen `waitForTimeout`. |
+| F-12 .env.local in .gitignore | PASS | Onveranderd. |
+| F-13 .env.example bestaat | PASS | Onveranderd. |
+| F-14 Geen DOM-manipulatie | PASS | Alleen React-state/props; geen directe DOM-calls. |
+| F-15 Conventional commits | PASS | Laatste 5 commits volgen de conventie. |
+| F-16 Snyk SAST | SKIP | Snyk MCP niet beschikbaar in deze sessie; geen nieuwe dependencies of auth-code. |
+| F-17 Snyk SCA | SKIP | Geen nieuwe dependencies; `package.json` ongewijzigd. Snyk MCP niet beschikbaar. |
+| F-18 Commit-msg hook | SKIP | Wordt bij de commit afgedwongen; de feature-commit volgt de conventie. |
+
+**Lokale fitness-run** (2026-11-13T15:27Z): FAIL:0 WARN:1 PASS:12 SKIP:5 — 0 blocking. De warn is de pre-existing F-03 createClient-telling; de skips zijn MCP- of hook-afhankelijk. De F-01 RLS-controle is daarnaast handmatig via de Supabase MCP uitgevoerd en geslaagd.
+
+## Architectuur-conformiteit
+
+- [x] Geen nieuwe dependencies — hergebruik bestaande shadcn/ui, lucide-react, Tailwind en React Query
+- [x] Geen nieuwe query, serveractie, RPC, migratie of schemawijziging
+- [x] Filter is een afgeleide view op de bestaande `usePosts()`/`usePillars()`-data; `countIdeasByPillar` blijft de enige telbron
+- [x] Bestaande React Query-cache-updates (`setQueryData` + invalidatie) zorgen voor directe actualiteit
+- [x] Pijplijn volledig verwijderd: component, helpers, testids en tests
+- [x] Pure filterlogica (`IdeaFilter`, `buildIdeaFilterOptions`, `matchesIdeaFilter`, `filterIdeas`, `resolveIdeaFilter`, `ideaFilterLabel`) deelt de regel met de UI
+- [x] Regressietests: 28 logicatests groen; 20 content-E2E-tests login-gated
+- [x] RLS en bestaande data ongemoeid; geen destructieve operatie
+
+## Tests
+
+- `tests/e2e/content-ideas-logic.spec.ts`: 28/28 groen — bestaande 21 + 7 nieuwe tests voor filteropties, filtering, fallback en labels; pijplijntests verwijderd.
+- `tests/e2e/content-ideas.spec.ts`: 20 tests geschreven; in deze omgeving 20 skipped wegens geen login-sessie (bestaand skip-patroon). Met een sessie worden de filterbalk, tellingen, beschrijvingsstrook, fallback, actualiteit, mobiel/toetsenbord en foutstaten uitgevoerd.
+- `npx tsc --noEmit`: 0 errors.
+- `npx eslint src/ --max-warnings 0`: 0 warnings/errors.
+- `npm run build`: geslaagd; `/content` 12.5 kB.
+- Volledige Playwright-suite (2026-11-13): 147 passed / 88 skipped (login-gated) / 0 failed.
+
+---
+
 # Fitness Check — 028-content-ideas-pipeline
 
 **Feature**: 028-content-ideas-pipeline

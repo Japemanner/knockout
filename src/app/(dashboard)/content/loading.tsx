@@ -10,7 +10,7 @@ export default function ContentLoading() {
       </div>
       <div className="space-y-3">
         <Skeleton className="h-28 w-full rounded-lg" />
-        <Skeleton className="h-44 w-full rounded-lg" />
+        <Skeleton className="h-16 w-full rounded-lg" />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     </div>

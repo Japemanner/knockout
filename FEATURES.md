@@ -2,6 +2,28 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## content-ideeën-filter (2026-11-13)
+
+**Spec**: `specs/030-content-ideas-type-filter/spec.md`
+**Branch**: `031-content-ideas-type-filter`
+
+De weergave "Ideeën" op `/content` toont nog één lijst met alle ideeën, ongeacht status. Het aparte blok "Pijplijn" is verwijderd. Boven de lijst staat een single-select filter op contentsoort: "Alle soorten", elke soort (ook gearchiveerd en met 0 ideeën) en "Geen soort" wanneer nodig, elk met een telling over alle statussen. Bij een gekozen soort verschijnt een alleen-lezen strook met naam, kleur, archiefmarkering en de korte beschrijving; lange tekst is uitklapbaar. De lijstkop toont "x van y" en een lege gefilterde lijst biedt "Toon alle ideeën". De filter is een afgeleide view op de bestaande `usePosts()`/`usePillars()`-data en `countIdeasByPillar()`; geen nieuwe query, serveractie, dependency of migratie. De bestaande React Query-invalidaties houden filter, tellingen, beschrijving en lijst actueel. De pijplijnhelpers en -tests zijn verwijderd; de filterlogica is pure, geteste helpers. Laad- en foutstaten zijn expliciet: filter-skeleton tijdens initial load, posts-fout met retry, soorten-fout met in-app melding en retry terwijl de lijst alle posts toont.
+
+**Nieuwe bestanden**:
+- `src/components/content/IdeaFilterBar.tsx` — filterbalk + beschrijvingsstrook
+- `specs/030-content-ideas-type-filter/` — spec, plan, research, data-model, contracts, quickstart, tasks
+
+**Aangepaste bestanden**:
+- `src/components/content/ContentView.tsx` — filterstate, afgeleide opties/lijst, pijplijn verwijderd
+- `src/components/content/IdeaList.tsx` — x van y, retry, gefilterde lege staat
+- `src/lib/content/ideas.ts` — IdeaFilter + pure filterhelpers; pijplijnhelpers verwijderd
+- `src/app/(dashboard)/content/loading.tsx` — filter-skeleton
+- `src/components/content/PipelineBlock.tsx` — verwijderd
+- `tests/e2e/content-ideas-logic.spec.ts` — filtertests; pijplijntests verwijderd
+- `tests/e2e/content-ideas.spec.ts` — filter-/beschrijving-/fouttests; pijplijntests verwijderd
+
+**Test**: `tests/e2e/content-ideas-logic.spec.ts` 28/28 groen. `npx tsc --noEmit`, `npx eslint src/ --max-warnings 0` en `npm run build` groen. Volledige Playwright-suite: 147 passed / 88 skipped (login-gated) / 0 failed. De content-E2E-tests zijn login-gated en in deze omgeving overgeslagen. Fitness-check: FAIL:0 WARN:1 PASS:12 SKIP:5; de warn is de pre-existing F-03 createClient-telling, de skips zijn MCP-/hook-afhankelijk.
+
 ## content-pijplijn (2026-11-04)
 
 **Spec**: `specs/028-content-ideas-pipeline/spec.md`

@@ -1,13 +1,21 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { countIdeasByPillar, selectPipelinePosts } from '@/lib/content/ideas'
+import {
+  ALL_IDEA_FILTER,
+  buildIdeaFilterOptions,
+  countIdeasByPillar,
+  filterIdeas,
+  ideaFilterLabel,
+  resolveIdeaFilter,
+  type IdeaFilter,
+} from '@/lib/content/ideas'
 import { useCreatePost, usePillars, usePosts } from '@/hooks/useContent'
 import { IdeaComposer } from '@/components/content/IdeaComposer'
-import { PipelineBlock } from '@/components/content/PipelineBlock'
+import { IdeaFilterBar } from '@/components/content/IdeaFilterBar'
 import { IdeaList } from '@/components/content/IdeaList'
 import { ContentOverview } from '@/components/content/ContentOverview'
 import { IdeaEditorDialog } from '@/components/content/IdeaEditorDialog'
@@ -30,6 +38,7 @@ export function ContentView() {
   const [view, setView] = useState<ContentViewName>('ideeen')
   const [pillarsOpen, setPillarsOpen] = useState(false)
   const [editorPostId, setEditorPostId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<IdeaFilter>(ALL_IDEA_FILTER)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const pillarsQuery = usePillars()
@@ -40,8 +49,32 @@ export function ContentView() {
   const posts = useMemo(() => postsQuery.data ?? [], [postsQuery.data])
 
   const pillarById = useMemo(() => new Map(pillars.map((pillar) => [pillar.id, pillar])), [pillars])
+  const pillarsByIdForNames = useMemo(
+    () => new Map(pillars.map((pillar) => [pillar.id, pillar.name])),
+    [pillars],
+  )
+  const knownPillarIds = useMemo(() => new Set(pillars.map((pillar) => pillar.id)), [pillars])
   const counts = useMemo(() => countIdeasByPillar(posts, pillars), [posts, pillars])
-  const pipelinePosts = useMemo(() => selectPipelinePosts(posts), [posts])
+  const effectiveFilter = useMemo(
+    () => resolveIdeaFilter(filter, { knownPillarIds, hasUnassigned: counts.unassigned > 0 }),
+    [filter, knownPillarIds, counts.unassigned],
+  )
+  useEffect(() => {
+    if (effectiveFilter !== filter) setFilter(effectiveFilter)
+  }, [effectiveFilter, filter])
+  const appliedFilter = pillarsQuery.isError ? ALL_IDEA_FILTER : effectiveFilter
+  const visiblePosts = useMemo(
+    () => filterIdeas(posts, appliedFilter, knownPillarIds),
+    [posts, appliedFilter, knownPillarIds],
+  )
+  const filterOptions = useMemo(() => buildIdeaFilterOptions(counts), [counts])
+  const activePillar =
+    appliedFilter.kind === 'pillar' ? pillarById.get(appliedFilter.pillarId) ?? null : null
+  const activeFilterLabel =
+    appliedFilter.kind === 'all' ? null : ideaFilterLabel(appliedFilter, pillarsByIdForNames)
+  const filterLoading = postsQuery.isLoading || pillarsQuery.isLoading
+  const filterHidden =
+    postsQuery.isError || (!filterLoading && !pillarsQuery.isError && pillars.length === 0)
   const activePillars = useMemo(() => pillars.filter((pillar) => !pillar.archived), [pillars])
 
   const editorPost = useMemo(
@@ -122,9 +155,22 @@ export function ContentView() {
             onCreate={handleCreate}
             isPending={createPost.isPending}
           />
-          <PipelineBlock
-            posts={pipelinePosts}
-            hasAnyPosts={posts.length > 0}
+          {!filterHidden && (
+            <IdeaFilterBar
+              options={filterOptions}
+              activeFilter={appliedFilter}
+              activePillar={activePillar}
+              onFilterChange={setFilter}
+              isLoading={filterLoading}
+              isError={pillarsQuery.isError}
+              onRetry={() => {
+                void pillarsQuery.refetch()
+              }}
+            />
+          )}
+          <IdeaList
+            posts={visiblePosts}
+            totalCount={posts.length}
             pillarById={pillarById}
             onOpen={(post: ContentPost) => setEditorPostId(post.id)}
             isLoading={postsQuery.isLoading}
@@ -132,13 +178,8 @@ export function ContentView() {
             onRetry={() => {
               void postsQuery.refetch()
             }}
-          />
-          <IdeaList
-            posts={posts}
-            pillarById={pillarById}
-            onOpen={(post: ContentPost) => setEditorPostId(post.id)}
-            isLoading={postsQuery.isLoading}
-            isError={postsQuery.isError}
+            activeFilterLabel={activeFilterLabel}
+            onClearFilter={() => setFilter(ALL_IDEA_FILTER)}
           />
         </div>
       </div>

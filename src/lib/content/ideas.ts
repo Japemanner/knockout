@@ -174,42 +174,114 @@ export function countIdeasByPillar(
 }
 
 // ============================================================
-// PIJPLIJN
+// FILTEREN OP SOORT
 // ============================================================
 
-/**
- * De pijplijn bevat elk idee dat nog niet live is. Live is de enige
- * uitsluiting; een toekomstige niet-live status hoort automatisch mee.
- */
-export function isPipelineStatus(status: ContentStatus): boolean {
-  return status !== 'live'
-}
+export type IdeaFilter =
+  | { kind: 'all' }
+  | { kind: 'none' }
+  | { kind: 'pillar'; pillarId: string }
 
-/**
- * Filtert de posts op de pijplijnregel en behoudt de bestaande volgorde.
- * De invoerarray wordt niet gemuteerd.
- */
-export function selectPipelinePosts<T extends Pick<ContentPost, 'status'>>(posts: T[]): T[] {
-  return posts.filter((post) => isPipelineStatus(post.status))
-}
+export const ALL_IDEA_FILTER: IdeaFilter = { kind: 'all' }
 
-export type PipelineViewState = 'loading' | 'error-empty' | 'empty' | 'error-with-data' | 'ready'
-
-/**
- * Bepaalt de staat van het pijplijnblok. De volgorde is bewust: een fout
- * zonder data gaat vóór laden, een fout met data houdt de rijen zichtbaar,
- * en pas daarna volgt de lege staat.
- */
-export function pipelineViewState(params: {
+export interface IdeaFilterOption {
+  filter: IdeaFilter
+  label: string
   count: number
-  isLoading: boolean
-  isError: boolean
-}): PipelineViewState {
-  if (params.isError && params.count === 0) return 'error-empty'
-  if (params.isLoading && params.count === 0) return 'loading'
-  if (params.count === 0) return 'empty'
-  if (params.isError) return 'error-with-data'
-  return 'ready'
+  color: PillarColor | null
+  archived: boolean
+}
+
+/**
+ * Bouwt de filteropties uit de bestaande tellingen. "Alle soorten" staat
+ * vooraan; daarna volgen alle soorten (ook 0 en gearchiveerd) en eventueel
+ * "Geen soort". De volgorde van counts.rows blijft behouden.
+ */
+export function buildIdeaFilterOptions(counts: IdeaCounts): IdeaFilterOption[] {
+  const options: IdeaFilterOption[] = [
+    {
+      filter: ALL_IDEA_FILTER,
+      label: 'Alle soorten',
+      count: counts.total,
+      color: null,
+      archived: false,
+    },
+  ]
+
+  for (const row of counts.rows) {
+    if (row.pillarId) {
+      options.push({
+        filter: { kind: 'pillar', pillarId: row.pillarId },
+        label: row.name,
+        count: row.count,
+        color: row.color,
+        archived: row.archived,
+      })
+    } else {
+      options.push({
+        filter: { kind: 'none' },
+        label: 'Geen soort',
+        count: row.count,
+        color: null,
+        archived: false,
+      })
+    }
+  }
+
+  return options
+}
+
+/**
+ * Bepaalt of een post bij het filter hoort. Een lege of onbekende pillar_id
+ * hoort bij "Geen soort", gelijk aan countIdeasByPillar.
+ */
+export function matchesIdeaFilter(
+  post: Pick<ContentPost, 'pillar_id'>,
+  filter: IdeaFilter,
+  knownPillarIds: ReadonlySet<string>,
+): boolean {
+  switch (filter.kind) {
+    case 'all':
+      return true
+    case 'none':
+      return post.pillar_id === null || !knownPillarIds.has(post.pillar_id)
+    case 'pillar':
+      return post.pillar_id === filter.pillarId && knownPillarIds.has(filter.pillarId)
+  }
+}
+
+/**
+ * Filtert de posts zonder de invoerarray te muteren en behoudt de volgorde.
+ */
+export function filterIdeas<T extends Pick<ContentPost, 'pillar_id'>>(
+  posts: T[],
+  filter: IdeaFilter,
+  knownPillarIds: ReadonlySet<string>,
+): T[] {
+  return posts.filter((post) => matchesIdeaFilter(post, filter, knownPillarIds))
+}
+
+/**
+ * Valt terug op "Alle soorten" wanneer de gekozen optie niet meer bestaat.
+ * Bij een geldige keuze wordt dezelfde referentie teruggegeven.
+ */
+export function resolveIdeaFilter(
+  filter: IdeaFilter,
+  options: { knownPillarIds: ReadonlySet<string>; hasUnassigned: boolean },
+): IdeaFilter {
+  if (filter.kind === 'all') return filter
+  if (filter.kind === 'none') return options.hasUnassigned ? filter : ALL_IDEA_FILTER
+  return options.knownPillarIds.has(filter.pillarId) ? filter : ALL_IDEA_FILTER
+}
+
+/** Label voor de actieve filter, gebruikt in de lijst en de gefilterde lege staat. */
+export function ideaFilterLabel(
+  filter: IdeaFilter,
+  pillarNameById: ReadonlyMap<string, string>,
+): string {
+  if (filter.kind === 'all') return 'Alle soorten'
+  if (filter.kind === 'none') return 'Geen soort'
+  return pillarNameById.get(filter.pillarId) ?? 'Geen soort'
 }
 
 // ============================================================

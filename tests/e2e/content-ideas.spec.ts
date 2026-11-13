@@ -35,10 +35,69 @@ async function createPillar(page: Page, name: string) {
   await expect(page.getByTestId('idea-pillar-select').locator('option', { hasText: name })).toHaveCount(1)
 }
 
-async function expectPipelineCountMatchesRows(page: Page) {
-  const raw = await page.getByTestId('pipeline-count').textContent()
-  const count = Number(raw?.trim() ?? '0')
-  await expect(page.getByTestId('pipeline-row')).toHaveCount(count)
+async function createPillarAndGetId(page: Page, name: string): Promise<string> {
+  await page.getByRole('button', { name: 'Soorten' }).click()
+  await expect(page.getByTestId('pillars-dialog')).toBeVisible()
+  await page.getByTestId('pillar-new-name').fill(name)
+  await page.getByTestId('pillar-add').click()
+  const row = page.getByTestId('pillar-row').last()
+  await expect(row.getByLabel('Naam')).toHaveValue(name)
+  const id = await row.getAttribute('data-pillar-id')
+  expect(id).not.toBeNull()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('pillars-dialog')).toHaveCount(0)
+  await expect(page.getByTestId('idea-pillar-select').locator('option', { hasText: name })).toHaveCount(1)
+  return id!
+}
+
+async function setPillarDescription(page: Page, pillarId: string, description: string) {
+  await page.getByRole('button', { name: 'Soorten' }).click()
+  await expect(page.getByTestId('pillars-dialog')).toBeVisible()
+  const row = page.locator(`[data-testid="pillar-row"][data-pillar-id="${pillarId}"]`)
+  await expect(row).toBeVisible()
+  await row.getByLabel('Korte beschrijving').fill(description)
+  await row.getByRole('button', { name: 'Opslaan' }).click()
+  await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('pillars-dialog')).toHaveCount(0)
+}
+
+async function archivePillar(page: Page, pillarId: string) {
+  await page.getByRole('button', { name: 'Soorten' }).click()
+  await expect(page.getByTestId('pillars-dialog')).toBeVisible()
+  const row = page.locator(`[data-testid="pillar-row"][data-pillar-id="${pillarId}"]`)
+  await expect(row).toBeVisible()
+  await row.getByTestId('pillar-archive-toggle').click()
+  await expect(row.getByRole('button', { name: 'Heractiveren' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('pillars-dialog')).toHaveCount(0)
+}
+
+function filterOption(page: Page, label: string) {
+  return page.getByTestId('idea-filter-option').filter({ hasText: label })
+}
+
+async function expectFilterOptionCount(page: Page, label: string, count: number) {
+  await expect(filterOption(page, label).getByTestId('idea-filter-count')).toHaveText(String(count))
+}
+
+async function createIdea(page: Page, title: string, pillarName?: string) {
+  await page.getByTestId('idea-title-input').fill(title)
+  await page.getByTestId('idea-pillar-select').selectOption({ label: pillarName ?? 'Geen soort' })
+  await page.getByTestId('idea-save-button').click()
+  await expect(page.getByTestId('idea-title-input')).toHaveValue('')
+}
+
+async function deleteIdea(page: Page, title: string) {
+  const row = page.getByTestId('idea-row').filter({ hasText: title }).first()
+  await expect(row).toBeVisible()
+  await row.click()
+  await expect(page.getByTestId('idea-editor')).toBeVisible()
+  await page.getByTestId('idea-editor-delete').click()
+  const dialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Verwijderen' }).click()
+  await expect(page.getByTestId('idea-row').filter({ hasText: title })).toHaveCount(0)
 }
 
 test.describe('content-ideeën', () => {
@@ -294,233 +353,315 @@ test.describe('content-ideeën', () => {
   })
 })
 
-test.describe('content-pijplijn', () => {
-  test('blok staat tussen composer en lijst, toont niet-live ideeën en opent de editor', async ({ page }) => {
+test.describe('content-ideeën filter', () => {
+  test('geen pijplijn, filterbalk zichtbaar en alle statussen in één lijst', async ({ page }) => {
     if (!(await openContent(page))) return
 
-    const pipeline = page.getByTestId('content-pipeline')
-    const composer = page.getByTestId('idea-composer')
-    const list = page.getByTestId('idea-list')
+    await expect(page.getByTestId('content-pipeline')).toHaveCount(0)
+    await expect(page.getByText('Pijplijn', { exact: true })).toHaveCount(0)
+    await expect(page.getByTestId('idea-filter')).toBeVisible()
+    await expect(filterOption(page, 'Alle soorten')).toHaveAttribute('aria-pressed', 'true')
 
-    await expect(pipeline).toBeVisible()
-    await expect(page.getByTestId('pipeline-heading')).toHaveText('Pijplijn')
-    await expect(composer).toBeVisible()
-    await expect(list).toBeVisible()
+    const visibleRows = await page.getByTestId('idea-row').count()
+    await expect(page.getByTestId('idea-list-count')).toHaveText(String(visibleRows))
 
-    const pipelineBox = await pipeline.boundingBox()
-    const composerBox = await composer.boundingBox()
-    const listBox = await list.boundingBox()
-    expect(pipelineBox).not.toBeNull()
-    expect(composerBox).not.toBeNull()
-    expect(listBox).not.toBeNull()
-    expect(pipelineBox!.y).toBeGreaterThan(composerBox!.y)
-    expect(pipelineBox!.y).toBeLessThan(listBox!.y)
-
-    const statuses = await page.getByTestId('pipeline-row-status').allTextContents()
-    expect(statuses.every((status) => status.trim() !== 'Live')).toBe(true)
-    await expectPipelineCountMatchesRows(page)
-
-    const title = `Pijplijn ${Date.now()}`
-    await page.getByTestId('idea-title-input').fill(title)
-    await page.getByTestId('idea-save-button').click()
-
-    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
-    await expect(pipelineRow).toBeVisible()
+    const title = `Live filter ${Date.now()}`
+    await createIdea(page, title)
     await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
-    await expectPipelineCountMatchesRows(page)
 
-    await pipelineRow.click()
-    await expect(page.getByTestId('idea-editor')).toBeVisible()
-    await expect(page.getByTestId('idea-editor-title')).toHaveValue(title)
-    await page.keyboard.press('Escape')
-  })
-})
-
-test.describe('content-pijplijn actualiteit', () => {
-  test('Live haalt uit de pijplijn, Gepland brengt terug en verwijderen haalt uit beide', async ({ page }) => {
-    if (!(await openContent(page))) return
-
-    const title = `Pijplijn live ${Date.now()}`
-    await page.getByTestId('idea-title-input').fill(title)
-    await page.getByTestId('idea-save-button').click()
-
-    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
-    const ideaRow = page.getByTestId('idea-row').filter({ hasText: title })
-    await expect(pipelineRow).toBeVisible()
-    await expect(ideaRow).toBeVisible()
-    await expectPipelineCountMatchesRows(page)
-
-    // Live: uit de pijplijn, maar niet uit de volledige lijst.
-    await pipelineRow.click()
-    await expect(page.getByTestId('idea-editor')).toBeVisible()
-    await page.getByTestId('idea-editor-body').fill('Klaar om te publiceren.')
+    await page.getByTestId('idea-row').filter({ hasText: title }).first().click()
+    await page.getByTestId('idea-editor-body').fill('Live tekst')
     await page.getByTestId('idea-editor-status').selectOption('live')
     await page.getByTestId('idea-editor-save').click()
     await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
 
-    await expect(pipelineRow).toHaveCount(0)
-    await expect(ideaRow).toBeVisible()
-    await expectPipelineCountMatchesRows(page)
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
+    await deleteIdea(page, title)
+  })
 
-    // Terug naar Gepland: weer in de pijplijn.
-    await ideaRow.click()
-    await expect(page.getByTestId('idea-editor')).toBeVisible()
-    await page.getByTestId('idea-editor-status').selectOption('gepland')
+  test('filtert op soort en op "Geen soort" met kloppende tellingen', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeA = `Filter A ${stamp}`
+    const typeB = `Filter B ${stamp}`
+    await createPillar(page, typeA)
+    await createPillar(page, typeB)
+
+    const titleA1 = `${typeA} 1`
+    const titleA2 = `${typeA} 2`
+    const titleB = `${typeB} 1`
+    const titleNone = `Los filter ${stamp}`
+
+    const noneBefore =
+      (await filterOption(page, 'Geen soort').count()) > 0
+        ? Number(await filterOption(page, 'Geen soort').getByTestId('idea-filter-count').textContent())
+        : 0
+
+    await createIdea(page, titleA1, typeA)
+    await createIdea(page, titleA2, typeA)
+    await createIdea(page, titleB, typeB)
+    await createIdea(page, titleNone)
+
+    await expectFilterOptionCount(page, typeA, 2)
+    await expectFilterOptionCount(page, typeB, 1)
+    await expectFilterOptionCount(page, 'Geen soort', noneBefore + 1)
+
+    const total = await page.getByTestId('idea-row').count()
+
+    await filterOption(page, typeA).click()
+    await expect(filterOption(page, typeA)).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA1 })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA2 })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleB })).toHaveCount(0)
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleNone })).toHaveCount(0)
+    await expect(page.getByTestId('idea-list-count')).toHaveText(`2 van ${total}`)
+
+    await filterOption(page, 'Geen soort').click()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleNone })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA1 })).toHaveCount(0)
+
+    await filterOption(page, 'Alle soorten').click()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA1 })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleB })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleNone })).toBeVisible()
+
+    await deleteIdea(page, titleA1)
+    await deleteIdea(page, titleA2)
+    await deleteIdea(page, titleB)
+    await deleteIdea(page, titleNone)
+  })
+
+  test('toont de korte beschrijving van de gekozen soort en werkt direct bij', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeName = `Beschrijving ${stamp}`
+    const pillarId = await createPillarAndGetId(page, typeName)
+    const description = 'Praktische tips voor ondernemers'
+    await setPillarDescription(page, pillarId, description)
+
+    const title = `Beschrijving idee ${stamp}`
+    await createIdea(page, title, typeName)
+
+    await filterOption(page, typeName).click()
+    await expect(page.getByTestId('idea-filter-description')).toBeVisible()
+    await expect(page.getByTestId('idea-filter-description')).toContainText(typeName)
+    await expect(page.getByTestId('idea-filter-description-text')).toHaveText(description)
+
+    const emptyType = `Leeg ${stamp}`
+    await createPillar(page, emptyType)
+    await filterOption(page, emptyType).click()
+    await expect(page.getByTestId('idea-filter-description-text')).toHaveText('Geen korte beschrijving.')
+
+    await filterOption(page, 'Alle soorten').click()
+    await expect(page.getByTestId('idea-filter-description')).toHaveCount(0)
+
+    const longDescription = 'a'.repeat(220)
+    await setPillarDescription(page, pillarId, longDescription)
+    await filterOption(page, typeName).click()
+    const toggle = page.getByTestId('idea-filter-description-toggle')
+    await expect(toggle).toBeVisible()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(toggle).toHaveText('Toon minder')
+
+    const updated = 'Bijgewerkte korte beschrijving'
+    await setPillarDescription(page, pillarId, updated)
+    await expect(page.getByTestId('idea-filter-description-text')).toHaveText(updated)
+
+    await archivePillar(page, pillarId)
+    await expect(filterOption(page, typeName)).toContainText('(gearchiveerd)')
+    await expect(page.getByTestId('idea-filter-description')).toContainText('(gearchiveerd)')
+    await expect(page.getByTestId('idea-filter-description-text')).toHaveText(updated)
+
+    await deleteIdea(page, title)
+  })
+
+  test('toont een gefilterde lege staat met "Toon alle ideeën"', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeWithIdea = `Gevuld ${stamp}`
+    const emptyType = `Leeg filter ${stamp}`
+    await createPillar(page, typeWithIdea)
+    await createPillar(page, emptyType)
+
+    const title = `Gevuld idee ${stamp}`
+    await createIdea(page, title, typeWithIdea)
+
+    await filterOption(page, emptyType).click()
+    await expect(page.getByTestId('idea-list-empty-filtered')).toBeVisible()
+    await expect(page.getByTestId('idea-list-empty-filtered')).toContainText(`Geen ideeën voor ${emptyType}.`)
+    await expect(page.getByTestId('idea-list-empty')).toHaveCount(0)
+    await expect(page.getByTestId('idea-list-clear-filter')).toBeVisible()
+
+    await page.getByTestId('idea-list-clear-filter').click()
+    await expect(filterOption(page, 'Alle soorten')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
+
+    await deleteIdea(page, title)
+  })
+
+  test('werkt tellingen en gefilterde lijst direct bij na toevoegen, wisselen en verwijderen', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeA = `Actualiteit A ${stamp}`
+    const typeB = `Actualiteit B ${stamp}`
+    await createPillarAndGetId(page, typeA)
+    const idB = await createPillarAndGetId(page, typeB)
+
+    await filterOption(page, typeA).click()
+
+    const titleA = `Actualiteit A idee ${stamp}`
+    await createIdea(page, titleA, typeA)
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA })).toBeVisible()
+
+    const titleB = `Actualiteit B idee ${stamp}`
+    await createIdea(page, titleB, typeB)
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleB })).toHaveCount(0)
+    await expectFilterOptionCount(page, typeB, 1)
+
+    await page.getByTestId('idea-row').filter({ hasText: titleA }).first().click()
+    await page.getByTestId('idea-editor-pillar').selectOption({ label: typeB })
     await page.getByTestId('idea-editor-save').click()
     await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
 
-    await expect(pipelineRow).toBeVisible()
-    await expect(ideaRow).toBeVisible()
-    await expectPipelineCountMatchesRows(page)
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA })).toHaveCount(0)
+    await expectFilterOptionCount(page, typeB, 2)
 
-    // Verwijderen: uit beide lijsten.
-    await pipelineRow.click()
-    await page.getByTestId('idea-editor-delete').click()
-    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
-    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
-    await expect(pipelineRow).toHaveCount(0)
-    await expect(ideaRow).toHaveCount(0)
-    await expectPipelineCountMatchesRows(page)
+    await filterOption(page, typeB).click()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleA })).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleB })).toBeVisible()
+
+    const renamedB = `${typeB} gewijzigd`
+    await page.getByRole('button', { name: 'Soorten' }).click()
+    const rowB = page.locator(`[data-testid="pillar-row"][data-pillar-id="${idB}"]`)
+    await expect(rowB.getByLabel('Naam')).toHaveValue(typeB)
+    await rowB.getByLabel('Naam').fill(renamedB)
+    await rowB.getByRole('button', { name: 'Opslaan' }).click()
+    await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(filterOption(page, renamedB)).toBeVisible()
+    await expect(filterOption(page, renamedB)).toHaveAttribute('aria-pressed', 'true')
+
+    await page.getByRole('button', { name: 'Soorten' }).click()
+    await rowB.getByRole('button', { name: 'Kleur green' }).click()
+    await rowB.getByRole('button', { name: 'Opslaan' }).click()
+    await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(filterOption(page, renamedB).locator('[aria-hidden]').first()).toHaveClass(/bg-green-500/)
+
+    await archivePillar(page, idB)
+    await expect(filterOption(page, renamedB)).toContainText('(gearchiveerd)')
+    await expect(page.getByTestId('idea-row').filter({ hasText: titleB })).toBeVisible()
+
+    await deleteIdea(page, titleA)
+    await deleteIdea(page, titleB)
   })
 
-  test('soort hernoemen, kleur wijzigen en archiveren werkt direct door in de pijplijn', async ({ page }) => {
+  test('laat "Geen soort" verdwijnen en valt terug op "Alle soorten"', async ({ page }) => {
     if (!(await openContent(page))) return
 
     const stamp = Date.now()
-    const typeName = `Pijplijnsoort ${stamp}`
-    const renamed = `${typeName} gewijzigd`
-
+    const typeName = `Fallback ${stamp}`
     await createPillar(page, typeName)
 
-    const title = `Pijplijn soort ${stamp}`
-    await page.getByTestId('idea-title-input').fill(title)
-    await page.getByTestId('idea-pillar-select').selectOption({ label: typeName })
-    await page.getByTestId('idea-save-button').click()
+    const title = `Fallback los ${stamp}`
+    await createIdea(page, title)
 
-    const pipelineRow = page.getByTestId('pipeline-row').filter({ hasText: title })
-    await expect(pipelineRow).toBeVisible()
-    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toHaveText(typeName)
+    const noneOption = filterOption(page, 'Geen soort')
+    await noneOption.click()
+    const before = Number(await noneOption.getByTestId('idea-filter-count').textContent())
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
 
-    // Hernoemen: open het beheer en maak een stabiele rij-locator op basis van het pillar-id.
-    await page.getByRole('button', { name: 'Soorten' }).click()
-    const createdRow = page.getByTestId('pillar-row').last()
-    await expect(createdRow.getByLabel('Naam')).toHaveValue(typeName)
-    const pillarId = await createdRow.getAttribute('data-pillar-id')
-    expect(pillarId).not.toBeNull()
-    const row = page.locator(`[data-testid="pillar-row"][data-pillar-id="${pillarId}"]`)
-
-    await expect(row.getByLabel('Naam')).toHaveValue(typeName)
-    await row.getByLabel('Naam').fill(renamed)
-    await row.getByRole('button', { name: 'Opslaan' }).click()
-    await expect(row.getByLabel('Naam')).toHaveValue(renamed)
+    await page.getByTestId('idea-row').filter({ hasText: title }).first().click()
+    await page.getByTestId('idea-editor-pillar').selectOption({ label: typeName })
+    await page.getByTestId('idea-editor-save').click()
+    await expect(page.getByText('Opgeslagen', { exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toHaveText(renamed)
 
-    // Kleur wijzigen
-    await page.getByRole('button', { name: 'Soorten' }).click()
-    await row.getByRole('button', { name: 'Kleur green' }).click()
-    await row.getByRole('button', { name: 'Opslaan' }).click()
-    await page.keyboard.press('Escape')
-    await expect(pipelineRow.locator('[aria-hidden]').first()).toHaveClass(/bg-green-500/)
-
-    // Archiveren
-    await page.getByRole('button', { name: 'Soorten' }).click()
-    await row.getByTestId('pillar-archive-toggle').click()
-    await expect(row.getByRole('button', { name: 'Heractiveren' })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(pipelineRow.getByTestId('pipeline-row-pillar')).toContainText('(gearchiveerd)')
-
-    // Opruimen: het testidee verwijderen; de soort blijft gearchiveerd bestaan.
-    await pipelineRow.click()
-    await page.getByTestId('idea-editor-delete').click()
-    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
-    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
-    await expect(pipelineRow).toHaveCount(0)
-    await expectPipelineCountMatchesRows(page)
-  })
-})
-
-test.describe('content-pijplijn staten', () => {
-  test('toont een eerlijke lege staat en een foutbanner met retry', async ({ page }) => {
-    if (!(await openContent(page))) return
-
-    await expect(page.getByTestId('pipeline-loading')).toHaveCount(0)
-    const rows = await page.getByTestId('pipeline-row').count()
-    await expectPipelineCountMatchesRows(page)
-
-    if (rows === 0) {
-      await expect(page.getByTestId('pipeline-empty')).toBeVisible()
-      await expect(page.getByTestId('pipeline-error')).toHaveCount(0)
+    if (before === 1) {
+      await expect(filterOption(page, 'Geen soort')).toHaveCount(0)
+      await expect(filterOption(page, 'Alle soorten')).toHaveAttribute('aria-pressed', 'true')
     } else {
-      await expect(page.getByTestId('pipeline-empty')).toHaveCount(0)
-      await expect(page.getByTestId('pipeline-error')).toHaveCount(0)
+      await expectFilterOptionCount(page, 'Geen soort', before - 1)
+      await filterOption(page, 'Alle soorten').click()
     }
 
-    // Mislukte refetch met bestaande data: foutbanner + bestaande rijen.
-    const title = `Pijplijn fout ${Date.now()}`
-    await page.route('**/rest/v1/kk_content_posts*', (route) => route.abort())
-    await page.getByTestId('idea-title-input').fill(title)
-    await page.getByTestId('idea-save-button').click()
-
-    const error = page.getByTestId('pipeline-error')
-    await expect(error).toBeVisible({ timeout: 20_000 })
-    await expect(error).toContainText('Kon de pijplijn niet verversen.')
-    await expect(page.getByTestId('pipeline-row').filter({ hasText: title })).toBeVisible()
-    await expect(page.getByTestId('pipeline-retry')).toBeVisible()
-
-    await page.unroute('**/rest/v1/kk_content_posts*')
-    await page.getByTestId('pipeline-retry').click()
-    await expect(error).toHaveCount(0, { timeout: 20_000 })
-
-    // Opruimen
-    const row = page.getByTestId('pipeline-row').filter({ hasText: title })
-    await row.click()
-    await page.getByTestId('idea-editor-delete').click()
-    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
-    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
-    await expect(row).toHaveCount(0)
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
+    await deleteIdea(page, title)
   })
 
   test('blijft bruikbaar op 375 px en met het toetsenbord', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 })
     if (!(await openContent(page))) return
 
-    await expect(page.getByTestId('content-pipeline')).toBeVisible()
+    await expect(page.getByTestId('idea-filter')).toBeVisible()
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
     )
     expect(overflow).toBeLessThanOrEqual(1)
 
-    const firstRow = page.getByTestId('pipeline-row').first()
-    if ((await firstRow.count()) > 0) {
-      await firstRow.focus()
-      await page.keyboard.press('Enter')
-      await expect(page.getByTestId('idea-editor')).toBeVisible()
-      await page.keyboard.press('Escape')
+    const allOption = filterOption(page, 'Alle soorten')
+    await allOption.focus()
+    await page.keyboard.press('Enter')
+    await expect(allOption).toHaveAttribute('aria-pressed', 'true')
+
+    const optionCount = await page.getByTestId('idea-filter-option').count()
+    if (optionCount > 1) {
+      const second = page.getByTestId('idea-filter-option').nth(1)
+      await second.focus()
+      await page.keyboard.press(' ')
+      await expect(second).toHaveAttribute('aria-pressed', 'true')
     }
   })
 
-  test('kapt een lange titel af en toont de volledige titel in de editor', async ({ page }) => {
+  test('toont een eerlijke posts-fout met retry', async ({ page }) => {
     if (!(await openContent(page))) return
 
-    const longTitle = `Lange pijplijntitel ${Date.now()} ${'x'.repeat(180)}`
-    await page.getByTestId('idea-title-input').fill(longTitle)
+    await page.route('**/rest/v1/kk_content_posts*', (route) => route.abort())
+    const title = `Fout ${Date.now()}`
+    await page.getByTestId('idea-title-input').fill(title)
     await page.getByTestId('idea-save-button').click()
 
-    const row = page.getByTestId('pipeline-row').filter({ hasText: longTitle })
-    await expect(row).toBeVisible()
-    await expect(row.getByTestId('pipeline-row-title')).toHaveClass(/truncate/)
+    await expect(page.getByTestId('idea-list-error')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('idea-list-retry')).toBeVisible()
+    await expect(page.getByTestId('idea-list-empty')).toHaveCount(0)
 
-    await row.click()
-    await expect(page.getByTestId('idea-editor-title')).toHaveValue(longTitle)
-    await page.keyboard.press('Escape')
+    await page.unroute('**/rest/v1/kk_content_posts*')
+    await page.getByTestId('idea-list-retry').click()
+    await expect(page.getByTestId('idea-list-error')).toHaveCount(0, { timeout: 20_000 })
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
 
-    await row.click()
-    await page.getByTestId('idea-editor-delete').click()
-    const deleteDialog = page.getByRole('dialog').filter({ hasText: 'Idee verwijderen?' })
-    await deleteDialog.getByRole('button', { name: 'Verwijderen' }).click()
-    await expect(row).toHaveCount(0)
+    await deleteIdea(page, title)
+  })
+
+  test('houdt de lijst zichtbaar als de soorten niet laden', async ({ page }) => {
+    if (!(await openContent(page))) return
+
+    const stamp = Date.now()
+    const typeName = `Soortfout ${stamp}`
+    const pillarId = await createPillarAndGetId(page, typeName)
+    const title = `Soortfout idee ${stamp}`
+    await createIdea(page, title, typeName)
+
+    await page.route('**/rest/v1/kk_content_pillars*', (route) => route.abort())
+    await setPillarDescription(page, pillarId, 'Tijdelijke beschrijving')
+
+    await expect(page.getByTestId('idea-filter-error')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('idea-filter-retry')).toBeVisible()
+    await expect(page.getByTestId('idea-row').filter({ hasText: title })).toBeVisible()
+
+    await page.unroute('**/rest/v1/kk_content_pillars*')
+    await page.getByTestId('idea-filter-retry').click()
+    await expect(page.getByTestId('idea-filter-error')).toHaveCount(0, { timeout: 20_000 })
+    await expect(filterOption(page, typeName)).toBeVisible()
+
+    await deleteIdea(page, title)
   })
 })

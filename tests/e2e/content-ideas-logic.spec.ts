@@ -4,15 +4,19 @@ import { test, expect } from '@playwright/test'
 // tests/e2e/column-filters.spec.ts: directe imports, geen pagina-interactie.
 
 import {
+  ALL_IDEA_FILTER,
+  buildIdeaFilterOptions,
   buildPostWritePayload,
   charCount,
   countIdeasByPillar,
+  filterIdeas,
   formatIdeaDate,
   hookPreview,
-  isPipelineStatus,
-  pipelineViewState,
-  selectPipelinePosts,
+  ideaFilterLabel,
+  matchesIdeaFilter,
+  resolveIdeaFilter,
   validateStatusChange,
+  type IdeaFilter,
   type PostWritePatch,
 } from '@/lib/content/ideas'
 import type { ContentPillar, ContentPost } from '@/types/database.types'
@@ -113,69 +117,126 @@ test.describe('countIdeasByPillar', () => {
   })
 })
 
-// ---------------------------------------------------------------- pijplijn
+// ---------------------------------------------------------------- filteropties
 
-test.describe('pijplijnselectie', () => {
-  test('isPipelineStatus is waar voor alles behalve live', () => {
-    expect(isPipelineStatus('idee')).toBe(true)
-    expect(isPipelineStatus('concept')).toBe(true)
-    expect(isPipelineStatus('klaar')).toBe(true)
-    expect(isPipelineStatus('gepland')).toBe(true)
-    expect(isPipelineStatus('live')).toBe(false)
-  })
-
-  test('selectPipelinePosts laat live weg en behoudt de volgorde', () => {
+test.describe('buildIdeaFilterOptions', () => {
+  test('zet "Alle soorten" vooraan, neemt alle soorten mee en zet "Geen soort" achteraan', () => {
+    const pillars = [
+      makePillar({ id: 'a', name: 'A', position: 0 }),
+      makePillar({ id: 'b', name: 'B', position: 1, archived: true }),
+      makePillar({ id: 'c', name: 'C', position: 2 }),
+    ]
     const posts = [
-      makePost({ id: 'p1', status: 'idee' }),
-      makePost({ id: 'p2', status: 'live' }),
-      makePost({ id: 'p3', status: 'gepland' }),
-      makePost({ id: 'p4', status: 'live' }),
-      makePost({ id: 'p5', status: 'concept' }),
+      makePost({ id: 'p1', pillar_id: 'a' }),
+      makePost({ id: 'p2', pillar_id: 'a' }),
+      makePost({ id: 'p3', pillar_id: 'b' }),
+      makePost({ id: 'p4', pillar_id: null }),
+      makePost({ id: 'p5', pillar_id: 'onbekend' }),
     ]
 
-    const selected = selectPipelinePosts(posts)
+    const options = buildIdeaFilterOptions(countIdeasByPillar(posts, pillars))
 
-    expect(selected.map((post) => post.id)).toEqual(['p1', 'p3', 'p5'])
-    expect(selected.every((post) => post.status !== 'live')).toBe(true)
+    expect(options.map((option) => [option.label, option.count])).toEqual([
+      ['Alle soorten', 5],
+      ['A', 2],
+      ['B', 1],
+      ['C', 0],
+      ['Geen soort', 2],
+    ])
+    expect(options[0]?.filter).toEqual(ALL_IDEA_FILTER)
+    expect(options[1]?.filter).toEqual({ kind: 'pillar', pillarId: 'a' })
+    expect(options[2]).toMatchObject({ archived: true, color: 'blue' })
+    expect(options[4]?.filter).toEqual({ kind: 'none' })
   })
 
-  test('een lege lijst geeft een lege pijplijn', () => {
-    expect(selectPipelinePosts([])).toEqual([])
-  })
+  test('voegt "Geen soort" niet toe als alle ideeën een soort hebben', () => {
+    const options = buildIdeaFilterOptions(
+      countIdeasByPillar(
+        [makePost({ pillar_id: 'a' }), makePost({ id: 'p2', pillar_id: 'a' })],
+        [makePillar({ id: 'a', name: 'A' })],
+      ),
+    )
 
-  test('selectPipelinePosts muteert de invoerarray niet', () => {
-    const posts = [
-      makePost({ id: 'p1', status: 'idee' }),
-      makePost({ id: 'p2', status: 'live' }),
-    ]
-    const copy = [...posts]
-
-    selectPipelinePosts(posts)
-
-    expect(posts).toEqual(copy)
-    expect(posts).toHaveLength(2)
+    expect(options.map((option) => option.label)).toEqual(['Alle soorten', 'A'])
+    expect(options.some((option) => option.filter.kind === 'none')).toBe(false)
   })
 })
 
-test.describe('pipelineViewState', () => {
-  test('loading bij geen data en geen fout', () => {
-    expect(pipelineViewState({ count: 0, isLoading: true, isError: false })).toBe('loading')
+// ---------------------------------------------------------------- filteren
+
+test.describe('matchesIdeaFilter en filterIdeas', () => {
+  const knownPillarIds = new Set(['a', 'b'])
+
+  test('all matcht alles, pillar matcht alleen de bekende soort en none matcht lege of onbekende ids', () => {
+    expect(matchesIdeaFilter(makePost({ pillar_id: 'a' }), ALL_IDEA_FILTER, knownPillarIds)).toBe(true)
+    expect(
+      matchesIdeaFilter(makePost({ pillar_id: 'a' }), { kind: 'pillar', pillarId: 'a' }, knownPillarIds),
+    ).toBe(true)
+    expect(
+      matchesIdeaFilter(makePost({ pillar_id: 'b' }), { kind: 'pillar', pillarId: 'a' }, knownPillarIds),
+    ).toBe(false)
+    expect(matchesIdeaFilter(makePost({ pillar_id: null }), { kind: 'none' }, knownPillarIds)).toBe(true)
+    expect(
+      matchesIdeaFilter(makePost({ pillar_id: 'onbekend' }), { kind: 'none' }, knownPillarIds),
+    ).toBe(true)
+    expect(matchesIdeaFilter(makePost({ pillar_id: 'a' }), { kind: 'none' }, knownPillarIds)).toBe(false)
   })
 
-  test('error-empty gaat vóór loading', () => {
-    expect(pipelineViewState({ count: 0, isLoading: true, isError: true })).toBe('error-empty')
+  test('filterIdeas behoudt de volgorde en muteert de invoerarray niet', () => {
+    const posts = [
+      makePost({ id: 'p1', pillar_id: 'a' }),
+      makePost({ id: 'p2', pillar_id: 'b' }),
+      makePost({ id: 'p3', pillar_id: 'a' }),
+      makePost({ id: 'p4', pillar_id: null }),
+    ]
+    const copy = [...posts]
+
+    const filtered = filterIdeas(posts, { kind: 'pillar', pillarId: 'a' }, knownPillarIds)
+
+    expect(filtered.map((post) => post.id)).toEqual(['p1', 'p3'])
+    expect(posts).toEqual(copy)
+    expect(filterIdeas(posts, ALL_IDEA_FILTER, knownPillarIds)).toHaveLength(4)
+    expect(filterIdeas(posts, { kind: 'none' }, knownPillarIds).map((post) => post.id)).toEqual(['p4'])
+  })
+})
+
+// ---------------------------------------------------------------- fallback
+
+test.describe('resolveIdeaFilter', () => {
+  const knownPillarIds = new Set(['a'])
+
+  test('laat een geldige keuze staan', () => {
+    const pillarFilter: IdeaFilter = { kind: 'pillar', pillarId: 'a' }
+    const noneFilter: IdeaFilter = { kind: 'none' }
+
+    expect(resolveIdeaFilter(ALL_IDEA_FILTER, { knownPillarIds, hasUnassigned: true })).toBe(
+      ALL_IDEA_FILTER,
+    )
+    expect(resolveIdeaFilter(pillarFilter, { knownPillarIds, hasUnassigned: true })).toBe(pillarFilter)
+    expect(resolveIdeaFilter(noneFilter, { knownPillarIds, hasUnassigned: true })).toBe(noneFilter)
   })
 
-  test('empty bij geen data, niet laden en geen fout', () => {
-    expect(pipelineViewState({ count: 0, isLoading: false, isError: false })).toBe('empty')
+  test('valt terug op "Alle soorten" als "Geen soort" niet meer bestaat of de soort onbekend is', () => {
+    expect(resolveIdeaFilter({ kind: 'none' }, { knownPillarIds, hasUnassigned: false })).toBe(
+      ALL_IDEA_FILTER,
+    )
+    expect(
+      resolveIdeaFilter(
+        { kind: 'pillar', pillarId: 'onbekend' },
+        { knownPillarIds, hasUnassigned: true },
+      ),
+    ).toBe(ALL_IDEA_FILTER)
   })
+})
 
-  test('error-with-data bij een mislukte refetch met bestaande rijen', () => {
-    expect(pipelineViewState({ count: 2, isLoading: false, isError: true })).toBe('error-with-data')
-  })
+test.describe('ideaFilterLabel', () => {
+  const names = new Map([['a', 'Soort A']])
 
-  test('ready bij rijen zonder fout, ook tijdens een achtergrondrefetch', () => {
-    expect(pipelineViewState({ count: 2, isLoading: true, isError: false })).toBe('ready')
+  test('geeft het juiste label voor alle gevallen', () => {
+    expect(ideaFilterLabel(ALL_IDEA_FILTER, names)).toBe('Alle soorten')
+    expect(ideaFilterLabel({ kind: 'none' }, names)).toBe('Geen soort')
+    expect(ideaFilterLabel({ kind: 'pillar', pillarId: 'a' }, names)).toBe('Soort A')
+    expect(ideaFilterLabel({ kind: 'pillar', pillarId: 'onbekend' }, names)).toBe('Geen soort')
   })
 })
 
