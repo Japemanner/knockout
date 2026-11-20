@@ -2,6 +2,18 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## navigatie zonder Team en Database (2026-11-20)
+
+**Branch**: `031-km-registratie`
+
+De sidebar toont de items **Team** en **Database** niet meer. De routes `/team` en `/db` blijven bestaan en zijn via de directe URL nog bereikbaar; alleen de navigatie-items zijn verwijderd. De admin-only logica voor **Instellingen** blijft ongewijzigd.
+
+**Aangepaste bestanden**:
+- `src/components/layout/AppShell.tsx` — navItems voor `/team` en `/db` verwijderd; filter vereenvoudigd; ongebruikte `Users`-import verwijderd
+
+**Test**: `npx tsc --noEmit` en `npx eslint src/ --max-warnings 0` groen.
+
+
 ## kilometerregistratie (2026-11-20)
 
 **Spec**: `specs/031-km-registratie/spec.md`
