@@ -2,6 +2,32 @@
 
 Auto-maintained by @feature-tracker. Laatste bovenaan.
 
+## kilometerregistratie (2026-11-20)
+
+**Spec**: `specs/031-km-registratie/spec.md`
+**Branch**: `031-km-registratie`
+
+`/km` is een nieuwe kilometerregistratie voor zakelijke ritten met de privéauto. Per rit leg je datum, opdrachtgever (optioneel), van, naar, zakelijk doel, enkele afstand, retour, tarief en notities vast. `distance_km` is altijd het totaal; de "Retour"-checkbox verdubbelt de enkele afstand vóór opslaan en `is_return` blijft alleen informatief. Het tarief is een snapshot per rit (`rate_per_km`), met een jaartabel (`2024/2025: € 0,23`, `2026: € 0,25`); het formulier vult het tarief voor op basis van de ritdatum, past het aan bij datumwijziging tenzij handmatig gewijzigd, en waarschuwt (niet blokkerend) boven het onbelaste maximum. `amount` is een generated column en wordt nooit in payloads meegestuurd: alle writes lopen via `buildTripWritePayload`. De pagina toont vier dashboardkaarten (km/vergoeding deze maand, vergoeding dit jaar, openstaand met ritaantal), recente routes voor hergebruik, een filterbare historie (maand/jaar/aangepast, opdrachtgever, status) met totalen, bewerken in een dialog, verwijderen met bevestiging, uitbetalen per selectie of alle open ritten met datumkeuze, terug naar open, en een Excel-NL CSV-export (`;`, komma-decimalen, UTF-8 BOM). Data gaat via SSR-prefetch + HydrationBoundary en de browser-client (React Query, optimistic updates met rollback); mutaties zijn server actions zonder `revalidatePath`. Migratie `027_mileage.sql` is via Supabase MCP toegepast op project `ythjnatklbnjtvvgpwlr`; RLS staat aan met vier policies op `user_id = (select auth.uid())`, de generated column en drie indexen zijn geverifieerd. De E2E-tests zijn login-gated en in deze omgeving overgeslagen.
+
+**Nieuwe bestanden**:
+- `supabase/migrations/027_mileage.sql` — `kk_mileage_trips`, indexen, RLS (4 policies), updated_at-trigger; idempotent en toegepast
+- `src/lib/mileage/rates.ts` — jaartarieven + `defaultRateForDate`
+- `src/lib/mileage/trips.ts` — retour/afronding, payload-whitelist, validatie, stats-aggregatie, recente routes, NL-formatters en CSV-opbouw
+- `src/lib/mileage/queries.ts` — `fetchTrips` (join op `kk_clients(name)`), `fetchMileageStats`, query keys onder `['mileage', ...]`
+- `src/actions/mileage.ts` — create/update/delete + mark/unmark uitbetaald; server-side validatie en client-eigendom
+- `src/hooks/useMileage.ts` — React Query reads + optimistic mutaties met rollback en invalidatie van `['mileage']`
+- `src/app/(dashboard)/km/page.tsx` + `loading.tsx` — SSR-prefetch van trips (huidige maand), stats en clients; skeleton
+- `src/components/mileage/MileageView.tsx`, `MileageDashboard.tsx`, `MileageAmount.tsx`, `TripEntryForm.tsx`, `RecentRoutes.tsx`, `TripHistory.tsx`, `TripEditDialog.tsx` — UI met privacy-maskering, staten en retry
+- `tests/e2e/mileage-logic.spec.ts` — 21 pure unit-tests
+- `tests/e2e/mileage.spec.ts` — 6 login-gated E2E-tests
+- `specs/031-km-registratie/spec.md` — korte spec
+
+**Aangepaste bestanden**:
+- `src/types/database.types.ts` — `MileageTrip` + tabelmapping (amount generated, nooit in Insert/Update)
+- `src/components/layout/AppShell.tsx` — navigatie-item "Kilometers" (`Car`) direct onder "Uren"
+
+**Test**: `tests/e2e/mileage-logic.spec.ts` 21/21 groen. `npx tsc --noEmit`, `npx eslint src/ --max-warnings 0` en `npm run build` groen (`/km` 10,1 kB). Volledige Playwright-suite: 168 passed / 94 skipped (login-gated) / 0 failed; de 6 km-E2E-tests zijn zonder sessie overgeslagen. Fitness-check: FAIL:0 WARN:1 PASS:12 SKIP:5; de warn is de pre-existing F-03 createClient-telling. RLS en generated column op `kk_mileage_trips` geverifieerd via Supabase MCP.
+
 ## content-ideeën-filter (2026-11-13)
 
 **Spec**: `specs/030-content-ideas-type-filter/spec.md`

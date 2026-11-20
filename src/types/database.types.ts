@@ -68,6 +68,12 @@ export interface Database {
         Insert: Omit<HourEntry, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<HourEntry, 'id'>>
       }
+      kk_mileage_trips: {
+        Row: MileageTrip
+        // amount is een generated column; nooit meesturen bij insert/update.
+        Insert: Omit<MileageTrip, 'id' | 'amount' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<MileageTrip, 'id' | 'amount'>>
+      }
       kk_priorities: {
         Row: Priority
         Insert: Omit<Priority, 'id' | 'created_at' | 'updated_at'>
@@ -252,6 +258,24 @@ export interface HourEntry {
   description: string | null
   start_time: string | null
   end_time: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MileageTrip {
+  id: string
+  user_id: string
+  client_id: string | null
+  trip_date: string // 'YYYY-MM-DD'
+  from_location: string
+  to_location: string
+  purpose: string
+  distance_km: number // altijd het totaal; is_return is alleen informatief
+  is_return: boolean
+  rate_per_km: number // snapshot op het moment van vastleggen
+  amount: number // generated column: round(distance_km * rate_per_km, 2)
+  reimbursed_at: string | null // 'YYYY-MM-DD'; null = openstaand
+  notes: string | null
   created_at: string
   updated_at: string
 }
